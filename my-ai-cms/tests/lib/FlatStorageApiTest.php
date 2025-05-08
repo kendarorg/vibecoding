@@ -5,6 +5,21 @@ use PHPUnit\Framework\TestCase;
 require_once '../../src/lib/FlatStorageApi.php';
 
 /**
+ * Test version of FlatStorageApi that allows mocking the request body
+ */
+class TestFlatStorageApi extends FlatStorageApi {
+    private string $mockRequestBody = '';
+
+    public function setMockRequestBody(array $data): void {
+        $this->mockRequestBody = json_encode($data);
+    }
+
+    protected function getRequestBody(): string {
+        return $this->mockRequestBody;
+    }
+}
+
+/**
  * Mock implementation of FlatStorage for testing
  */
 class FakeFlatStorage extends FlatStorage {
@@ -98,11 +113,11 @@ class FakeFlatStorage extends FlatStorage {
 
 class FlatStorageApiTest extends TestCase {
     private FakeFlatStorage $fakeStorage;
-    private FlatStorageApi $api;
+    private TestFlatStorageApi $api;
 
     protected function setUp(): void {
         $this->fakeStorage = new FakeFlatStorage();
-        $this->api = new FlatStorageApi($this->fakeStorage);
+        $this->api = new TestFlatStorageApi($this->fakeStorage);
 
         // Setup test data
         $this->fakeStorage->upsertItem(
@@ -154,7 +169,7 @@ class FlatStorageApiTest extends TestCase {
         ];
 
         // Setup input stream
-        $this->setupInputData($inputData);
+        $this->api->setMockRequestBody($inputData);
 
         $response = $this->api->processRequest();
 
@@ -180,7 +195,7 @@ class FlatStorageApiTest extends TestCase {
         ];
 
         // Setup input stream
-        $this->setupInputData($inputData);
+        $this->api->setMockRequestBody($inputData);
 
         $response = $this->api->processRequest();
 
@@ -203,7 +218,7 @@ class FlatStorageApiTest extends TestCase {
         ];
 
         // Setup input stream
-        $this->setupInputData($inputData);
+        $this->api->setMockRequestBody($inputData);
 
         $response = $this->api->processRequest();
 
@@ -233,7 +248,7 @@ class FlatStorageApiTest extends TestCase {
         ];
 
         // Setup input stream
-        $this->setupInputData($inputData);
+        $this->api->setMockRequestBody($inputData);
 
         $response = $this->api->processRequest();
 

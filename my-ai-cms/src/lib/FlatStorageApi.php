@@ -78,7 +78,7 @@ class FlatStorageApi {
         }
 
         // Get request data
-        $data = json_decode(file_get_contents('php://input'), true);
+        $data = json_decode($this->getRequestBody(), true);
         if (!$data) {
             throw new InvalidArgumentException('Invalid JSON data');
         }
@@ -110,7 +110,7 @@ class FlatStorageApi {
         }
 
         // Get request data
-        $data = json_decode(file_get_contents('php://input'), true);
+        $data = json_decode($this->getRequestBody(), true);
         if (!$data) {
             throw new InvalidArgumentException('Invalid JSON data');
         }
@@ -154,6 +154,15 @@ class FlatStorageApi {
             'success' => true,
             'message' => 'Item deleted successfully'
         ];
+    }
+
+    /**
+     * Get the raw request body
+     *
+     * @return string Raw request body
+     */
+    protected function getRequestBody(): string {
+        return $this->getRequestBody();
     }
 }
 
