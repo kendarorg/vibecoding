@@ -366,4 +366,35 @@ class FlatStorageTest extends TestCase
         $indexLogSizeAfter = filesize($this->tempStructureDir . '/index.log');
         $this->assertEquals($indexLogSizeBefore, $indexLogSizeAfter, 'Index log should not have grown');
     }
+
+    public function testHasChildren(): void
+    {
+        $rootUuid = '00000000-0000-0000-0000-000000000000';
+
+        // Create a parent item
+        $parentUuid = 'cccc1111-cccc-1111-cccc-111111111111';
+        $this->storage->upsertItem($parentUuid, $rootUuid, 'Parent Item', 'Parent Content');
+
+        // Initially, parent should have no children
+        $this->assertFalse($this->storage->hasChildren($parentUuid));
+
+        // Create a child item
+        $childUuid = 'cccc2222-cccc-2222-cccc-222222222222';
+        $this->storage->upsertItem($childUuid, $parentUuid, 'Child Item', 'Child Content');
+
+        // Now parent should have children
+        $this->assertTrue($this->storage->hasChildren($parentUuid));
+
+        // Root should have children
+        $this->assertTrue($this->storage->hasChildren($rootUuid));
+
+        // Child should have no children
+        $this->assertFalse($this->storage->hasChildren($childUuid));
+
+        // Delete the child
+        $this->storage->deleteItem($childUuid, $parentUuid);
+
+        // Parent should no longer have children
+        $this->assertFalse($this->storage->hasChildren($parentUuid));
+    }
 }
