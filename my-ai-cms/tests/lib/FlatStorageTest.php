@@ -322,4 +322,48 @@ class FlatStorageTest extends TestCase
         $namesLog = file_get_contents($this->tempStructureDir . '/names.log');
         $this->assertStringContainsString("RN,$uuid,$newTitle", $namesLog, 'Names log should contain a rename entry');
     }
+
+    public function testUpsertItemWithNullParent(): void
+    {
+        // Create initial item with a known parent
+        $uuid = 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1';
+        $initialParentUuid = '00000000-0000-0000-0000-000000000000'; // Root
+        $initialTitle = 'Initial Title';
+        $initialContent = 'Initial Content';
+
+        $this->storage->upsertItem($uuid, $initialParentUuid, $initialTitle, $initialContent);
+
+        // Now create another parent to move to first
+        $newParentUuid = 'b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2';
+        $this->storage->upsertItem($newParentUuid, $initialParentUuid, 'New Parent', 'New Parent Content');
+
+        // Move item to the new parent
+        $this->storage->upsertItem($uuid, $newParentUuid, $initialTitle, $initialContent);
+
+        // Verify it was moved
+        $children = $this->storage->listChildren($newParentUuid);
+        $this->assertCount(1, $children);
+        $this->assertEquals($uuid, $children[0]['id']);
+
+        // Get initial log file size to check for changes later
+        $indexLogSizeBefore = filesize($this->tempStructureDir . '/index.log');
+
+        // Now update the item with null parent (should not change parent)
+        $newTitle = 'Updated Title';
+        $newContent = 'Updated Content';
+        $this->storage->upsertItem($uuid, null, $newTitle, $newContent);
+
+        // Verify content and title were updated
+        $this->assertEquals($newContent, file_get_contents($this->tempDataDir . '/' . $uuid));
+
+        // Verify parent has not changed
+        $children = $this->storage->listChildren($newParentUuid);
+        $this->assertCount(1, $children);
+        $this->assertEquals($uuid, $children[0]['id']);
+        $this->assertEquals($newTitle, $children[0]['title']);
+
+        // Verify no parent change was logged
+        $indexLogSizeAfter = filesize($this->tempStructureDir . '/index.log');
+        $this->assertEquals($indexLogSizeBefore, $indexLogSizeAfter, 'Index log should not have grown');
+    }
 }
