@@ -3593,3 +3593,7 @@ if (basename($_SERVER['SCRIPT_FILENAME']) === basename(__FILE__)) {
 ```
 
 This implementation follows the same API structure as the FlatStorageApi but adapts it to work with the FilesStorage class. It provides endpoints for listing files (with optional filtering by extension), getting file content, creating new files, updating existing files, and deleting files.
+
+### FIX 014 
+
+Rewrite the directory structure for the filestorage and tests
