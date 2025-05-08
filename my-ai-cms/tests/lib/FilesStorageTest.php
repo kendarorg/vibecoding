@@ -3,7 +3,8 @@
 require_once '../../src/lib/FilesStorage.php';
 
 class FilesStorageTest extends PHPUnit\Framework\TestCase {
-    private $storageBasePath;
+    private $tempDataDir;
+    private $tempStructureDir;
     private $storage;
 
     protected function setUp(): void {
@@ -22,28 +23,35 @@ class FilesStorageTest extends PHPUnit\Framework\TestCase {
     }
 
     protected function tearDown(): void {
-        // Clean up the temporary directory
-        $this->removeDirectory($this->storageBasePath);
+        // Clean up test directories
+        $this->recursiveRemoveDirectory($this->tempDataDir);
+        $this->recursiveRemoveDirectory($this->tempStructureDir);
     }
 
-    private function removeDirectory($dir) {
-        if (!is_dir($dir)) {
+    /**
+     * Helper method to remove directory recursively
+     */
+    private function recursiveRemoveDirectory(string $directory): void
+    {
+        if (!is_dir($directory)) {
             return;
         }
 
-        $files = array_diff(scandir($dir), ['.', '..']);
+        $items = scandir($directory);
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
 
-        foreach ($files as $file) {
-            $path = $dir . '/' . $file;
-
+            $path = $directory . '/' . $item;
             if (is_dir($path)) {
-                $this->removeDirectory($path);
+                $this->recursiveRemoveDirectory($path);
             } else {
                 unlink($path);
             }
         }
 
-        rmdir($dir);
+        rmdir($directory);
     }
 
     public function testUpsertNewFile() {

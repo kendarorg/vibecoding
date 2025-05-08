@@ -25,31 +25,50 @@ class FilesStorage {
         }
     }
 
-    public function upsertFile($itemId, $itemTitle, $itemContent = null) {
+    /**
+     * Parse an itemId to extract its basename and extension
+     *
+     * @param string $itemId The item ID which may include an extension
+     * @return array [$basename, $extension]
+     */
+    private function parseItemId(string $itemId): array {
         // Extract extension if present in itemId
         $extension = '';
+        $basename = $itemId;
+
         if (strpos($itemId, '.') !== false) {
-            list($itemId, $extension) = explode('.', $itemId, 2);
+            $parts = explode('.', $itemId);
+            $extension = array_pop($parts);
+            $basename = implode('.', $parts);
         }
 
-        $filePath = $this->dataDir . '/' . $itemId;
-        if ($extension) {
-            $filePath .= '.' . $extension;
-        }
+        return [$basename, $extension];
+    }
 
+    /**
+     * Get the full file path based on the itemId
+     */
+    private function getFilePath(string $itemId): string {
+        return $this->dataDir . '/' . $itemId;
+    }
+
+    public function upsertFile($itemId, $itemTitle, $itemContent = null) {
+        $filePath = $this->getFilePath($itemId);
         $fileExists = file_exists($filePath);
 
         // If file doesn't exist, create it and log creation
         if (!$fileExists) {
             if ($itemContent !== null) {
                 file_put_contents($filePath, $itemContent);
+            } else {
+                file_put_contents($filePath, '');
             }
-            $this->appendToLog('CR', $itemId . ($extension ? '.' . $extension : ''), $itemTitle);
+            $this->appendToLog('CR', $itemId, $itemTitle);
         } else {
             // Check if title has changed
-            $currentTitle = $this->getCurrentTitle($itemId . ($extension ? '.' . $extension : ''));
+            $currentTitle = $this->getCurrentTitle($itemId);
             if ($currentTitle !== $itemTitle) {
-                $this->appendToLog('RN', $itemId . ($extension ? '.' . $extension : ''), $itemTitle);
+                $this->appendToLog('RN', $itemId, $itemTitle);
             }
 
             // Update content if provided
@@ -62,23 +81,11 @@ class FilesStorage {
     }
 
     public function deleteFile($itemId) {
-        // Find files matching the pattern (for any extension)
-        $pattern = $this->dataDir . '/' . $itemId . '.*';
-        $files = glob($pattern);
+        $filePath = $this->getFilePath($itemId);
 
-        if (empty($files)) {
-            // Also check for files without extension
-            if (file_exists($this->dataDir . '/' . $itemId)) {
-                $files[] = $this->dataDir . '/' . $itemId;
-            }
-        }
-
-        if (!empty($files)) {
-            foreach ($files as $file) {
-                $fileName = basename($file);
-                $this->appendToLog('DE', $fileName, '');
-                unlink($file);
-            }
+        if (file_exists($filePath)) {
+            $this->appendToLog('DE', $itemId, '');
+            unlink($filePath);
             return true;
         }
 
@@ -92,7 +99,6 @@ class FilesStorage {
 
         $lines = file($this->namesLogFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 
-        $items = [];
         $activeItems = [];
 
         foreach ($lines as $line) {
@@ -100,20 +106,14 @@ class FilesStorage {
             if (count($parts) < 3) continue;
 
             list($action, $itemId, $itemTitle) = $parts;
-
-            // Extract extension if present
-            $extension = '';
-            if (strpos($itemId, '.') !== false) {
-                list($id, $extension) = explode('.', $itemId, 2);
-            } else {
-                $id = $itemId;
-            }
+            [$basename, $extension] = $this->parseItemId($itemId);
 
             switch ($action) {
                 case 'CR':
                     $activeItems[$itemId] = [
-                        'id' => $id,
+                        'id' => $itemId,
                         'title' => $itemTitle,
+                        'basename' => $basename,
                         'extension' => $extension
                     ];
                     break;
@@ -144,22 +144,13 @@ class FilesStorage {
     }
 
     public function getContent($itemId) {
-        // Try to find the file with or without extension
-        $filePath = $this->dataDir . '/' . $itemId;
+        $filePath = $this->getFilePath($itemId);
 
-        if (!file_exists($filePath)) {
-            // Look for files with this ID but any extension
-            $pattern = $this->dataDir . '/' . $itemId . '.*';
-            $files = glob($pattern);
-
-            if (empty($files)) {
-                return null;
-            }
-
-            $filePath = $files[0]; // Use the first match
+        if (file_exists($filePath)) {
+            return file_get_contents($filePath);
         }
 
-        return file_get_contents($filePath);
+        return null;
     }
 
     // Helper methods

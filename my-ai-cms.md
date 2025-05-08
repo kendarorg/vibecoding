@@ -3597,3 +3597,212 @@ This implementation follows the same API structure as the FlatStorageApi but ada
 ### FIX 014 
 
 Rewrite the directory structure for the filestorage and tests
+
+### REQ 015
+
+The FilesStorage should accept on all its functions as $itemId filenames with or without extension. Modify it accordingly
+
+### RES 015
+
+Looking at your `FilesStorage` class, I'll update it to better handle file IDs with or without extensions.
+
+Here's the improved implementation:
+
+```php
+<?php
+
+class FilesStorage {
+    private $dataDir;
+    private $structureDir;
+    private $namesLogFile;
+
+    public function __construct(string $dataDir = 'data',string $indexDir = 'structure') {
+        $this->dataDir = $dataDir;
+        $this->structureDir = $indexDir;
+        $this->namesLogFile = $this->structureDir . '/names.log';
+
+        // Ensure directories exist
+        if (!is_dir($this->dataDir)) {
+            mkdir($this->dataDir, 0755, true);
+        }
+
+        if (!is_dir($this->structureDir)) {
+            mkdir($this->structureDir, 0755, true);
+        }
+
+        // Ensure names log file exists
+        if (!file_exists($this->namesLogFile)) {
+            file_put_contents($this->namesLogFile, '');
+        }
+    }
+
+    /**
+     * Parse an itemId to extract its basename and extension
+     * 
+     * @param string $itemId The item ID which may include an extension
+     * @return array [$basename, $extension]
+     */
+    private function parseItemId(string $itemId): array {
+        // Extract extension if present in itemId
+        $extension = '';
+        $basename = $itemId;
+        
+        if (strpos($itemId, '.') !== false) {
+            $parts = explode('.', $itemId);
+            $extension = array_pop($parts);
+            $basename = implode('.', $parts);
+        }
+        
+        return [$basename, $extension];
+    }
+    
+    /**
+     * Get the full file path based on the itemId
+     */
+    private function getFilePath(string $itemId): string {
+        return $this->dataDir . '/' . $itemId;
+    }
+
+    public function upsertFile($itemId, $itemTitle, $itemContent = null) {
+        $filePath = $this->getFilePath($itemId);
+        $fileExists = file_exists($filePath);
+
+        // If file doesn't exist, create it and log creation
+        if (!$fileExists) {
+            if ($itemContent !== null) {
+                file_put_contents($filePath, $itemContent);
+            } else {
+                file_put_contents($filePath, '');
+            }
+            $this->appendToLog('CR', $itemId, $itemTitle);
+        } else {
+            // Check if title has changed
+            $currentTitle = $this->getCurrentTitle($itemId);
+            if ($currentTitle !== $itemTitle) {
+                $this->appendToLog('RN', $itemId, $itemTitle);
+            }
+
+            // Update content if provided
+            if ($itemContent !== null) {
+                file_put_contents($filePath, $itemContent);
+            }
+        }
+
+        return true;
+    }
+
+    public function deleteFile($itemId) {
+        $filePath = $this->getFilePath($itemId);
+        
+        if (file_exists($filePath)) {
+            $this->appendToLog('DE', $itemId, '');
+            unlink($filePath);
+            return true;
+        }
+        
+        return false;
+    }
+
+    public function listFiles() {
+        if (!file_exists($this->namesLogFile)) {
+            return [];
+        }
+
+        $lines = file($this->namesLogFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
+        $activeItems = [];
+
+        foreach ($lines as $line) {
+            $parts = explode(',', $line, 3);
+            if (count($parts) < 3) continue;
+
+            list($action, $itemId, $itemTitle) = $parts;
+            [$basename, $extension] = $this->parseItemId($itemId);
+
+            switch ($action) {
+                case 'CR':
+                    $activeItems[$itemId] = [
+                        'id' => $itemId,
+                        'title' => $itemTitle,
+                        'basename' => $basename,
+                        'extension' => $extension
+                    ];
+                    break;
+                case 'RN':
+                    if (isset($activeItems[$itemId])) {
+                        $activeItems[$itemId]['title'] = $itemTitle;
+                    }
+                    break;
+                case 'DE':
+                    unset($activeItems[$itemId]);
+                    break;
+            }
+        }
+
+        return array_values($activeItems);
+    }
+
+    public function listFilesByExtension(...$extensions) {
+        $files = $this->listFiles();
+
+        if (empty($extensions)) {
+            return $files;
+        }
+
+        return array_filter($files, function($file) use ($extensions) {
+            return in_array($file['extension'], $extensions);
+        });
+    }
+
+    public function getContent($itemId) {
+        $filePath = $this->getFilePath($itemId);
+
+        if (file_exists($filePath)) {
+            return file_get_contents($filePath);
+        }
+
+        return null;
+    }
+
+    // Helper methods
+    private function appendToLog($action, $itemId, $itemTitle) {
+        $logLine = $action . ',' . $itemId . ',' . $itemTitle . PHP_EOL;
+        file_put_contents($this->namesLogFile, $logLine, FILE_APPEND);
+    }
+
+    private function getCurrentTitle($itemId) {
+        if (!file_exists($this->namesLogFile)) {
+            return null;
+        }
+
+        $lines = file($this->namesLogFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $title = null;
+
+        foreach ($lines as $line) {
+            $parts = explode(',', $line, 3);
+            if (count($parts) < 3) continue;
+
+            list($action, $id, $itemTitle) = $parts;
+
+            if ($id === $itemId) {
+                if ($action === 'CR' || $action === 'RN') {
+                    $title = $itemTitle;
+                } else if ($action === 'DE') {
+                    $title = null;
+                }
+            }
+        }
+
+        return $title;
+    }
+}
+```
+
+Key changes:
+1. Added a `parseItemId()` helper method to consistently extract basename and extension
+2. Added a `getFilePath()` method to centralize file path creation
+3. Improved extension handling to support filenames with multiple dots
+4. Updated the file listing to include both the full ID and parsed parts
+5. Simplified the file operations by using the helper methods
+
+This implementation now treats the itemId as the complete identifier (with or without extension) throughout all operations.
