@@ -39,20 +39,30 @@ class FlatStorageApi {
         }
     }
 
-    /**
-     * Handle GET requests for retrieving data
-     */
     private function handleGetRequest(?string $action): array {
         switch ($action) {
             case 'list':
                 $parentId = $_GET['parent'] ?? '00000000-0000-0000-0000-000000000000';
                 $items = $this->storage->listChildren($parentId);
+
+                // Add additional information about each item
+                foreach ($items as &$item) {
+                    // Check if this item has children
+                    $hasChildren = $this->storage->hasChildren($item['id']);
+                    $item['hasChildren'] = $hasChildren;
+
+                    // Add parent information explicitly
+                    $item['parent'] = $parentId;
+                }
+
                 return [
                     'success' => true,
-                    'items' => $items
+                    'items' => $items,
+                    'parent' => $parentId // Return parent ID for context
                 ];
 
             case 'content':
+                // Rest of the code remains the same
                 $id = $_GET['id'] ?? null;
                 if (!$id) {
                     throw new InvalidArgumentException('Missing item ID');

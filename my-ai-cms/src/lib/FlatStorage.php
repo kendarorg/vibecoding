@@ -239,4 +239,21 @@ class FlatStorage {
 
         return $lastName;
     }
+
+    /**
+     * Check if an item has any children
+     *
+     * @param string $itemId The ID of the item to check
+     * @return bool True if the item has children, false otherwise
+     */
+    public function hasChildren(string $itemId): bool {
+        $structurePath = $this->getStructurePath($itemId);
+
+        if (!file_exists($structurePath)) {
+            return false;
+        }
+
+        $structure = json_decode(file_get_contents($structurePath), true);
+        return !empty($structure['children']);
+    }
 }
