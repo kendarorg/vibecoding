@@ -31,7 +31,7 @@ class FakeFlatStorage extends FlatStorage {
         // No initialization needed for fake implementation
     }
 
-    public function upsertItem(string $itemUuid, string $parentUuid, ?string $itemTitle = null, ?string $itemContent = null): void {
+    public function upsertItem(string $itemUuid, ?string $parentUuid = null, ?string $itemTitle = null, ?string $itemContent = null): void {
         // Create item if it doesn't exist
         if (!isset($this->items[$itemUuid])) {
             $this->items[$itemUuid] = [
