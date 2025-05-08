@@ -37,11 +37,11 @@ class FlatStorage {
     /**
      * Create or update an item
      * @param string $itemUuid Item identifier
-     * @param string $parentUuid Parent identifier
+     * @param string|null $parentUuid Parent identifier (null to keep existing parent)
      * @param string|null $itemTitle Optional title (null to keep existing)
      * @param string|null $itemContent Optional content (null to keep existing)
      */
-    public function upsertItem(string $itemUuid, string $parentUuid, ?string $itemTitle = null, ?string $itemContent = null): void {
+    public function upsertItem(string $itemUuid, ?string $parentUuid = null, ?string $itemTitle = null, ?string $itemContent = null): void {
         $itemPath = $this->dataDir . '/' . $itemUuid;
         $itemExists = file_exists($itemPath);
 
@@ -54,6 +54,11 @@ class FlatStorage {
         }
 
         if (!$itemExists) {
+            // For new items, we must have a parent UUID
+            if ($parentUuid === null) {
+                throw new InvalidArgumentException('Parent UUID is required for new items');
+            }
+
             // New item - add creation entries
             file_put_contents($this->indexLogPath, "CR,$itemUuid,$parentUuid\n", FILE_APPEND);
 
@@ -62,10 +67,12 @@ class FlatStorage {
                 file_put_contents($this->namesLogPath, "CR,$itemUuid,$itemTitle\n", FILE_APPEND);
             }
         } else {
-            // Existing item - check for parent change
-            $lastParent = $this->getLastParent($itemUuid);
-            if ($lastParent !== $parentUuid) {
-                file_put_contents($this->indexLogPath, "MV,$itemUuid,$parentUuid\n", FILE_APPEND);
+            // Existing item - check for parent change only if parentUuid is provided
+            if ($parentUuid !== null) {
+                $lastParent = $this->getLastParent($itemUuid);
+                if ($lastParent !== $parentUuid) {
+                    file_put_contents($this->indexLogPath, "MV,$itemUuid,$parentUuid\n", FILE_APPEND);
+                }
             }
 
             // Check for name change, but only if a title was provided

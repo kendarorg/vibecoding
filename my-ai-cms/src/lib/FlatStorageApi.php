@@ -162,7 +162,7 @@ class FlatStorageApi {
      * @return string Raw request body
      */
     protected function getRequestBody(): string {
-        return $this->getRequestBody();
+        return file_get_contents('php://input');
     }
 }
 

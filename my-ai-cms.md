@@ -2378,3 +2378,74 @@ The UI meets all the requirements:
 - Save button for content changes
 - Navigable breadcrumb showing the path
 - Root node cannot be renamed or deleted
+
+### REQ 008
+
+(There was an error!)
+in upsertItem allow null parentUUID, if it's null do not change the parent!
+
+### RES 008
+
+I'll modify the `upsertItem` method in `FlatStorage.php` to handle null `parentUuid` values properly, ensuring that the parent doesn't change when `parentUuid` is null.
+
+Here's the updated method:
+
+```php
+/**
+ * Create or update an item
+ * @param string $itemUuid Item identifier
+ * @param string|null $parentUuid Parent identifier (null to keep existing parent)
+ * @param string|null $itemTitle Optional title (null to keep existing)
+ * @param string|null $itemContent Optional content (null to keep existing)
+ */
+public function upsertItem(string $itemUuid, ?string $parentUuid = null, ?string $itemTitle = null, ?string $itemContent = null): void {
+    $itemPath = $this->dataDir . '/' . $itemUuid;
+    $itemExists = file_exists($itemPath);
+
+    // Handle content update if provided
+    if ($itemContent !== null) {
+        file_put_contents($itemPath, $itemContent);
+    } elseif (!$itemExists) {
+        // Create empty file if it doesn't exist and no content was provided
+        file_put_contents($itemPath, '');
+    }
+
+    if (!$itemExists) {
+        // For new items, we must have a parent UUID
+        if ($parentUuid === null) {
+            throw new InvalidArgumentException('Parent UUID is required for new items');
+        }
+        
+        // New item - add creation entries
+        file_put_contents($this->indexLogPath, "CR,$itemUuid,$parentUuid\n", FILE_APPEND);
+
+        // Only add name entry if title is provided
+        if ($itemTitle !== null) {
+            file_put_contents($this->namesLogPath, "CR,$itemUuid,$itemTitle\n", FILE_APPEND);
+        }
+    } else {
+        // Existing item - check for parent change only if parentUuid is provided
+        if ($parentUuid !== null) {
+            $lastParent = $this->getLastParent($itemUuid);
+            if ($lastParent !== $parentUuid) {
+                file_put_contents($this->indexLogPath, "MV,$itemUuid,$parentUuid\n", FILE_APPEND);
+            }
+        }
+
+        // Check for name change, but only if a title was provided
+        if ($itemTitle !== null) {
+            $lastName = $this->getLastName($itemUuid);
+            if ($lastName !== $itemTitle) {
+                file_put_contents($this->namesLogPath, "RN,$itemUuid,$itemTitle\n", FILE_APPEND);
+            }
+        }
+    }
+}
+```
+
+This modification:
+1. Changes the `parentUuid` parameter to be nullable
+2. For new items (when `itemExists` is false), requires a parent UUID to be specified
+3. For existing items, only checks and updates the parent if a non-null `parentUuid` is provided
+4. Maintains the original behavior for title and content updates
+
