@@ -1,0 +1,184 @@
+<?php
+
+require_once '../../src/lib/FilesStorage.php';
+
+class FilesStorageTest extends PHPUnit\Framework\TestCase {
+    private $storageBasePath;
+    private $storage;
+
+    protected function setUp(): void {
+        // Create a temporary directory for testing
+        $this->storageBasePath = sys_get_temp_dir() . '/files_storage_test_' . uniqid();
+        mkdir($this->storageBasePath, 0755, true);
+
+        $this->storage = new FilesStorage($this->storageBasePath);
+    }
+
+    protected function tearDown(): void {
+        // Clean up the temporary directory
+        $this->removeDirectory($this->storageBasePath);
+    }
+
+    private function removeDirectory($dir) {
+        if (!is_dir($dir)) {
+            return;
+        }
+
+        $files = array_diff(scandir($dir), ['.', '..']);
+
+        foreach ($files as $file) {
+            $path = $dir . '/' . $file;
+
+            if (is_dir($path)) {
+                $this->removeDirectory($path);
+            } else {
+                unlink($path);
+            }
+        }
+
+        rmdir($dir);
+    }
+
+    public function testUpsertNewFile() {
+        // Create a new file
+        $this->storage->upsertFile('test123.txt', 'Test Document', 'This is a test content');
+
+        // Check if the file exists
+        $this->assertFileExists($this->storageBasePath . '/data/test123.txt');
+
+        // Check if the content is correct
+        $content = file_get_contents($this->storageBasePath . '/data/test123.txt');
+        $this->assertEquals('This is a test content', $content);
+
+        // Check if the log entry is correct
+        $logContent = file_get_contents($this->storageBasePath . '/structure/names.log');
+        $this->assertStringContainsString('CR,test123.txt,Test Document', $logContent);
+    }
+
+    public function testUpsertExistingFileWithTitleChange() {
+        // Create a file
+        $this->storage->upsertFile('test456.md', 'Original Title', 'Original content');
+
+        // Update the title
+        $this->storage->upsertFile('test456.md', 'New Title', 'Updated content');
+
+        // Check if the file was updated
+        $content = file_get_contents($this->storageBasePath . '/data/test456.md');
+        $this->assertEquals('Updated content', $content);
+
+        // Check log entries
+        $logContent = file_get_contents($this->storageBasePath . '/structure/names.log');
+        $this->assertStringContainsString('CR,test456.md,Original Title', $logContent);
+        $this->assertStringContainsString('RN,test456.md,New Title', $logContent);
+    }
+
+    public function testDeleteFile() {
+        // Create a file
+        $this->storage->upsertFile('delete_me.txt', 'Delete Test', 'Content to delete');
+
+        // Check if the file exists
+        $this->assertFileExists($this->storageBasePath . '/data/delete_me.txt');
+
+        // Delete the file
+        $result = $this->storage->deleteFile('delete_me');
+
+        // Check if deletion was successful
+        $this->assertTrue($result);
+
+        // Check if the file is gone
+        $this->assertFileDoesNotExist($this->storageBasePath . '/data/delete_me.txt');
+
+        // Check log entries
+        $logContent = file_get_contents($this->storageBasePath . '/structure/names.log');
+        $this->assertStringContainsString('CR,delete_me.txt,Delete Test', $logContent);
+        $this->assertStringContainsString('DE,delete_me.txt,', $logContent);
+    }
+
+    public function testListFiles() {
+        // Create several files
+        $this->storage->upsertFile('file1.txt', 'File One', 'Content 1');
+        $this->storage->upsertFile('file2.md', 'File Two', 'Content 2');
+        $this->storage->upsertFile('file3.json', 'File Three', 'Content 3');
+
+        // Delete one file
+        $this->storage->deleteFile('file2');
+
+        // Update one file title
+        $this->storage->upsertFile('file1.txt', 'File One Updated', null);
+
+        // List all files
+        $files = $this->storage->listFiles();
+
+        // Check results
+        $this->assertCount(2, $files);
+
+        // Check that file1 is present with updated title
+        $file1 = array_filter($files, function($file) {
+            return $file['id'] === 'file1';
+        });
+        $this->assertCount(1, $file1);
+        $file1 = reset($file1);
+        $this->assertEquals('File One Updated', $file1['title']);
+        $this->assertEquals('txt', $file1['extension']);
+
+        // Check that file3 is present
+        $file3 = array_filter($files, function($file) {
+            return $file['id'] === 'file3';
+        });
+        $this->assertCount(1, $file3);
+        $file3 = reset($file3);
+        $this->assertEquals('File Three', $file3['title']);
+        $this->assertEquals('json', $file3['extension']);
+
+        // Ensure file2 is not present (it was deleted)
+        $file2 = array_filter($files, function($file) {
+            return $file['id'] === 'file2';
+        });
+        $this->assertCount(0, $file2);
+    }
+
+    public function testListFilesByExtension() {
+        // Create several files with different extensions
+        $this->storage->upsertFile('doc1.txt', 'Text Doc', 'Text content');
+        $this->storage->upsertFile('doc2.md', 'Markdown Doc', 'Markdown content');
+        $this->storage->upsertFile('doc3.txt', 'Another Text', 'More text');
+        $this->storage->upsertFile('doc4.json', 'JSON Doc', '{"test": true}');
+
+        // List only txt files
+        $textFiles = $this->storage->listFilesByExtension('txt');
+
+        // Check that only txt files are returned
+        $this->assertCount(2, $textFiles);
+        foreach ($textFiles as $file) {
+            $this->assertEquals('txt', $file['extension']);
+        }
+
+        // List multiple extensions
+        $mixedFiles = $this->storage->listFilesByExtension('md', 'json');
+
+        // Check that only md and json files are returned
+        $this->assertCount(2, $mixedFiles);
+        foreach ($mixedFiles as $file) {
+            $this->assertTrue(in_array($file['extension'], ['md', 'json']));
+        }
+    }
+
+    public function testGetContent() {
+        // Create a file
+        $this->storage->upsertFile('content_test.txt', 'Content Test', 'This is the content to retrieve');
+
+        // Get the content
+        $content = $this->storage->getContent('content_test.txt');
+
+        // Check if content is correct
+        $this->assertEquals('This is the content to retrieve', $content);
+
+        // Test getting content without extension in request
+        $contentAlt = $this->storage->getContent('content_test');
+        $this->assertEquals('This is the content to retrieve', $contentAlt);
+
+        // Test getting content for non-existent file
+        $nonExistentContent = $this->storage->getContent('does_not_exist');
+        $this->assertNull($nonExistentContent);
+    }
+}
