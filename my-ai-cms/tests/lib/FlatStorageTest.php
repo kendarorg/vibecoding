@@ -2,33 +2,35 @@
 
 use PHPUnit\Framework\TestCase;
 
-require_once('src/plib/FlatStorage.php');
+require_once('../../src/lib/FlatStorage.php');
 
 class FlatStorageTest extends TestCase
 {
     private FlatStorage $storage;
-    private string $tempDir;
+    private string $tempDataDir;
     private string $tempStructureDir;
 
     protected function setUp(): void
     {
+        $target = '.././target/lib/filestorage_test';
         // Create a unique test directory
-        $this->tempDir = 'test_storage/flatstorage_test_' . uniqid();
-        $this->tempStructureDir = 'test_storage/structure_' . uniqid();
+        $uniqueId = uniqid();
+        $this->tempDataDir = $target.'/' . $uniqueId.'_data';
+        $this->tempStructureDir = $target.'/' . $uniqueId.'_structure';
 
         // Create the directories
-        if (!file_exists('test_storage')) {
-            mkdir('test_storage', 0755, true);
+        if (!file_exists($target)) {
+            mkdir($target, 0755, true);
         }
 
         // Initialize storage with test directories
-        $this->storage = new FlatStorage($this->tempDir, $this->tempStructureDir);
+        $this->storage = new FlatStorage($this->tempDataDir, $this->tempStructureDir);
     }
 
     protected function tearDown(): void
     {
         // Clean up test directories
-        $this->recursiveRemoveDirectory($this->tempDir);
+        $this->recursiveRemoveDirectory($this->tempDataDir);
         $this->recursiveRemoveDirectory($this->tempStructureDir);
     }
 
@@ -68,11 +70,11 @@ class FlatStorageTest extends TestCase
         $this->storage->upsertItem($uuid, $parentUuid, $title, $content);
 
         // Check data file was created
-        $this->assertFileExists($this->tempDir . '/' . $uuid);
-        $this->assertEquals($content, file_get_contents($this->tempDir . '/' . $uuid));
+        $this->assertFileExists($this->tempDataDir . '/' . $uuid);
+        $this->assertEquals($content, file_get_contents($this->tempDataDir . '/' . $uuid));
 
         // Check temp marker file was created
-        $this->assertFileExists($this->tempDir . '/' . $uuid . '.tmp');
+        $this->assertFileExists($this->tempDataDir . '/' . $uuid . '.tmp');
 
         // Check log entries
         $indexLog = file_get_contents($this->tempStructureDir . '/index.log');
@@ -100,7 +102,7 @@ class FlatStorageTest extends TestCase
         $this->storage->upsertItem($uuid, $newParentUuid, $newTitle, $newContent);
 
         // Check content was updated
-        $this->assertEquals($newContent, file_get_contents($this->tempDir . '/' . $uuid));
+        $this->assertEquals($newContent, file_get_contents($this->tempDataDir . '/' . $uuid));
 
         // Check log entries for updates
         $indexLog = file_get_contents($this->tempStructureDir . '/index.log');
@@ -129,7 +131,7 @@ class FlatStorageTest extends TestCase
         $this->storage->upsertItem($uuid, $parentUuid, $title, $newContent);
 
         // Check content was updated
-        $this->assertEquals($newContent, file_get_contents($this->tempDir . '/' . $uuid));
+        $this->assertEquals($newContent, file_get_contents($this->tempDataDir . '/' . $uuid));
 
         // Check that log files didn't grow (no new entries)
         $indexLogSizeAfter = filesize($this->tempStructureDir . '/index.log');
@@ -187,10 +189,10 @@ class FlatStorageTest extends TestCase
         $this->storage->deleteItem($parentUuid, $rootUuid);
 
         // Check files are removed
-        $this->assertFileDoesNotExist($this->tempDir . '/' . $parentUuid);
-        $this->assertFileDoesNotExist($this->tempDir . '/' . $parentUuid . '.tmp');
-        $this->assertFileDoesNotExist($this->tempDir . '/' . $childUuid);
-        $this->assertFileDoesNotExist($this->tempDir . '/' . $childUuid . '.tmp');
+        $this->assertFileDoesNotExist($this->tempDataDir . '/' . $parentUuid);
+        $this->assertFileDoesNotExist($this->tempDataDir . '/' . $parentUuid . '.tmp');
+        $this->assertFileDoesNotExist($this->tempDataDir . '/' . $childUuid);
+        $this->assertFileDoesNotExist($this->tempDataDir . '/' . $childUuid . '.tmp');
 
         // Check log entries for deletion
         $indexLog = file_get_contents($this->tempStructureDir . '/index.log');
