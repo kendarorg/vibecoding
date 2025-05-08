@@ -2911,3 +2911,9 @@ These tests will validate:
    - Missing ID with content action throws exception
 
 The tests cover all the behavior needed for both methods while maintaining the test structure used in your existing tests.
+
+### FIX 012
+
+A private function made protected
+Wrongly Overriding  the children flag on ui
+
