@@ -1,5 +1,7 @@
 <?php
 
+require_once "Utils.php";
+
 class FilesStorage {
     private $dataDir;
     private $structureDir;
