@@ -5,9 +5,9 @@ class FilesStorage {
     private $structureDir;
     private $namesLogFile;
 
-    public function __construct($basePath = '') {
-        $this->dataDir = rtrim($basePath, '/') . '/data';
-        $this->structureDir = rtrim($basePath, '/') . '/structure';
+    public function __construct(string $dataDir = 'data',string $indexDir = 'structure') {
+        $this->dataDir = $dataDir;
+        $this->structureDir = $indexDir;
         $this->namesLogFile = $this->structureDir . '/names.log';
 
         // Ensure directories exist

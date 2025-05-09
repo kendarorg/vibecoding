@@ -7,11 +7,18 @@ class FilesStorageTest extends PHPUnit\Framework\TestCase {
     private $storage;
 
     protected function setUp(): void {
-        // Create a temporary directory for testing
-        $this->storageBasePath = sys_get_temp_dir() . '/files_storage_test_' . uniqid();
-        mkdir($this->storageBasePath, 0755, true);
+        $target = '../../target/lib/files_storage_test';
+        // Create a unique test directory
+        $uniqueId = uniqid();
+        $this->tempDataDir = $target.'/' . $uniqueId.'_data';
+        $this->tempStructureDir = $target.'/' . $uniqueId.'_structure';
 
-        $this->storage = new FilesStorage($this->storageBasePath);
+        // Create the directories
+        if (!file_exists($target)) {
+            mkdir($target, 0755, true);
+        }
+
+        $this->storage = new FilesStorage($this->tempDataDir,$this->tempStructureDir);
     }
 
     protected function tearDown(): void {
@@ -44,14 +51,14 @@ class FilesStorageTest extends PHPUnit\Framework\TestCase {
         $this->storage->upsertFile('test123.txt', 'Test Document', 'This is a test content');
 
         // Check if the file exists
-        $this->assertFileExists($this->storageBasePath . '/data/test123.txt');
+        $this->assertFileExists($this->tempDataDir.'/test123.txt');
 
         // Check if the content is correct
-        $content = file_get_contents($this->storageBasePath . '/data/test123.txt');
+        $content = file_get_contents($this->tempDataDir.'/test123.txt');
         $this->assertEquals('This is a test content', $content);
 
         // Check if the log entry is correct
-        $logContent = file_get_contents($this->storageBasePath . '/structure/names.log');
+        $logContent = file_get_contents($this->tempStructureDir.'/names.log');
         $this->assertStringContainsString('CR,test123.txt,Test Document', $logContent);
     }
 
@@ -63,11 +70,11 @@ class FilesStorageTest extends PHPUnit\Framework\TestCase {
         $this->storage->upsertFile('test456.md', 'New Title', 'Updated content');
 
         // Check if the file was updated
-        $content = file_get_contents($this->storageBasePath . '/data/test456.md');
+        $content = file_get_contents($this->tempDataDir.'/test456.md');
         $this->assertEquals('Updated content', $content);
 
         // Check log entries
-        $logContent = file_get_contents($this->storageBasePath . '/structure/names.log');
+        $logContent = file_get_contents($this->tempStructureDir.'/names.log');
         $this->assertStringContainsString('CR,test456.md,Original Title', $logContent);
         $this->assertStringContainsString('RN,test456.md,New Title', $logContent);
     }
@@ -77,7 +84,7 @@ class FilesStorageTest extends PHPUnit\Framework\TestCase {
         $this->storage->upsertFile('delete_me.txt', 'Delete Test', 'Content to delete');
 
         // Check if the file exists
-        $this->assertFileExists($this->storageBasePath . '/data/delete_me.txt');
+        $this->assertFileExists($this->tempDataDir.'/delete_me.txt');
 
         // Delete the file
         $result = $this->storage->deleteFile('delete_me');
@@ -86,10 +93,10 @@ class FilesStorageTest extends PHPUnit\Framework\TestCase {
         $this->assertTrue($result);
 
         // Check if the file is gone
-        $this->assertFileDoesNotExist($this->storageBasePath . '/data/delete_me.txt');
+        $this->assertFileDoesNotExist($this->tempDataDir.'/delete_me.txt');
 
         // Check log entries
-        $logContent = file_get_contents($this->storageBasePath . '/structure/names.log');
+        $logContent = file_get_contents($this->tempStructureDir.'/names.log');
         $this->assertStringContainsString('CR,delete_me.txt,Delete Test', $logContent);
         $this->assertStringContainsString('DE,delete_me.txt,', $logContent);
     }
