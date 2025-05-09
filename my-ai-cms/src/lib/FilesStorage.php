@@ -75,6 +75,9 @@ class FilesStorage {
         $filePath = $this->getFilePath($itemId);
         $fileExists = file_exists($filePath);
 
+        // Extract basename for log
+        [$basename, $extension] = $this->parseItemId($itemId);
+
         // If file doesn't exist, create it and log creation
         if (!$fileExists) {
             if ($itemContent !== null) {
@@ -82,12 +85,12 @@ class FilesStorage {
             } else {
                 file_put_contents($filePath, '');
             }
-            $this->appendToLog('CR', $itemId, $itemTitle);
+            $this->appendToLog('CR', $basename, $itemTitle);
         } else {
             // Check if title has changed
-            $currentTitle = $this->getCurrentTitle($itemId);
+            $currentTitle = $this->getCurrentTitle($basename);
             if ($currentTitle !== $itemTitle) {
-                $this->appendToLog('RN', $itemId, $itemTitle);
+                $this->appendToLog('RN', $basename, $itemTitle);
             }
 
             // Update content if provided
@@ -103,7 +106,10 @@ class FilesStorage {
         $filePath = $this->getFilePath($itemId);
 
         if (file_exists($filePath)) {
-            $this->appendToLog('DE', $itemId, '');
+            // Extract basename for log
+            [$basename, $extension] = $this->parseItemId(basename($filePath));
+
+            $this->appendToLog('DE', $basename, '');
             unlink($filePath);
             return true;
         }
@@ -124,25 +130,35 @@ class FilesStorage {
             $parts = explode(',', $line, 3);
             if (count($parts) < 3) continue;
 
-            list($action, $itemId, $itemTitle) = $parts;
-            [$basename, $extension] = $this->parseItemId($itemId);
+            list($action, $basename, $itemTitle) = $parts;
+
+            // Find matching file with extension
+            $matchingFiles = glob($this->dataDir . '/' . $basename . '.*');
+            $extension = '';
+            $itemId = $basename;
+
+            if (!empty($matchingFiles)) {
+                $pathInfo = pathinfo($matchingFiles[0]);
+                $extension = $pathInfo['extension'] ?? '';
+                $itemId = $basename . ($extension ? '.' . $extension : '');
+            }
 
             switch ($action) {
                 case 'CR':
-                    $activeItems[$itemId] = [
-                        'id' => $itemId,
+                    $activeItems[$basename] = [
+                        'id' => $basename,
                         'title' => $itemTitle,
                         'basename' => $basename,
                         'extension' => $extension
                     ];
                     break;
                 case 'RN':
-                    if (isset($activeItems[$itemId])) {
-                        $activeItems[$itemId]['title'] = $itemTitle;
+                    if (isset($activeItems[$basename])) {
+                        $activeItems[$basename]['title'] = $itemTitle;
                     }
                     break;
                 case 'DE':
-                    unset($activeItems[$itemId]);
+                    unset($activeItems[$basename]);
                     break;
             }
         }
@@ -173,12 +189,12 @@ class FilesStorage {
     }
 
     // Helper methods
-    private function appendToLog($action, $itemId, $itemTitle) {
-        $logLine = $action . ',' . $itemId . ',' . $itemTitle . PHP_EOL;
+    private function appendToLog($action, $basename, $itemTitle) {
+        $logLine = $action . ',' . $basename . ',' . $itemTitle . PHP_EOL;
         file_put_contents($this->namesLogFile, $logLine, FILE_APPEND);
     }
 
-    private function getCurrentTitle($itemId) {
+    private function getCurrentTitle($basename) {
         if (!file_exists($this->namesLogFile)) {
             return null;
         }
@@ -192,7 +208,7 @@ class FilesStorage {
 
             list($action, $id, $itemTitle) = $parts;
 
-            if ($id === $itemId) {
+            if ($id === $basename) {
                 if ($action === 'CR' || $action === 'RN') {
                     $title = $itemTitle;
                 } else if ($action === 'DE') {

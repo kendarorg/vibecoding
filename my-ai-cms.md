@@ -3841,4 +3841,306 @@ private function getFilePath(string $itemId): string {
     return $directPath;
 }
 
+### REQ 017
+
+* all the appendToLog in FilesStorage should use always the filename without extension do the required modifications
+* Update the FilesStorageTest accordingly
+
+### RES 017
+
+I'll modify the FilesStorage class to ensure all appendToLog calls use the filename without extension, and update the tests accordingly.
+
+Here's the implementation for FilesStorage:
+
+```php
+<?php
+
+class FilesStorage {
+    private $dataDir;
+    private $structureDir;
+    private $namesLogFile;
+
+    public function __construct(string $dataDir = 'data',string $indexDir = 'structure') {
+        $this->dataDir = $dataDir;
+        $this->structureDir = $indexDir;
+        $this->namesLogFile = $this->structureDir . '/names.log';
+
+        // Ensure directories exist
+        if (!is_dir($this->dataDir)) {
+            mkdir($this->dataDir, 0755, true);
+        }
+
+        if (!is_dir($this->structureDir)) {
+            mkdir($this->structureDir, 0755, true);
+        }
+
+        // Ensure names log file exists
+        if (!file_exists($this->namesLogFile)) {
+            file_put_contents($this->namesLogFile, '');
+        }
+    }
+
+    /**
+     * Parse an itemId to extract its basename and extension
+     *
+     * @param string $itemId The item ID which may include an extension
+     * @return array [$basename, $extension]
+     */
+    private function parseItemId(string $itemId): array {
+        // Extract extension if present in itemId
+        $extension = '';
+        $basename = $itemId;
+
+        if (strpos($itemId, '.') !== false) {
+            $parts = explode('.', $itemId);
+            $extension = array_pop($parts);
+            $basename = implode('.', $parts);
+        }
+
+        return [$basename, $extension];
+    }
+
+    /**
+     * Get the full file path based on the itemId
+     *
+     * @param string $itemId The item ID which may or may not include an extension
+     * @return string The full file path
+     */
+    private function getFilePath(string $itemId): string {
+        // If the file exists directly with the given ID, return its path
+        $directPath = $this->dataDir . '/' . $itemId;
+        if (file_exists($directPath)) {
+            return $directPath;
+        }
+
+        // If itemId doesn't have an extension, try to find a matching file with extension
+        if (strpos($itemId, '.') === false) {
+            $files = glob($this->dataDir . '/' . $itemId . '.*');
+            if (!empty($files)) {
+                // Return the first matching file
+                return $files[0];
+            }
+        }
+
+        // Default: return path as is (for new files or when no match is found)
+        return $directPath;
+    }
+
+    public function upsertFile($itemId, $itemTitle, $itemContent = null) {
+        $filePath = $this->getFilePath($itemId);
+        $fileExists = file_exists($filePath);
+        
+        // Extract basename for log
+        [$basename, $extension] = $this->parseItemId($itemId);
+
+        // If file doesn't exist, create it and log creation
+        if (!$fileExists) {
+            if ($itemContent !== null) {
+                file_put_contents($filePath, $itemContent);
+            } else {
+                file_put_contents($filePath, '');
+            }
+            $this->appendToLog('CR', $basename, $itemTitle);
+        } else {
+            // Check if title has changed
+            $currentTitle = $this->getCurrentTitle($basename);
+            if ($currentTitle !== $itemTitle) {
+                $this->appendToLog('RN', $basename, $itemTitle);
+            }
+
+            // Update content if provided
+            if ($itemContent !== null) {
+                file_put_contents($filePath, $itemContent);
+            }
+        }
+
+        return true;
+    }
+
+    public function deleteFile($itemId) {
+        $filePath = $this->getFilePath($itemId);
+
+        if (file_exists($filePath)) {
+            // Extract basename for log
+            [$basename, $extension] = $this->parseItemId(basename($filePath));
+            
+            $this->appendToLog('DE', $basename, '');
+            unlink($filePath);
+            return true;
+        }
+
+        return false;
+    }
+
+    public function listFiles() {
+        if (!file_exists($this->namesLogFile)) {
+            return [];
+        }
+
+        $lines = file($this->namesLogFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
+        $activeItems = [];
+
+        foreach ($lines as $line) {
+            $parts = explode(',', $line, 3);
+            if (count($parts) < 3) continue;
+
+            list($action, $basename, $itemTitle) = $parts;
+            
+            // Find matching file with extension
+            $matchingFiles = glob($this->dataDir . '/' . $basename . '.*');
+            $extension = '';
+            $itemId = $basename;
+            
+            if (!empty($matchingFiles)) {
+                $pathInfo = pathinfo($matchingFiles[0]);
+                $extension = $pathInfo['extension'] ?? '';
+                $itemId = $basename . ($extension ? '.' . $extension : '');
+            }
+
+            switch ($action) {
+                case 'CR':
+                    $activeItems[$basename] = [
+                        'id' => $basename,
+                        'title' => $itemTitle,
+                        'basename' => $basename,
+                        'extension' => $extension
+                    ];
+                    break;
+                case 'RN':
+                    if (isset($activeItems[$basename])) {
+                        $activeItems[$basename]['title'] = $itemTitle;
+                    }
+                    break;
+                case 'DE':
+                    unset($activeItems[$basename]);
+                    break;
+            }
+        }
+
+        return array_values($activeItems);
+    }
+
+    public function listFilesByExtension(...$extensions) {
+        $files = $this->listFiles();
+
+        if (empty($extensions)) {
+            return $files;
+        }
+
+        return array_filter($files, function($file) use ($extensions) {
+            return in_array($file['extension'], $extensions);
+        });
+    }
+
+    public function getContent($itemId) {
+        $filePath = $this->getFilePath($itemId);
+
+        if (file_exists($filePath)) {
+            return file_get_contents($filePath);
+        }
+
+        return null;
+    }
+
+    // Helper methods
+    private function appendToLog($action, $basename, $itemTitle) {
+        $logLine = $action . ',' . $basename . ',' . $itemTitle . PHP_EOL;
+        file_put_contents($this->namesLogFile, $logLine, FILE_APPEND);
+    }
+
+    private function getCurrentTitle($basename) {
+        if (!file_exists($this->namesLogFile)) {
+            return null;
+        }
+
+        $lines = file($this->namesLogFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $title = null;
+
+        foreach ($lines as $line) {
+            $parts = explode(',', $line, 3);
+            if (count($parts) < 3) continue;
+
+            list($action, $id, $itemTitle) = $parts;
+
+            if ($id === $basename) {
+                if ($action === 'CR' || $action === 'RN') {
+                    $title = $itemTitle;
+                } else if ($action === 'DE') {
+                    $title = null;
+                }
+            }
+        }
+
+        return $title;
+    }
+}
+```
+
+Now, here are the updates needed for FilesStorageTest:
+
+```php
+public function testUpsertNewFile() {
+    // Create a new file
+    $this->storage->upsertFile('test123.txt', 'Test Document', 'This is a test content');
+
+    // Check if the file exists
+    $this->assertFileExists($this->tempDataDir.'/test123.txt');
+
+    // Check if the content is correct
+    $content = file_get_contents($this->tempDataDir.'/test123.txt');
+    $this->assertEquals('This is a test content', $content);
+
+    // Check if the log entry is correct - now using basename only
+    $logContent = file_get_contents($this->tempStructureDir.'/names.log');
+    $this->assertStringContainsString('CR,test123,Test Document', $logContent);
+}
+
+public function testUpsertExistingFileWithTitleChange() {
+    // Create a file
+    $this->storage->upsertFile('test456.md', 'Original Title', 'Original content');
+
+    // Update the title
+    $this->storage->upsertFile('test456.md', 'New Title', 'Updated content');
+
+    // Check if the file was updated
+    $content = file_get_contents($this->tempDataDir.'/test456.md');
+    $this->assertEquals('Updated content', $content);
+
+    // Check log entries - now using basename only
+    $logContent = file_get_contents($this->tempStructureDir.'/names.log');
+    $this->assertStringContainsString('CR,test456,Original Title', $logContent);
+    $this->assertStringContainsString('RN,test456,New Title', $logContent);
+}
+
+public function testDeleteFile() {
+    // Create a file
+    $this->storage->upsertFile('delete_me.txt', 'Delete Test', 'Content to delete');
+
+    // Check if the file exists
+    $this->assertFileExists($this->tempDataDir.'/delete_me.txt');
+
+    // Delete the file
+    $result = $this->storage->deleteFile('delete_me');
+
+    // Check if deletion was successful
+    $this->assertTrue($result);
+
+    // Check if the file is gone
+    $this->assertFileDoesNotExist($this->tempDataDir.'/delete_me.txt');
+
+    // Check log entries - now using basename only
+    $logContent = file_get_contents($this->tempStructureDir.'/names.log');
+    $this->assertStringContainsString('CR,delete_me,Delete Test', $logContent);
+    $this->assertStringContainsString('DE,delete_me,', $logContent);
+}
+```
+
+Key changes made:
+1. Modified `appendToLog` to only accept and store basenames without extensions
+2. Updated all methods that call `appendToLog` to extract the basename first
+3. Adjusted `listFiles()` to match files based on the basenames stored in the log
+4. Updated the tests to check for the basename-only format in log entries
+5. Maintained compatibility with the existing interface for itemIds with or without extensions
+
 

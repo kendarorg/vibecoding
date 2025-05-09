@@ -65,9 +65,9 @@ class FilesStorageTest extends PHPUnit\Framework\TestCase {
         $content = file_get_contents($this->tempDataDir.'/test123.txt');
         $this->assertEquals('This is a test content', $content);
 
-        // Check if the log entry is correct
+        // Check if the log entry is correct - now using basename only
         $logContent = file_get_contents($this->tempStructureDir.'/names.log');
-        $this->assertStringContainsString('CR,test123.txt,Test Document', $logContent);
+        $this->assertStringContainsString('CR,test123,Test Document', $logContent);
     }
 
     public function testUpsertExistingFileWithTitleChange() {
@@ -81,10 +81,10 @@ class FilesStorageTest extends PHPUnit\Framework\TestCase {
         $content = file_get_contents($this->tempDataDir.'/test456.md');
         $this->assertEquals('Updated content', $content);
 
-        // Check log entries
+        // Check log entries - now using basename only
         $logContent = file_get_contents($this->tempStructureDir.'/names.log');
-        $this->assertStringContainsString('CR,test456.md,Original Title', $logContent);
-        $this->assertStringContainsString('RN,test456.md,New Title', $logContent);
+        $this->assertStringContainsString('CR,test456,Original Title', $logContent);
+        $this->assertStringContainsString('RN,test456,New Title', $logContent);
     }
 
     public function testDeleteFile() {
@@ -103,10 +103,10 @@ class FilesStorageTest extends PHPUnit\Framework\TestCase {
         // Check if the file is gone
         $this->assertFileDoesNotExist($this->tempDataDir.'/delete_me.txt');
 
-        // Check log entries
+        // Check log entries - now using basename only
         $logContent = file_get_contents($this->tempStructureDir.'/names.log');
-        $this->assertStringContainsString('CR,delete_me.txt,Delete Test', $logContent);
-        $this->assertStringContainsString('DE,delete_me.txt,', $logContent);
+        $this->assertStringContainsString('CR,delete_me,Delete Test', $logContent);
+        $this->assertStringContainsString('DE,delete_me,', $logContent);
     }
 
     public function testListFiles() {
