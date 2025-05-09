@@ -25,21 +25,12 @@
         </div>
     </div>
 
-    <div class="file-content">
+    <div class="file-actions">
         <div class="file-controls">
             <h2 id="currentFileName">No file selected</h2>
             <div>
-                <button id="saveBtn">Save</button>
                 <button id="deleteBtn" class="delete">Delete</button>
             </div>
-        </div>
-
-        <div class="title-area">
-            <input type="text" id="titleInput" class="title-input" placeholder="File title" disabled>
-        </div>
-
-        <div class="editor">
-            <textarea id="contentEditor" placeholder="File content will appear here" disabled></textarea>
         </div>
     </div>
 </div>
