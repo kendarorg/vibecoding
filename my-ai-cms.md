@@ -6167,3 +6167,8 @@ This ensures that:
 1. The context menu is hidden by default when the page loads
 2. The context menu appears only when right-clicking on a file
 3. The default browser context menu is prevented from showing
+
+### FIX 027
+
+* Fix the title not shown
+* Fix part of context menu
