@@ -3806,3 +3806,39 @@ Key changes:
 5. Simplified the file operations by using the helper methods
 
 This implementation now treats the itemId as the complete identifier (with or without extension) throughout all operations.
+
+### REQ 016
+
+The getFilePath
+* Given the filename with extension can work as now
+* Given the filename without extension should check if the file exists and add the extension when returning the path
+
+### RES 016
+
+/**
+ * Get the full file path based on the itemId
+ * 
+ * @param string $itemId The item ID which may or may not include an extension
+ * @return string The full file path
+ */
+private function getFilePath(string $itemId): string {
+    // If the file exists directly with the given ID, return its path
+    $directPath = $this->dataDir . '/' . $itemId;
+    if (file_exists($directPath)) {
+        return $directPath;
+    }
+    
+    // If itemId doesn't have an extension, try to find a matching file with extension
+    if (strpos($itemId, '.') === false) {
+        $files = glob($this->dataDir . '/' . $itemId . '.*');
+        if (!empty($files)) {
+            // Return the first matching file
+            return $files[0];
+        }
+    }
+    
+    // Default: return path as is (for new files or when no match is found)
+    return $directPath;
+}
+
+
