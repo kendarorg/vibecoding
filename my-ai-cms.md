@@ -832,3 +832,96 @@ These changes ensure the FlatStorage class follows the new requirements while ma
 ### FIX 003
 
 updated test
+
+
+### REQ 004
+
+Add the following tests on FlatStorageTest, just show me the new tests:
+
+* Upsert with null title 
+	* Verify the title was not changed
+	* Verify content was changed
+* Upsert with null content
+	* Verify the content was not changed
+	* Verify title was changed
+
+### RES 004
+
+Here are the new tests to verify the optional parameters in the `upsertItem` method:
+
+```php
+public function testUpsertWithNullTitle(): void
+{
+    // Create initial item
+    $uuid = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+    $parentUuid = '00000000-0000-0000-0000-000000000000';
+    $initialTitle = 'Initial Title';
+    $initialContent = 'Initial Content';
+
+    $this->storage->upsertItem($uuid, $parentUuid, $initialTitle, $initialContent);
+
+    // Update with null title, new content
+    $newContent = 'Updated Content';
+    $this->storage->upsertItem($uuid, $parentUuid, null, $newContent);
+
+    // Verify content was changed
+    $this->assertEquals($newContent, file_get_contents($this->tempDataDir . '/' . $uuid));
+
+    // Verify title was not changed
+    $children = $this->storage->listChildren($parentUuid);
+    $matchingItem = null;
+    foreach ($children as $item) {
+        if ($item['id'] === $uuid) {
+            $matchingItem = $item;
+            break;
+        }
+    }
+
+    $this->assertNotNull($matchingItem, 'Item should exist in parent\'s children');
+    $this->assertEquals($initialTitle, $matchingItem['title'], 'Title should not have changed');
+
+    // Check log files
+    $namesLog = file_get_contents($this->tempStructureDir . '/names.log');
+    $this->assertStringNotContainsString("RN,$uuid", $namesLog, 'Names log should not contain a rename entry');
+}
+
+public function testUpsertWithNullContent(): void
+{
+    // Create initial item
+    $uuid = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
+    $parentUuid = '00000000-0000-0000-0000-000000000000';
+    $initialTitle = 'Initial Title';
+    $initialContent = 'Initial Content';
+
+    $this->storage->upsertItem($uuid, $parentUuid, $initialTitle, $initialContent);
+
+    // Update with new title, null content
+    $newTitle = 'Updated Title';
+    $this->storage->upsertItem($uuid, $parentUuid, $newTitle, null);
+
+    // Verify content was not changed
+    $this->assertEquals($initialContent, file_get_contents($this->tempDataDir . '/' . $uuid));
+
+    // Verify title was changed
+    $children = $this->storage->listChildren($parentUuid);
+    $matchingItem = null;
+    foreach ($children as $item) {
+        if ($item['id'] === $uuid) {
+            $matchingItem = $item;
+            break;
+        }
+    }
+
+    $this->assertNotNull($matchingItem, 'Item should exist in parent\'s children');
+    $this->assertEquals($newTitle, $matchingItem['title'], 'Title should have changed');
+
+    // Check log files
+    $namesLog = file_get_contents($this->tempStructureDir . '/names.log');
+    $this->assertStringContainsString("RN,$uuid,$newTitle", $namesLog, 'Names log should contain a rename entry');
+}
+```
+
+These tests verify that:
+1. When title is null, only the content gets updated
+2. When content is null, only the title gets updated
+3. Log entries are only created for fields that are actually changed
