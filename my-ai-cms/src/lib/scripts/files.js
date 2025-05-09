@@ -1,13 +1,14 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Elements
     const filesContainer = document.getElementById('files-container');
-    const deleteBtn = document.getElementById('deleteBtn');
-    const currentFileName = document.getElementById('currentFileName');
-    const newFileTitle = document.getElementById('newFileTitle');
-    const newFileExtension = document.getElementById('newFileExtension');
-    const createFileBtn = document.getElementById('createFileBtn');
+    const fileUpload = document.getElementById('fileUpload');
+    const uploadFileTitle = document.getElementById('uploadFileTitle');
+    const uploadFileBtn = document.getElementById('uploadFileBtn');
     const extensionFilter = document.getElementById('extensionFilter');
     const applyFilter = document.getElementById('applyFilter');
+    const contextMenu = document.getElementById('contextMenu');
+    const contextRename = document.getElementById('contextRename');
+    const contextDelete = document.getElementById('contextDelete');
 
     // State
     let currentFileId = null;
@@ -16,13 +17,24 @@ document.addEventListener('DOMContentLoaded', function() {
     loadFiles();
 
     // Event listeners
-    deleteBtn.addEventListener('click', deleteCurrentFile);
-    createFileBtn.addEventListener('click', createNewFile);
+    uploadFileBtn.addEventListener('click', uploadFile);
     applyFilter.addEventListener('click', applyExtensionFilter);
+    contextRename.addEventListener('click', renameCurrentFile);
+    contextDelete.addEventListener('click', deleteCurrentFile);
+
+    // Close context menu when clicking elsewhere
+    document.addEventListener('click', function() {
+        contextMenu.style.display = 'none';
+    });
+
+    // Prevent context menu from closing when clicked
+    contextMenu.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
 
     // Functions
     function loadFiles(extensions = null) {
-        filesContainer.innerHTML = '<div class="loading">Loading files...</div>';
+        filesContainer.innerHTML = '<tr><td colspan="2" class="loading">Loading files...</td></tr>';
 
         let url = 'api/files.php?action=list';
         if (extensions) {
@@ -35,35 +47,51 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     renderFileList(data.files);
                 } else {
-                    filesContainer.innerHTML = '<div class="error">Error loading files: ' + data.message + '</div>';
+                    filesContainer.innerHTML = '<tr><td colspan="2" class="error">Error loading files: ' + data.message + '</td></tr>';
                 }
             })
             .catch(error => {
                 console.error('Error fetching files:', error);
-                filesContainer.innerHTML = '<div class="error">Error loading files</div>';
+                filesContainer.innerHTML = '<tr><td colspan="2" class="error">Error loading files</td></tr>';
             });
     }
 
     function renderFileList(files) {
         if (!files || files.length === 0) {
-            filesContainer.innerHTML = '<div class="empty">No files found</div>';
+            filesContainer.innerHTML = '<tr><td colspan="2" class="empty">No files found</td></tr>';
             return;
         }
 
         filesContainer.innerHTML = '';
         files.forEach(file => {
-            const fileItem = document.createElement('div');
-            fileItem.className = 'file-item';
-            fileItem.dataset.fileId = file;
+            const row = document.createElement('tr');
+            row.className = 'file-item';
+            row.dataset.fileId = file;
 
             // Add file type icon based on extension
-            const extension = file.split('.').pop();
+            const extension = file.split('.').pop().toLowerCase();
             const icon = getIconForExtension(extension);
 
-            fileItem.innerHTML = `<span class="file-type-icon">${icon}</span> ${file}`;
+            // Create title cell
+            const titleCell = document.createElement('td');
+            titleCell.className = 'file-title';
+            titleCell.innerHTML = `<span class="file-type-icon">${icon}</span> ${file}`;
+            titleCell.addEventListener('contextmenu', (e) => showContextMenu(e, file));
 
-            fileItem.addEventListener('click', () => selectFile(file));
-            filesContainer.appendChild(fileItem);
+            // Create preview cell
+            const previewCell = document.createElement('td');
+            previewCell.className = 'file-preview';
+
+            // If it's an image, show preview
+            if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension)) {
+                previewCell.innerHTML = `<img src="api/files.php?action=get&id=${file}" width="100" alt="${file}">`;
+            } else {
+                previewCell.textContent = 'No preview';
+            }
+
+            row.appendChild(titleCell);
+            row.appendChild(previewCell);
+            filesContainer.appendChild(row);
         });
     }
 
@@ -76,23 +104,26 @@ document.addEventListener('DOMContentLoaded', function() {
             case 'css': return '🎨';
             case 'js': return '⚙️';
             case 'php': return '🐘';
+            case 'jpg':
+            case 'jpeg':
+            case 'png':
+            case 'gif':
+            case 'webp':
+            case 'svg': return '🖼️';
             default: return '📄';
         }
     }
 
-    function selectFile(fileId) {
-        // Update UI
-        const fileItems = document.querySelectorAll('.file-item');
-        fileItems.forEach(item => item.classList.remove('active'));
+    function showContextMenu(e, fileId) {
+        e.preventDefault();
 
-        const selectedItem = document.querySelector(`.file-item[data-file-id="${fileId}"]`);
-        if (selectedItem) {
-            selectedItem.classList.add('active');
-        }
-
-        // Update state
+        // Update current file
         currentFileId = fileId;
-        currentFileName.textContent = fileId;
+
+        // Position the context menu
+        contextMenu.style.left = e.pageX + 'px';
+        contextMenu.style.top = e.pageY + 'px';
+        contextMenu.style.display = 'block';
     }
 
     function deleteCurrentFile() {
@@ -107,9 +138,11 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Reset UI
+                    // Reset state
                     currentFileId = null;
-                    currentFileName.textContent = 'No file selected';
+
+                    // Hide context menu
+                    contextMenu.style.display = 'none';
 
                     // Reload file list
                     loadFiles(extensionFilter.value || null);
@@ -125,58 +158,97 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
-    function createNewFile() {
-        const title = newFileTitle.value.trim();
-        const extension = newFileExtension.value.trim();
+    function renameCurrentFile() {
+        if (!currentFileId) return;
+
+        const newTitle = prompt('Enter new title for the file:', currentFileId);
+        if (!newTitle || newTitle === currentFileId) return;
+
+        fetch('api/files.php?action=rename', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: currentFileId,
+                newTitle: newTitle
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reset state
+                    currentFileId = null;
+
+                    // Hide context menu
+                    contextMenu.style.display = 'none';
+
+                    // Reload file list
+                    loadFiles(extensionFilter.value || null);
+
+                    alert('File renamed successfully');
+                } else {
+                    alert('Error renaming file: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error renaming file:', error);
+                alert('Network error when renaming file');
+            });
+    }
+
+    function uploadFile() {
+        const title = uploadFileTitle.value.trim();
+        const file = fileUpload.files[0];
 
         if (!title) {
             alert('Please enter a file title');
             return;
         }
 
-        if (!extension) {
-            alert('Please enter a file extension');
+        if (!file) {
+            alert('Please select a file to upload');
             return;
         }
 
-        // Create empty content
-        const encodedContent = btoa('');
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            // Get base64 content (removing the data:mime/type;base64, prefix)
+            const base64Content = event.target.result.split(',')[1];
 
-        fetch('api/files.php?action=create', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                title: title,
-                extension: extension,
-                content: encodedContent
+            fetch('api/files.php?action=upload', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    title: title,
+                    content: base64Content,
+                    originalFilename: file.name
+                })
             })
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Reset form
-                    newFileTitle.value = '';
-                    newFileExtension.value = '';
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Reset form
+                        uploadFileTitle.value = '';
+                        fileUpload.value = '';
 
-                    // Reload file list and select the new file
-                    loadFiles(extensionFilter.value || null);
+                        // Reload file list
+                        loadFiles(extensionFilter.value || null);
 
-                    // Select the newly created file after a slight delay
-                    setTimeout(() => {
-                        selectFile(data.id);
-                    }, 500);
+                        alert('File uploaded successfully');
+                    } else {
+                        alert('Error uploading file: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error uploading file:', error);
+                    alert('Network error when uploading file');
+                });
+        };
 
-                    alert('File created successfully');
-                } else {
-                    alert('Error creating file: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error creating file:', error);
-                alert('Network error when creating file');
-            });
+        reader.readAsDataURL(file);
     }
 
     function applyExtensionFilter() {

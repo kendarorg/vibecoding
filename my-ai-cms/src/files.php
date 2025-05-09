@@ -6,33 +6,40 @@
             <button id="applyFilter">Filter</button>
         </div>
 
-        <div id="files-container">
+        <div class="file-upload-form">
+            <h3>Upload File</h3>
+            <div class="form-row">
+                <label for="uploadFileTitle">File Title</label>
+                <input type="text" id="uploadFileTitle" placeholder="Enter file title">
+            </div>
+            <div class="form-row">
+                <input type="file" id="fileUpload">
+            </div>
+            <button id="uploadFileBtn">Upload File</button>
+        </div>
+
+        <table id="files-table" class="files-table">
+            <thead>
+            <tr>
+                <th>Title</th>
+                <th>Preview</th>
+            </tr>
+            </thead>
+            <tbody id="files-container">
             <!-- Files will be populated here -->
-            <div class="loading">Loading files...</div>
-        </div>
-
-        <div class="create-file-form">
-            <h3>Create New File</h3>
-            <div class="form-row">
-                <label for="newFileTitle">File Title</label>
-                <input type="text" id="newFileTitle" placeholder="Enter file title">
-            </div>
-            <div class="form-row">
-                <label for="newFileExtension">File Extension</label>
-                <input type="text" id="newFileExtension" placeholder="E.g., txt, md, json">
-            </div>
-            <button id="createFileBtn">Create File</button>
-        </div>
+            <tr>
+                <td colspan="2" class="loading">Loading files...</td>
+            </tr>
+            </tbody>
+        </table>
     </div>
+</div>
 
-    <div class="file-actions">
-        <div class="file-controls">
-            <h2 id="currentFileName">No file selected</h2>
-            <div>
-                <button id="deleteBtn" class="delete">Delete</button>
-            </div>
-        </div>
-    </div>
+<div id="contextMenu" class="context-menu">
+    <ul>
+        <li id="contextRename">Rename</li>
+        <li id="contextDelete">Delete</li>
+    </ul>
 </div>
 
 <script src="lib/scripts/files.js"></script>
