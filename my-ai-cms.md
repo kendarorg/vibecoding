@@ -6172,3 +6172,118 @@ This ensures that:
 
 * Fix the title not shown
 * Fix part of context menu
+
+### REQ 028
+
+On FilesStorageAPI add the GET method get action to download the file
+
+### RES 028
+
+Looking at your code, I'll add a new GET action called 'get' to the FilesStorageApi to download files. This will pair with your image display functionality in the frontend.
+
+Here's how to implement it in your `handleGetRequest` method:
+
+```php
+public function handleGetRequest(?string $action): array {
+    switch ($action) {
+        case 'list':
+            $extension = $_GET['extension'] ?? null;
+
+            if ($extension) {
+                // If extensions are provided as comma-separated values
+                $extensions = explode(',', $extension);
+                $files = $this->storage->listFilesByExtension(...$extensions);
+            } else {
+                $files = $this->storage->listFiles();
+            }
+
+            return [
+                'success' => true,
+                'files' => $files
+            ];
+
+        case 'content':
+            $id = $_GET['id'] ?? null;
+            if (!$id) {
+                throw new InvalidArgumentException('Missing file ID');
+            }
+            $content = $this->storage->getContent($id);
+
+            if ($content === null) {
+                return [
+                    'success' => false,
+                    'message' => 'File not found'
+                ];
+            }
+
+            return [
+                'success' => true,
+                'content' => $content
+            ];
+            
+        case 'get':
+            $id = $_GET['id'] ?? null;
+            if (!$id) {
+                throw new InvalidArgumentException('Missing file ID');
+            }
+            
+            $content = $this->storage->getContent($id);
+            
+            if ($content === null) {
+                header('HTTP/1.0 404 Not Found');
+                exit('File not found');
+            }
+            
+            // Determine MIME type based on file extension
+            $extension = strtolower(pathinfo($id, PATHINFO_EXTENSION));
+            $mimeTypes = [
+                'jpg' => 'image/jpeg',
+                'jpeg' => 'image/jpeg',
+                'png' => 'image/png',
+                'gif' => 'image/gif',
+                'webp' => 'image/webp',
+                'svg' => 'image/svg+xml',
+                'pdf' => 'application/pdf',
+                'txt' => 'text/plain',
+                'html' => 'text/html',
+                'css' => 'text/css',
+                'js' => 'application/javascript',
+                'json' => 'application/json',
+                'xml' => 'application/xml',
+            ];
+            
+            $contentType = $mimeTypes[$extension] ?? 'application/octet-stream';
+            
+            // Output file directly instead of returning JSON
+            header('Content-Type: ' . $contentType);
+            header('Content-Length: ' . strlen($content));
+            header('Content-Disposition: inline; filename="' . basename($id) . '"');
+            echo $content;
+            exit;
+
+        default:
+            throw new InvalidArgumentException('Invalid action specified');
+    }
+}
+```
+
+This implementation:
+
+1. Creates a new 'get' action case
+2. Gets the file ID from the request
+3. Fetches the content using your existing `getContent` method
+4. Determines the appropriate MIME type based on the file extension
+5. Sets the correct HTTP headers for the file type
+6. Outputs the content directly instead of returning JSON
+7. Exits to prevent any additional output
+
+This approach will allow users to:
+- View images in the browser
+- Download other file types
+- Access files directly via URL
+
+No changes are needed to your frontend code since your image tags already use the correct URL format (`api/files.php?action=get&id=${fileName}`).
+
+### FIX 029
+
+Change "upload" action to "Create" on files.php
