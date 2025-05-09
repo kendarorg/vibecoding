@@ -4400,3 +4400,531 @@ These changes implement all the requirements you specified:
 ### FIX 018
 
 Porting by hand...
+
+
+### REQ 019
+
+* Prepare the unit tests for the FilesStorageApi (using a fake FilesStorage)
+* Wrap the file_get_contents('php://input') inside a function "getRequestBody" in FilesStorageApi
+* In FilesStorageApiTest instead of using directly the FilesStorageApi use a derived class where the getRequestBody is overridden and return the fake data
+
+### RES 019
+
+I'll help you prepare unit tests for `FilesStorageApi`, modify the class to make it more testable, and create a derived test class.
+
+First, let's create a test class for `FilesStorageApi` that follows the pattern from `FlatStorageApiTest`.
+
+Here's the implementation:
+
+```php
+<?php
+
+require_once __DIR__ . '/../../src/lib/FilesStorageApi.php';
+
+class FakeFilesStorage extends FilesStorage {
+    private array $files = [];
+    private array $fileContents = [];
+
+    public function __construct() {
+        // Skip parent constructor
+    }
+
+    public function upsertFile(string $fileId, ?string $title, ?string $content): void {
+        $this->files[$fileId] = $title;
+        if ($content !== null) {
+            $this->fileContents[$fileId] = $content;
+        }
+    }
+
+    public function listFiles(): array {
+        return array_keys($this->files);
+    }
+
+    public function listFilesByExtension(string ...$extensions): array {
+        $result = [];
+        foreach (array_keys($this->files) as $fileId) {
+            $ext = pathinfo($fileId, PATHINFO_EXTENSION);
+            if (in_array($ext, $extensions)) {
+                $result[] = $fileId;
+            }
+        }
+        return $result;
+    }
+
+    public function getContent(string $fileId): ?string {
+        return $this->fileContents[$fileId] ?? null;
+    }
+
+    public function getFileTitle(string $fileId): ?string {
+        return $this->files[$fileId] ?? null;
+    }
+
+    public function deleteFile(string $fileId): bool {
+        if (!isset($this->files[$fileId])) {
+            return false;
+        }
+        
+        unset($this->files[$fileId]);
+        unset($this->fileContents[$fileId]);
+        return true;
+    }
+
+    public function hasFile(string $fileId): bool {
+        return isset($this->files[$fileId]);
+    }
+}
+
+class TestableFilesStorageApi extends FilesStorageApi {
+    private ?string $mockRequestBody = null;
+
+    public function setMockRequestBody(array $data): void {
+        $this->mockRequestBody = json_encode($data);
+    }
+
+    protected function getRequestBody(): string {
+        if ($this->mockRequestBody !== null) {
+            return $this->mockRequestBody;
+        }
+        return parent::getRequestBody();
+    }
+}
+
+class FilesStorageApiTest extends PHPUnit\Framework\TestCase {
+    private FakeFilesStorage $fakeStorage;
+    private TestableFilesStorageApi $api;
+
+    protected function setUp(): void {
+        $this->fakeStorage = new FakeFilesStorage();
+        $this->api = new TestableFilesStorageApi($this->fakeStorage);
+
+        // Create some initial test files
+        $this->fakeStorage->upsertFile('test-file-1.txt', 'Test File 1', 'Test Content 1');
+        $this->fakeStorage->upsertFile('test-file-2.md', 'Test File 2', 'Test Content 2');
+        $this->fakeStorage->upsertFile('test-file-3.json', 'Test File 3', '{"test": "data"}');
+        
+        // Reset global variables
+        $_GET = [];
+        $_SERVER = [];
+    }
+
+    protected function tearDown(): void {
+        // Clean up global variables
+        $_GET = [];
+        $_SERVER = [];
+    }
+    
+    public function testListAllFiles(): void {
+        // Mock $_GET and $_SERVER
+        $_GET = ['action' => 'list'];
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+
+        $response = $this->api->processRequest();
+
+        $this->assertTrue($response['success']);
+        $this->assertCount(3, $response['files']);
+        $this->assertContains('test-file-1.txt', $response['files']);
+        $this->assertContains('test-file-2.md', $response['files']);
+        $this->assertContains('test-file-3.json', $response['files']);
+    }
+
+    public function testListFilesByExtension(): void {
+        // Mock $_GET and $_SERVER
+        $_GET = [
+            'action' => 'list',
+            'extension' => 'txt,json'
+        ];
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+
+        $response = $this->api->processRequest();
+
+        $this->assertTrue($response['success']);
+        $this->assertCount(2, $response['files']);
+        $this->assertContains('test-file-1.txt', $response['files']);
+        $this->assertContains('test-file-3.json', $response['files']);
+        $this->assertNotContains('test-file-2.md', $response['files']);
+    }
+
+    public function testGetFileContent(): void {
+        // Mock $_GET and $_SERVER
+        $_GET = [
+            'action' => 'content',
+            'id' => 'test-file-1.txt'
+        ];
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+
+        $response = $this->api->processRequest();
+
+        $this->assertTrue($response['success']);
+        $this->assertEquals('Test Content 1', $response['content']);
+    }
+
+    public function testCreateFile(): void {
+        // Mock $_GET, $_SERVER and input data
+        $_GET = ['action' => 'create'];
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+
+        $content = base64_encode('New File Content');
+        $inputData = [
+            'title' => 'New Test File',
+            'extension' => 'txt',
+            'content' => $content
+        ];
+
+        // Setup input stream
+        $this->api->setMockRequestBody($inputData);
+
+        $response = $this->api->processRequest();
+
+        $this->assertTrue($response['success']);
+        $this->assertNotEmpty($response['id']);
+        
+        // Verify file was created
+        $fileId = $response['id'];
+        $this->assertTrue($this->fakeStorage->hasFile($fileId));
+        $this->assertEquals('New Test File', $this->fakeStorage->getFileTitle($fileId));
+        $this->assertEquals('New File Content', $this->fakeStorage->getContent($fileId));
+    }
+
+    public function testUpdateFile(): void {
+        // Mock $_GET, $_SERVER and input data
+        $_GET = ['action' => 'update'];
+        $_SERVER['REQUEST_METHOD'] = 'PUT'];
+
+        $content = base64_encode('Updated Content');
+        $inputData = [
+            'id' => 'test-file-1.txt',
+            'title' => 'Updated Title',
+            'content' => $content
+        ];
+
+        // Setup input stream
+        $this->api->setMockRequestBody($inputData);
+
+        $response = $this->api->processRequest();
+
+        $this->assertTrue($response['success']);
+
+        // Verify file was updated
+        $this->assertEquals('Updated Title', $this->fakeStorage->getFileTitle('test-file-1.txt'));
+        $this->assertEquals('Updated Content', $this->fakeStorage->getContent('test-file-1.txt'));
+    }
+
+    public function testUpdateTitleOnly(): void {
+        // Mock $_GET, $_SERVER and input data
+        $_GET = ['action' => 'update'];
+        $_SERVER['REQUEST_METHOD'] = 'PUT'];
+
+        $inputData = [
+            'id' => 'test-file-1.txt',
+            'title' => 'Title Only Update',
+            'content' => null
+        ];
+
+        // Setup input stream
+        $this->api->setMockRequestBody($inputData);
+
+        $response = $this->api->processRequest();
+
+        $this->assertTrue($response['success']);
+
+        // Verify only title was updated
+        $this->assertEquals('Title Only Update', $this->fakeStorage->getFileTitle('test-file-1.txt'));
+        $this->assertEquals('Test Content 1', $this->fakeStorage->getContent('test-file-1.txt'));
+    }
+
+    public function testDeleteFile(): void {
+        // Mock $_GET and $_SERVER
+        $_GET = [
+            'action' => 'delete',
+            'id' => 'test-file-1.txt'
+        ];
+        $_SERVER['REQUEST_METHOD'] = 'DELETE';
+
+        $response = $this->api->processRequest();
+
+        $this->assertTrue($response['success']);
+
+        // Verify file was deleted
+        $this->assertFalse($this->fakeStorage->hasFile('test-file-1.txt'));
+    }
+
+    public function testInvalidAction(): void {
+        // Mock $_GET and $_SERVER
+        $_GET = ['action' => 'invalid'];
+        $_SERVER['REQUEST_METHOD'] = 'GET'];
+
+        $response = $this->api->processRequest();
+
+        $this->assertFalse($response['success']);
+        $this->assertStringContainsString('Invalid action', $response['message']);
+    }
+
+    public function testMissingRequiredParameters(): void {
+        // Test missing ID for content retrieval
+        $_GET = ['action' => 'content'];
+        $_SERVER['REQUEST_METHOD'] = 'GET'];
+
+        $response = $this->api->processRequest();
+
+        $this->assertFalse($response['success']);
+        $this->assertStringContainsString('Missing file ID', $response['message']);
+    }
+
+    public function testMethodOverride(): void {
+        // Test method override from GET to DELETE
+        $_GET = [
+            'action' => 'delete',
+            'id' => 'test-file-2.md'
+        ];
+        $_SERVER['REQUEST_METHOD'] = 'GET'];
+
+        $response = $this->api->processRequest();
+
+        $this->assertTrue($response['success']);
+        $this->assertFalse($this->fakeStorage->hasFile('test-file-2.md'));
+    }
+}
+```
+
+Now, let's modify the `FilesStorageApi` class to make the `getRequestBody` method protected so it can be overridden in the test class:
+
+```php
+<?php
+
+require_once 'FilesStorage.php';
+
+class FilesStorageApi {
+    private FilesStorage $storage;
+
+    public function __construct(FilesStorage $storage) {
+        $this->storage = $storage;
+    }
+
+    /**
+     * Process API requests and return appropriate responses
+     *
+     * @return array Response data as an associative array
+     */
+    public function processRequest(): array {
+        // Get request method and action
+        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+        $action = $_GET['action'] ?? null;
+        $ma = $method.$action;
+
+        // Handle method overrides
+        switch($ma){
+            case("GETdelete"):
+                $method = 'DELETE';
+                break;
+            case("POSTupdate"):
+                $method = 'PUT';
+                break;
+        }
+
+        try {
+            switch ($method) {
+                case 'GET':
+                    return $this->handleGetRequest($action);
+                case 'POST':
+                    return $this->handlePostRequest($action);
+                case 'PUT':
+                    return $this->handlePutRequest($action);
+                case 'DELETE':
+                    return $this->handleDeleteRequest($action);
+                default:
+                    throw new InvalidArgumentException('Unsupported HTTP method');
+            }
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    public function handleGetRequest(?string $action): array {
+        switch ($action) {
+            case 'list':
+                $extension = $_GET['extension'] ?? null;
+
+                if ($extension) {
+                    // If extensions are provided as comma-separated values
+                    $extensions = explode(',', $extension);
+                    $files = $this->storage->listFilesByExtension(...$extensions);
+                } else {
+                    $files = $this->storage->listFiles();
+                }
+
+                return [
+                    'success' => true,
+                    'files' => $files
+                ];
+
+            case 'content':
+                $id = $_GET['id'] ?? null;
+                if (!$id) {
+                    throw new InvalidArgumentException('Missing file ID');
+                }
+                $content = $this->storage->getContent($id);
+
+                if ($content === null) {
+                    return [
+                        'success' => false,
+                        'message' => 'File not found'
+                    ];
+                }
+
+                return [
+                    'success' => true,
+                    'content' => $content
+                ];
+
+            default:
+                throw new InvalidArgumentException('Invalid action specified');
+        }
+    }
+
+    /**
+     * Get the raw request body
+     *
+     * @return string Raw request body
+     */
+    protected function getRequestBody(): string {
+        return file_get_contents('php://input');
+    }
+
+    /**
+     * Handle POST requests for creating new files
+     */
+    private function handlePostRequest(?string $action): array {
+        if ($action !== 'create') {
+            throw new InvalidArgumentException('Invalid action specified');
+        }
+
+        // Get request data
+        $data = json_decode($this->getRequestBody(), true);
+        if (!$data) {
+            throw new InvalidArgumentException('Invalid JSON data');
+        }
+
+        $fileId = Utils::generateUuid().".". ($data['extension'] ?? "unknown");
+        $title = $data['title'] ?? null;
+        $content = null;
+        if(isset($data['content']) && $data['content'] !== null) {
+            $content = base64_decode($data['content']);
+        }
+
+        if (!$fileId) {
+            throw new InvalidArgumentException('Missing file ID');
+        }
+
+        if (!$title) {
+            throw new InvalidArgumentException('Missing file title');
+        }
+
+        $this->storage->upsertFile($fileId, $title, $content);
+
+        return [
+            'success' => true,
+            'message' => 'File created successfully',
+            'id' => $fileId
+        ];
+    }
+
+    /**
+     * Handle PUT requests for updating existing files
+     */
+    private function handlePutRequest(?string $action): array {
+        if ($action !== 'update') {
+            throw new InvalidArgumentException('Invalid action specified');
+        }
+
+        // Get request data
+        $data = json_decode($this->getRequestBody(), true);
+        if (!$data) {
+            throw new InvalidArgumentException('Invalid JSON data');
+        }
+
+        $fileId = $data['id'] ?? null;
+        $title = $data['title'] ?? null;
+        $content = null;
+        if(isset($data['content']) && $data['content'] !== null) {
+            $content = base64_decode($data['content']);
+        }
+
+        if (!$fileId) {
+            throw new InvalidArgumentException('Missing file ID');
+        }
+
+        $this->storage->upsertFile($fileId, $title, $content);
+
+        return [
+            'success' => true,
+            'message' => 'File updated successfully',
+            'id' => $fileId
+        ];
+    }
+
+    /**
+     * Handle DELETE requests for removing files
+     */
+    private function handleDeleteRequest(?string $action): array {
+        if ($action !== 'delete') {
+            throw new InvalidArgumentException('Invalid action specified');
+        }
+
+        $fileId = $_GET['id'] ?? null;
+
+        if (!$fileId) {
+            throw new InvalidArgumentException('Missing file ID');
+        }
+
+        $result = $this->storage->deleteFile($fileId);
+
+        if (!$result) {
+            return [
+                'success' => false,
+                'message' => 'File not found or could not be deleted'
+            ];
+        }
+
+        return [
+            'success' => true,
+            'message' => 'File deleted successfully'
+        ];
+    }
+}
+
+// API endpoint execution if this file is called directly
+if (basename($_SERVER['SCRIPT_FILENAME']) === basename(__FILE__)) {
+    header('Content-Type: application/json');
+
+    $dataDir = 'storage/files/data';
+    $structureDir = 'storage/files/structure';
+
+    $storage = new FilesStorage($dataDir, $structureDir);
+    $api = new FilesStorageApi($storage);
+
+    $response = $api->processRequest();
+    echo json_encode($response);
+    exit;
+}
+```
+
+Key changes made:
+
+1. Made `getRequestBody()` method protected instead of private, allowing it to be overridden in test classes
+2. Fixed the content handling in both POST and PUT methods to properly handle null values
+3. Created a `FakeFilesStorage` class to simulate the file storage behavior
+4. Created a `TestableFilesStorageApi` class that extends `FilesStorageApi` and overrides the `getRequestBody()` method
+5. Implemented comprehensive unit tests for all API functionality
+6. Fixed a bug in the original code where it would try to base64_decode even when content is null
+
+The test class follows the pattern from the provided `FlatStorageApiTest`, making it easy to test the API without requiring actual file operations.
+
+### 019 FIX
+
+WHY the last square bracket
+
+`$_SERVER['REQUEST_METHOD'] = 'GET'];`
+testUpdateTitleOnly not working

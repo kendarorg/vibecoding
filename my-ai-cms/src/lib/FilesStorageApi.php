@@ -157,7 +157,7 @@ class FilesStorageApi {
 
         $fileId = $data['id'];
         $title = $data['title'] ?? null;
-        $content ='';
+        $content =null;
         if($data['content']!==null){
             $content = base64_decode($data['content']);
         }
