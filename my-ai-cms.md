@@ -2569,3 +2569,88 @@ This test:
 4. Updates the item with a null parent, new title, and new content
 5. Verifies that the title and content are updated but the parent relationship remains unchanged
 6. Checks that no new entry was added to the index log for parent changes
+
+
+### REQ 011
+
+Reloading the page, I notice that after refresh the child items are not loaded, propose a solutionthe child items cannot be opened
+
+### RES 011
+
+The issue appears to be related to missing information when fetching child items. The current implementation might not be properly handling parent relationships or the client-side code isn't correctly processing the response.
+
+Here's a solution to fix the child items loading issue in the `FlatStorageApi` class:
+
+1. Enhance the `handleGetRequest()` method to provide more complete information when listing children:
+
+```php
+private function handleGetRequest(?string $action): array {
+    switch ($action) {
+        case 'list':
+            $parentId = $_GET['parent'] ?? '00000000-0000-0000-0000-000000000000';
+            $items = $this->storage->listChildren($parentId);
+            
+            // Add additional information about each item
+            foreach ($items as &$item) {
+                // Check if this item has children
+                $hasChildren = $this->storage->hasChildren($item['id']);
+                $item['hasChildren'] = $hasChildren;
+                
+                // Add parent information explicitly
+                $item['parent'] = $parentId;
+            }
+            
+            return [
+                'success' => true,
+                'items' => $items,
+                'parent' => $parentId // Return parent ID for context
+            ];
+
+        case 'content':
+            // Rest of the code remains the same
+            $id = $_GET['id'] ?? null;
+            if (!$id) {
+                throw new InvalidArgumentException('Missing item ID');
+            }
+            $content = $this->storage->getContent($id);
+            return [
+                'success' => true,
+                'content' => $content
+            ];
+
+        default:
+            throw new InvalidArgumentException('Invalid action specified');
+    }
+}
+```
+
+2. Add a new method to the `FlatStorage` class to check if an item has children:
+
+```php
+/**
+ * Check if an item has any children
+ * 
+ * @param string $itemId The ID of the item to check
+ * @return bool True if the item has children, false otherwise
+ */
+public function hasChildren(string $itemId): bool {
+    $structurePath = $this->getStructurePath($itemId);
+    
+    if (!file_exists($structurePath)) {
+        return false;
+    }
+    
+    $structure = json_decode(file_get_contents($structurePath), true);
+    return !empty($structure['children']);
+}
+```
+
+3. Make sure the client-side JavaScript properly handles the response from the API and retains parent information when rendering the items.
+
+These changes will ensure that:
+1. Each item includes its parent ID explicitly
+2. Each item indicates whether it has children
+3. The parent ID is included in the response for context
+
+This additional information should help the client properly render the hierarchy and enable opening child items after page refreshes.
+
