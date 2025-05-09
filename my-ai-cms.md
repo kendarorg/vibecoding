@@ -5448,3 +5448,7 @@ This UI includes:
 The interface is responsive and user-friendly, with clear visual feedback for actions. It uses the FilesStorageApi through the expected endpoints and properly base64-encodes content to ensure binary safety.
 
 To use this UI, save it as `src/files.php` and navigate to it in your browser.
+
+### FIX 022
+
+Refactoring css and js
