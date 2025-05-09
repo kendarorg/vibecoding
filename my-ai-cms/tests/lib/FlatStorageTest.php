@@ -12,7 +12,7 @@ class FlatStorageTest extends TestCase
 
     protected function setUp(): void
     {
-        $target = '.././target/lib/filestorage_test';
+        $target = '../../target/lib/filestorage_test';
         // Create a unique test directory
         $uniqueId = uniqid();
         $this->tempDataDir = $target.'/' . $uniqueId.'_data';

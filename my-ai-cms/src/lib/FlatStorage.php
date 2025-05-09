@@ -36,19 +36,31 @@ class FlatStorage {
 
     /**
      * Create or update an item
+     * @param string $itemUuid Item identifier
+     * @param string $parentUuid Parent identifier
+     * @param string|null $itemTitle Optional title (null to keep existing)
+     * @param string|null $itemContent Optional content (null to keep existing)
      */
-    public function upsertItem(string $itemUuid, string $parentUuid, string $itemTitle, string $itemContent): void {
+    public function upsertItem(string $itemUuid, string $parentUuid, ?string $itemTitle = null, ?string $itemContent = null): void {
         $itemPath = $this->dataDir . '/' . $itemUuid;
+        $itemExists = file_exists($itemPath);
 
-        // Create or update the file content
-        file_put_contents($itemPath, $itemContent);
+        // Handle content update if provided
+        if ($itemContent !== null) {
+            file_put_contents($itemPath, $itemContent);
+        } elseif (!$itemExists) {
+            // Create empty file if it doesn't exist and no content was provided
+            file_put_contents($itemPath, '');
+        }
 
-        if (!file_exists($itemPath . '.tmp')) {
+        if (!$itemExists) {
             // New item - add creation entries
             file_put_contents($this->indexLogPath, "CR,$itemUuid,$parentUuid\n", FILE_APPEND);
-            file_put_contents($this->namesLogPath, "CR,$itemUuid,$itemTitle\n", FILE_APPEND);
-            // Create a tmp file to mark item as existing
-            file_put_contents($itemPath . '.tmp', '');
+
+            // Only add name entry if title is provided
+            if ($itemTitle !== null) {
+                file_put_contents($this->namesLogPath, "CR,$itemUuid,$itemTitle\n", FILE_APPEND);
+            }
         } else {
             // Existing item - check for parent change
             $lastParent = $this->getLastParent($itemUuid);
@@ -56,10 +68,12 @@ class FlatStorage {
                 file_put_contents($this->indexLogPath, "MV,$itemUuid,$parentUuid\n", FILE_APPEND);
             }
 
-            // Check for name change
-            $lastName = $this->getLastName($itemUuid);
-            if ($lastName !== $itemTitle) {
-                file_put_contents($this->namesLogPath, "RN,$itemUuid,$itemTitle\n", FILE_APPEND);
+            // Check for name change, but only if a title was provided
+            if ($itemTitle !== null) {
+                $lastName = $this->getLastName($itemUuid);
+                if ($lastName !== $itemTitle) {
+                    file_put_contents($this->namesLogPath, "RN,$itemUuid,$itemTitle\n", FILE_APPEND);
+                }
             }
         }
     }
@@ -75,7 +89,7 @@ class FlatStorage {
 
         $itemPath = $this->dataDir . '/' . $itemUuid;
 
-        if (file_exists($itemPath) || file_exists($itemPath . '.tmp')) {
+        if (file_exists($itemPath)) {
             // Delete all children recursively
             $children = $this->listChildren($itemUuid);
             foreach ($children as $child) {
@@ -85,14 +99,19 @@ class FlatStorage {
             // Add deletion entry
             file_put_contents($this->indexLogPath, "DE,$itemUuid,$parentUuid\n", FILE_APPEND);
 
-            // Remove the tmp marker file
-            if (file_exists($itemPath . '.tmp')) {
-                unlink($itemPath . '.tmp');
-            }
-
             // Remove the actual file
-            if (file_exists($itemPath)) {
-                unlink($itemPath);
+            unlink($itemPath);
+        } else {
+            // Check if item exists in logs but file is missing
+            $lastParent = $this->getLastParent($itemUuid);
+            if ($lastParent !== null) {
+                // Still need to delete children and add deletion entry
+                $children = $this->listChildren($itemUuid);
+                foreach ($children as $child) {
+                    $this->deleteItem($child['id'], $itemUuid);
+                }
+
+                file_put_contents($this->indexLogPath, "DE,$itemUuid,$parentUuid\n", FILE_APPEND);
             }
         }
     }
