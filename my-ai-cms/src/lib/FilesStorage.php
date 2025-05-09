@@ -166,12 +166,18 @@ class FilesStorage {
     }
 
     public function listFilesByExtension(...$extensions) {
+        if($extensions!=null && is_array($extensions) && count($extensions)==1){
+            if(is_array($extensions) && !is_string($extensions)){
+                $extensions = $extensions[0];
+            }
+        }
+        error_log("AAAAA ".json_encode($extensions));
         $files = $this->listFiles();
 
         if (empty($extensions)) {
             return $files;
         }
-
+        error_log("BBB ".json_encode($files));
         return array_filter($files, function($file) use ($extensions) {
             return in_array($file['extension'], $extensions);
         });

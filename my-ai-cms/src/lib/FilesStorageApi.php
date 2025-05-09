@@ -59,7 +59,7 @@ class FilesStorageApi {
                 if ($extension) {
                     // If extensions are provided as comma-separated values
                     $extensions = explode(',', $extension);
-                    $files = $this->storage->listFilesByExtension(...$extensions);
+                    $files = $this->storage->listFilesByExtension($extensions);
                 } else {
                     $files = $this->storage->listFiles();
                 }
