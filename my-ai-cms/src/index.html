@@ -511,11 +511,7 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Add hasChildren flag to each item
-                        return data.items.map(item => ({
-                            ...item,
-                            hasChildren: false // We don't know until we try to load children
-                        }));
+                        return data.items;
                     } else {
                         console.error('API error:', data.message);
                         return [];

@@ -39,7 +39,7 @@ class FlatStorageApi {
         }
     }
 
-    private function handleGetRequest(?string $action): array {
+    protected function handleGetRequest(?string $action): array {
         switch ($action) {
             case 'list':
                 $parentId = $_GET['parent'] ?? '00000000-0000-0000-0000-000000000000';

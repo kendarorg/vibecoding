@@ -2,8 +2,8 @@
 
 use PHPUnit\Framework\TestCase;
 
-require_once('../src/lib/FlatStorage.php');
-require_once('../src/lib/FlatStorageApi.php');
+require_once('../../src/lib/FlatStorage.php');
+require_once('../../src/lib/FlatStorageApi.php');
 
 class FlatStorageApiTest extends TestCase
 {
