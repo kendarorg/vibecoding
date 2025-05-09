@@ -4143,4 +4143,255 @@ Key changes made:
 4. Updated the tests to check for the basename-only format in log entries
 5. Maintained compatibility with the existing interface for itemIds with or without extensions
 
+### REQ 018
 
+Within FilesStorageApi
+* Should expect for put and post requests that the content is encoded in base64 therefore should decode it before passing it to the 
+* The handlePostRequest should not receive the id of the file but the extension. The id will be generate as random UUID
+* The handlePostRequest and handlePutRequest should return the newly created id and the extension
+Within FilesStorage
+* The listFiles should return as 'id' the filename without extension the basename should not be used
+
+Modify the tests accordingly
+Show only modified items
+
+### RES 018
+
+Based on your requirements, I'll provide the necessary modifications to adapt the FilesStorageApi and FilesStorage classes. I'll start with modifications to the FilesStorage class and then update the tests to match the new behavior.
+
+First, let's modify the `listFiles` method in `FilesStorage.php`:
+
+```php
+public function listFiles() {
+    if (!file_exists($this->namesLogFile)) {
+        return [];
+    }
+
+    $lines = file($this->namesLogFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    $activeItems = [];
+
+    foreach ($lines as $line) {
+        $parts = explode(',', $line, 3);
+        if (count($parts) < 3) continue;
+
+        list($action, $basename, $itemTitle) = $parts;
+
+        // Find matching file with extension
+        $matchingFiles = glob($this->dataDir . '/' . $basename . '.*');
+        $extension = '';
+        
+        if (!empty($matchingFiles)) {
+            $pathInfo = pathinfo($matchingFiles[0]);
+            $extension = $pathInfo['extension'] ?? '';
+        }
+
+        switch ($action) {
+            case 'CR':
+                $activeItems[$basename] = [
+                    'id' => $basename,
+                    'title' => $itemTitle,
+                    'basename' => $basename,
+                    'extension' => $extension
+                ];
+                break;
+            case 'RN':
+                if (isset($activeItems[$basename])) {
+                    $activeItems[$basename]['title'] = $itemTitle;
+                }
+                break;
+            case 'DE':
+                unset($activeItems[$basename]);
+                break;
+        }
+    }
+
+    return array_values($activeItems);
+}
+```
+
+Now let's update the tests to reflect these changes:
+
+```php
+public function testListFiles() {
+    // Create several files
+    $this->storage->upsertFile('file1.txt', 'File One', 'Content 1');
+    $this->storage->upsertFile('file2.md', 'File Two', 'Content 2');
+    $this->storage->upsertFile('file3.json', 'File Three', 'Content 3');
+
+    // Delete one file
+    $this->storage->deleteFile('file2');
+
+    // Update one file title
+    $this->storage->upsertFile('file1.txt', 'File One Updated', null);
+
+    // List all files
+    $files = $this->storage->listFiles();
+
+    // Check results
+    $this->assertCount(2, $files);
+
+    // Check that file1 is present with updated title
+    $file1 = array_filter($files, function($file) {
+        return $file['id'] === 'file1';
+    });
+    $this->assertCount(1, $file1);
+    $file1 = reset($file1);
+    $this->assertEquals('File One Updated', $file1['title']);
+    $this->assertEquals('txt', $file1['extension']);
+
+    // Check that file3 is present
+    $file3 = array_filter($files, function($file) {
+        return $file['id'] === 'file3';
+    });
+    $this->assertCount(1, $file3);
+    $file3 = reset($file3);
+    $this->assertEquals('File Three', $file3['title']);
+    $this->assertEquals('json', $file3['extension']);
+
+    // Ensure file2 is not present (it was deleted)
+    $file2 = array_filter($files, function($file) {
+        return $file['id'] === 'file2';
+    });
+    $this->assertCount(0, $file2);
+}
+```
+
+For the FilesStorageApi class, here are the required modifications:
+
+```php
+/**
+ * Handle POST requests to create new files
+ * 
+ * @param string $extension The file extension
+ * @param string $title The file title
+ * @param string $content The file content (base64 encoded)
+ * @return array The response with the new ID and extension
+ */
+public function handlePostRequest($extension, $title, $content = null) {
+    // Generate random UUID for the new file
+    $fileId = $this->generateUuid();
+    
+    // Decode base64 content if provided
+    $decodedContent = null;
+    if ($content !== null) {
+        $decodedContent = base64_decode($content);
+    }
+    
+    // Full ID with extension
+    $fullId = $fileId . ($extension ? '.' . $extension : '');
+    
+    // Create new file with the storage
+    $this->storage->upsertFile($fullId, $title, $decodedContent);
+    
+    // Return the new ID and extension
+    return [
+        'id' => $fileId,
+        'extension' => $extension
+    ];
+}
+
+/**
+ * Handle PUT requests to update existing files
+ * 
+ * @param string $id The file ID
+ * @param string $title The file title
+ * @param string $content The file content (base64 encoded)
+ * @return array The response with the ID and extension
+ */
+public function handlePutRequest($id, $title, $content = null) {
+    // Extract extension if present
+    $extension = '';
+    $basename = $id;
+    
+    if (strpos($id, '.') !== false) {
+        $parts = explode('.', $id);
+        $extension = array_pop($parts);
+        $basename = implode('.', $parts);
+    }
+    
+    // Decode base64 content if provided
+    $decodedContent = null;
+    if ($content !== null) {
+        $decodedContent = base64_decode($content);
+    }
+    
+    // Update the file
+    $this->storage->upsertFile($id, $title, $decodedContent);
+    
+    // Return the ID and extension
+    return [
+        'id' => $basename,
+        'extension' => $extension
+    ];
+}
+
+/**
+ * Generate a random UUID
+ * 
+ * @return string The generated UUID
+ */
+private function generateUuid() {
+    return sprintf(
+        '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+        mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+        mt_rand(0, 0xffff),
+        mt_rand(0, 0x0fff) | 0x4000,
+        mt_rand(0, 0x3fff) | 0x8000,
+        mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+    );
+}
+```
+
+For the tests of the FilesStorageApi, you'll want to add something like:
+
+```php
+public function testHandlePostRequest() {
+    $extension = 'txt';
+    $title = 'New File';
+    $content = base64_encode('This is new content');
+    
+    $result = $this->api->handlePostRequest($extension, $title, $content);
+    
+    $this->assertArrayHasKey('id', $result);
+    $this->assertArrayHasKey('extension', $result);
+    $this->assertEquals($extension, $result['extension']);
+    
+    // Verify the file exists and has correct content
+    $fullId = $result['id'] . '.' . $extension;
+    $retrievedContent = $this->storage->getContent($fullId);
+    $this->assertEquals('This is new content', $retrievedContent);
+}
+
+public function testHandlePutRequest() {
+    // First create a file
+    $extension = 'txt';
+    $initialTitle = 'Initial Title';
+    $initialContent = base64_encode('Initial content');
+    
+    $createResult = $this->api->handlePostRequest($extension, $initialTitle, $initialContent);
+    $fileId = $createResult['id'];
+    
+    // Now update it
+    $newTitle = 'Updated Title';
+    $newContent = base64_encode('Updated content');
+    $fullId = $fileId . '.' . $extension;
+    
+    $updateResult = $this->api->handlePutRequest($fullId, $newTitle, $newContent);
+    
+    $this->assertArrayHasKey('id', $updateResult);
+    $this->assertArrayHasKey('extension', $updateResult);
+    $this->assertEquals($fileId, $updateResult['id']);
+    $this->assertEquals($extension, $updateResult['extension']);
+    
+    // Verify the file has been updated
+    $retrievedContent = $this->storage->getContent($fullId);
+    $this->assertEquals('Updated content', $retrievedContent);
+}
+```
+
+These changes implement all the requirements you specified:
+1. Modified FilesStorage.listFiles() to use the basename as 'id'
+2. Updated FilesStorageApi to base64 decode content
+3. Changed handlePostRequest to generate a UUID and accept extension instead of ID
+4. Made both API methods return the id and extension
+5. Updated tests to match the new behavior

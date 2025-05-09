@@ -123,7 +123,6 @@ class FilesStorage {
         }
 
         $lines = file($this->namesLogFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-
         $activeItems = [];
 
         foreach ($lines as $line) {
@@ -135,12 +134,10 @@ class FilesStorage {
             // Find matching file with extension
             $matchingFiles = glob($this->dataDir . '/' . $basename . '.*');
             $extension = '';
-            $itemId = $basename;
 
             if (!empty($matchingFiles)) {
                 $pathInfo = pathinfo($matchingFiles[0]);
                 $extension = $pathInfo['extension'] ?? '';
-                $itemId = $basename . ($extension ? '.' . $extension : '');
             }
 
             switch ($action) {
