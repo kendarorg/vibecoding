@@ -75,6 +75,9 @@ class FilesStorageApi {
                     throw new InvalidArgumentException('Missing file ID');
                 }
                 $content = $this->storage->getContent($id);
+                if($content!=null && $content!==''){
+                    $content = base64_encode($content);
+                }
 
                 if ($content === null) {
                     return [
@@ -87,6 +90,46 @@ class FilesStorageApi {
                     'success' => true,
                     'content' => $content
                 ];
+
+            case 'get':
+                $id = $_GET['id'] ?? null;
+                if (!$id) {
+                    throw new InvalidArgumentException('Missing file ID');
+                }
+
+                $content = $this->storage->getContent($id);
+
+                if ($content === null) {
+                    header('HTTP/1.0 404 Not Found');
+                    exit('File not found');
+                }
+
+                // Determine MIME type based on file extension
+                $extension = strtolower(pathinfo($id, PATHINFO_EXTENSION));
+                $mimeTypes = [
+                    'jpg' => 'image/jpeg',
+                    'jpeg' => 'image/jpeg',
+                    'png' => 'image/png',
+                    'gif' => 'image/gif',
+                    'webp' => 'image/webp',
+                    'svg' => 'image/svg+xml',
+                    'pdf' => 'application/pdf',
+                    'txt' => 'text/plain',
+                    'html' => 'text/html',
+                    'css' => 'text/css',
+                    'js' => 'application/javascript',
+                    'json' => 'application/json',
+                    'xml' => 'application/xml',
+                ];
+
+                $contentType = $mimeTypes[$extension] ?? 'application/octet-stream';
+
+                // Output file directly instead of returning JSON
+                header('Content-Type: ' . $contentType);
+                header('Content-Length: ' . strlen($content));
+                header('Content-Disposition: inline; filename="' . basename($id) . '"');
+                echo $content;
+                exit;
 
             default:
                 throw new InvalidArgumentException('Invalid action specified');
