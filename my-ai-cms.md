@@ -5705,3 +5705,353 @@ These changes:
 5. Keep the file listing, filtering, creation, and deletion functionality
 
 The system now focuses solely on file management operations without displaying file contents.
+
+
+### 024 REQ
+
+Apply the following modifications to files.php and files.js
+* Opening the files.php should show a table with the list of files with the following rows
+	* Title (with context menu to delete the file or update the title)
+	* In case the file is an image show the image with a width of 100px
+* Remove the possibility to create a file
+* Add the possibility to upload a file specifiying the title
+
+### 024 RES
+
+I'll implement the modifications to transform the file management into a table-based view with image previews and file upload functionality.
+
+#### Updated `src/files.php`:
+
+```php
+<link rel="stylesheet" href="lib/css/files.css">
+<div class="container">
+    <div class="file-list">
+        <div class="extension-filter">
+            <input type="text" id="extensionFilter" class="filter-input" placeholder="Filter by extension (e.g., txt,md,json)">
+            <button id="applyFilter">Filter</button>
+        </div>
+
+        <div class="file-upload-form">
+            <h3>Upload File</h3>
+            <div class="form-row">
+                <label for="uploadFileTitle">File Title</label>
+                <input type="text" id="uploadFileTitle" placeholder="Enter file title">
+            </div>
+            <div class="form-row">
+                <input type="file" id="fileUpload">
+            </div>
+            <button id="uploadFileBtn">Upload File</button>
+        </div>
+
+        <table id="files-table" class="files-table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Preview</th>
+                </tr>
+            </thead>
+            <tbody id="files-container">
+                <!-- Files will be populated here -->
+                <tr>
+                    <td colspan="2" class="loading">Loading files...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="contextMenu" class="context-menu">
+    <ul>
+        <li id="contextRename">Rename</li>
+        <li id="contextDelete">Delete</li>
+    </ul>
+</div>
+
+<script src="lib/scripts/files.js"></script>
+```
+
+#### Updated `src/lib/scripts/files.js`:
+
+```javascript
+document.addEventListener('DOMContentLoaded', function() {
+    // Elements
+    const filesContainer = document.getElementById('files-container');
+    const fileUpload = document.getElementById('fileUpload');
+    const uploadFileTitle = document.getElementById('uploadFileTitle');
+    const uploadFileBtn = document.getElementById('uploadFileBtn');
+    const extensionFilter = document.getElementById('extensionFilter');
+    const applyFilter = document.getElementById('applyFilter');
+    const contextMenu = document.getElementById('contextMenu');
+    const contextRename = document.getElementById('contextRename');
+    const contextDelete = document.getElementById('contextDelete');
+
+    // State
+    let currentFileId = null;
+
+    // Initialize
+    loadFiles();
+
+    // Event listeners
+    uploadFileBtn.addEventListener('click', uploadFile);
+    applyFilter.addEventListener('click', applyExtensionFilter);
+    contextRename.addEventListener('click', renameCurrentFile);
+    contextDelete.addEventListener('click', deleteCurrentFile);
+
+    // Close context menu when clicking elsewhere
+    document.addEventListener('click', function() {
+        contextMenu.style.display = 'none';
+    });
+
+    // Prevent context menu from closing when clicked
+    contextMenu.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+
+    // Functions
+    function loadFiles(extensions = null) {
+        filesContainer.innerHTML = '<tr><td colspan="2" class="loading">Loading files...</td></tr>';
+
+        let url = 'api/files.php?action=list';
+        if (extensions) {
+            url += '&extension=' + extensions;
+        }
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    renderFileList(data.files);
+                } else {
+                    filesContainer.innerHTML = '<tr><td colspan="2" class="error">Error loading files: ' + data.message + '</td></tr>';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching files:', error);
+                filesContainer.innerHTML = '<tr><td colspan="2" class="error">Error loading files</td></tr>';
+            });
+    }
+
+    function renderFileList(files) {
+        if (!files || files.length === 0) {
+            filesContainer.innerHTML = '<tr><td colspan="2" class="empty">No files found</td></tr>';
+            return;
+        }
+
+        filesContainer.innerHTML = '';
+        files.forEach(file => {
+            const row = document.createElement('tr');
+            row.className = 'file-item';
+            row.dataset.fileId = file;
+
+            // Add file type icon based on extension
+            const extension = file.split('.').pop().toLowerCase();
+            const icon = getIconForExtension(extension);
+            
+            // Create title cell
+            const titleCell = document.createElement('td');
+            titleCell.className = 'file-title';
+            titleCell.innerHTML = `<span class="file-type-icon">${icon}</span> ${file}`;
+            titleCell.addEventListener('contextmenu', (e) => showContextMenu(e, file));
+            
+            // Create preview cell
+            const previewCell = document.createElement('td');
+            previewCell.className = 'file-preview';
+            
+            // If it's an image, show preview
+            if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension)) {
+                previewCell.innerHTML = `<img src="api/files.php?action=get&id=${file}" width="100" alt="${file}">`;
+            } else {
+                previewCell.textContent = 'No preview';
+            }
+            
+            row.appendChild(titleCell);
+            row.appendChild(previewCell);
+            filesContainer.appendChild(row);
+        });
+    }
+
+    function getIconForExtension(extension) {
+        switch(extension.toLowerCase()) {
+            case 'txt': return '📄';
+            case 'md': return '📝';
+            case 'json': return '📋';
+            case 'html': return '🌐';
+            case 'css': return '🎨';
+            case 'js': return '⚙️';
+            case 'php': return '🐘';
+            case 'jpg': 
+            case 'jpeg': 
+            case 'png': 
+            case 'gif': 
+            case 'webp': 
+            case 'svg': return '🖼️';
+            default: return '📄';
+        }
+    }
+
+    function showContextMenu(e, fileId) {
+        e.preventDefault();
+        
+        // Update current file
+        currentFileId = fileId;
+        
+        // Position the context menu
+        contextMenu.style.left = e.pageX + 'px';
+        contextMenu.style.top = e.pageY + 'px';
+        contextMenu.style.display = 'block';
+    }
+
+    function deleteCurrentFile() {
+        if (!currentFileId) return;
+        
+        const confirm = window.confirm(`Are you sure you want to delete ${currentFileId}?`);
+        if (!confirm) return;
+
+        fetch(`api/files.php?action=delete&id=${currentFileId}`, {
+            method: 'DELETE'
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reset state
+                    currentFileId = null;
+                    
+                    // Hide context menu
+                    contextMenu.style.display = 'none';
+                    
+                    // Reload file list
+                    loadFiles(extensionFilter.value || null);
+
+                    alert('File deleted successfully');
+                } else {
+                    alert('Error deleting file: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting file:', error);
+                alert('Network error when deleting file');
+            });
+    }
+
+    function renameCurrentFile() {
+        if (!currentFileId) return;
+        
+        const newTitle = prompt('Enter new title for the file:', currentFileId);
+        if (!newTitle || newTitle === currentFileId) return;
+
+        fetch('api/files.php?action=rename', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: currentFileId,
+                newTitle: newTitle
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reset state
+                    currentFileId = null;
+                    
+                    // Hide context menu
+                    contextMenu.style.display = 'none';
+                    
+                    // Reload file list
+                    loadFiles(extensionFilter.value || null);
+
+                    alert('File renamed successfully');
+                } else {
+                    alert('Error renaming file: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error renaming file:', error);
+                alert('Network error when renaming file');
+            });
+    }
+
+    function uploadFile() {
+        const title = uploadFileTitle.value.trim();
+        const file = fileUpload.files[0];
+
+        if (!title) {
+            alert('Please enter a file title');
+            return;
+        }
+
+        if (!file) {
+            alert('Please select a file to upload');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            // Get base64 content (removing the data:mime/type;base64, prefix)
+            const base64Content = event.target.result.split(',')[1];
+            
+            fetch('api/files.php?action=upload', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    title: title,
+                    content: base64Content,
+                    originalFilename: file.name
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Reset form
+                        uploadFileTitle.value = '';
+                        fileUpload.value = '';
+
+                        // Reload file list
+                        loadFiles(extensionFilter.value || null);
+
+                        alert('File uploaded successfully');
+                    } else {
+                        alert('Error uploading file: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error uploading file:', error);
+                    alert('Network error when uploading file');
+                });
+        };
+        
+        reader.readAsDataURL(file);
+    }
+
+    function applyExtensionFilter() {
+        const extensions = extensionFilter.value.trim();
+        loadFiles(extensions || null);
+    }
+});
+```
+
+These changes:
+
+1. Replace the file list with a table showing:
+   - File title with icon
+   - Preview column (showing images for image files)
+
+2. Add context menu functionality:
+   - Right-click on a file to open context menu
+   - Options to rename or delete the file
+
+3. Remove file creation and replace with file upload:
+   - Form to upload files with a title
+   - Uses FileReader API to convert file to base64 for upload
+
+4. Add CSS and HTML structure to support the new features:
+   - Table layout for file list
+   - Context menu positioning
+   - Image preview container
+
+The backend API would need corresponding endpoints for file rename and upload functionality.
+
+
