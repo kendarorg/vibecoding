@@ -4928,3 +4928,26 @@ WHY the last square bracket
 
 `$_SERVER['REQUEST_METHOD'] = 'GET'];`
 testUpdateTitleOnly not working
+
+
+
+### REQ 020
+
+Create a Settings php class with a single static variable initialized with the directory of the Settings class
+
+### RES 020
+
+<?php
+
+class Settings {
+    /**
+     * Root directory path where this Settings class is located
+     * @var string
+     */
+    public static $root;
+}
+
+// Initialize the static variable with the directory path of this file
+Settings::$root = dirname(__FILE__);
+
+
