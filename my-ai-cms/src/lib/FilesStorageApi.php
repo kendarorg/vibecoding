@@ -116,9 +116,13 @@ class FilesStorageApi {
             throw new InvalidArgumentException('Invalid JSON data');
         }
 
-        $fileId = $data['id'] ?? null;
+        $fileId = Utils::generateUuid().".". ($data['extension'] ?? "unknown");
         $title = $data['title'] ?? null;
-        $content = $data['content'] ?? '';
+        $content ='';
+        if($data['content']!==null){
+            $content = base64_decode($data['content']);
+        }
+
 
         if (!$fileId) {
             throw new InvalidArgumentException('Missing file ID');
@@ -151,9 +155,12 @@ class FilesStorageApi {
             throw new InvalidArgumentException('Invalid JSON data');
         }
 
-        $fileId = $data['id'] ?? null;
-        $title = array_key_exists('title', $data) ? $data['title'] : null;
-        $content = array_key_exists('content', $data) ? $data['content'] : null;
+        $fileId = $data['id'];
+        $title = $data['title'] ?? null;
+        $content ='';
+        if($data['content']!==null){
+            $content = base64_decode($data['content']);
+        }
 
         if (!$fileId) {
             throw new InvalidArgumentException('Missing file ID');

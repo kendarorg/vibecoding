@@ -4395,3 +4395,8 @@ These changes implement all the requirements you specified:
 3. Changed handlePostRequest to generate a UUID and accept extension instead of ID
 4. Made both API methods return the id and extension
 5. Updated tests to match the new behavior
+
+
+### FIX 018
+
+Porting by hand...
