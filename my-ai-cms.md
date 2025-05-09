@@ -1459,3 +1459,105 @@ The API supports:
 - Moving items between parents
 - Deleting items
 - Error handling for invalid requests
+
+
+### REQ 006
+
+
+* Wrap the file_get_contents('php://input') inside a function "getRequestBody" in FlatStorageApi
+* In FlatStorageApiTest instead of using directly the FlatStorageApi use a derived class where the getRequestBody is overridden and return the fake data
+
+### RES 006
+
+I'll implement the requested changes by:
+
+1. Wrapping the `file_get_contents('php://input')` inside a `getRequestBody` method in `FlatStorageApi`
+2. Creating a test class that extends `FlatStorageApi` and overrides the `getRequestBody` method
+
+Here's how to implement these changes:
+
+First, modify the `FlatStorageApi` class to add the `getRequestBody` method:
+
+```php
+/**
+ * Get the raw request body
+ * 
+ * @return string Raw request body
+ */
+protected function getRequestBody(): string {
+    return file_get_contents('php://input');
+}
+```
+
+Then replace any direct calls to `file_get_contents('php://input')` in the `FlatStorageApi` class with `$this->getRequestBody()`.
+
+Next, create a test class in your test file:
+
+```php
+/**
+ * Test version of FlatStorageApi that allows mocking the request body
+ */
+class TestFlatStorageApi extends FlatStorageApi {
+    private string $mockRequestBody = '';
+    
+    public function setMockRequestBody(array $data): void {
+        $this->mockRequestBody = json_encode($data);
+    }
+    
+    protected function getRequestBody(): string {
+        return $this->mockRequestBody;
+    }
+}
+```
+
+Finally, update your test class to use this new approach:
+
+```php
+class FlatStorageApiTest extends TestCase {
+    private FakeFlatStorage $fakeStorage;
+    private TestFlatStorageApi $api;
+
+    protected function setUp(): void {
+        $this->fakeStorage = new FakeFlatStorage();
+        $this->api = new TestFlatStorageApi($this->fakeStorage);
+
+        // Setup test data
+        $this->fakeStorage->upsertItem(
+            '11111111-1111-1111-1111-111111111111',
+            '00000000-0000-0000-0000-000000000000',
+            'Test Item 1',
+            'Test Content 1'
+        );
+    }
+    
+    // Update all test methods that handle input data
+    public function testCreateItem(): void {
+        // Mock $_GET, $_SERVER and input data
+        $_GET = ['action' => 'create'];
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+
+        $inputData = [
+            'id' => '22222222-2222-2222-2222-222222222222',
+            'parent' => '11111111-1111-1111-1111-111111111111',
+            'title' => 'New Item',
+            'content' => 'New Content'
+        ];
+
+        // Set mock request body
+        $this->api->setMockRequestBody($inputData);
+
+        $response = $this->api->processRequest();
+
+        // Rest of the test remains the same
+        // ...
+    }
+    
+    // Update other test methods that use setupInputData in a similar way
+    // ...
+    
+    // Remove the setupInputData and mockFileGetContents methods
+    // as they're no longer needed
+}
+```
+
+Make similar updates to all other test methods that previously called `setupInputData()`. This approach is cleaner and avoids the need for complex mocking of global functions.
