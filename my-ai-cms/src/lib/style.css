@@ -1,0 +1,149 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.header {
+    background-color: #f5f5f5;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.breadcrumb {
+    display: flex;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.breadcrumb li {
+    margin-right: 5px;
+}
+
+.breadcrumb li:after {
+    content: ">";
+    margin-left: 5px;
+}
+
+.breadcrumb li:last-child:after {
+    content: "";
+}
+
+.breadcrumb a {
+    color: #0066cc;
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.main-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.tree-panel {
+    width: 300px;
+    border-right: 1px solid #ddd;
+    overflow: auto;
+    padding: 10px;
+}
+
+.content-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+}
+
+.content-title {
+    font-size: 18px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.content-editor {
+    flex: 1;
+    width: 100%;
+    resize: none;
+    border: 1px solid #ddd;
+    padding: 10px;
+    font-family: inherit;
+}
+
+.tree-node {
+    margin: 5px 0;
+}
+
+.tree-children {
+    margin-left: 20px;
+    display: none;
+}
+
+.tree-node.open > .tree-children {
+    display: block;
+}
+
+.tree-label {
+    cursor: pointer;
+    user-select: none;
+    padding: 3px;
+}
+
+.tree-label:hover {
+    background-color: #f0f0f0;
+}
+
+.tree-label.selected {
+    background-color: #e0e0ff;
+}
+
+.tree-toggle {
+    display: inline-block;
+    width: 16px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.context-menu {
+    position: absolute;
+    background-color: white;
+    border: 1px solid #ddd;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    z-index: 1000;
+}
+
+.context-menu ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.context-menu li {
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.context-menu li:hover {
+    background-color: #f0f0f0;
+}
+
+.save-button {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.save-button:hover {
+    background-color: #45a049;
+}

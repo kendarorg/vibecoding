@@ -10,4 +10,5 @@ class Settings {
 }
 
 // Initialize the static variable with the directory path of this file
-Settings::$root = dirname(__FILE__);
+//Settings::$root = dirname(__FILE__);
+Settings::$root = dirname(dirname(__FILE__))."/storage";
