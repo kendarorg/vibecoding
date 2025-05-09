@@ -553,3 +553,9 @@ This test suite covers:
 
 Each test focuses on a specific functionality of the FlatStorage class, ensuring that the storage mechanisms work correctly and that log 
 entries accurately reflect the operations performed.
+
+### FIX 002
+
+Include paths
+location of the temporary files
+Removed tests cache
