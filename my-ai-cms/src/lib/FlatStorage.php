@@ -11,9 +11,9 @@ class FlatStorage {
     /**
      * Constructor
      */
-    public function __construct(string $baseDir = 'data') {
-        $this->dataDir = $baseDir;
-        $this->structureDir = $baseDir . '/structure';
+    public function __construct(string $dataDir = 'data',string $indexDir = 'structure') {
+        $this->dataDir = $dataDir;
+        $this->structureDir = $indexDir;
         $this->indexLogPath = $this->structureDir . '/index.log';
         $this->namesLogPath = $this->structureDir . '/names.log';
 
