@@ -327,4 +327,39 @@ class FlatStorageApiTest extends TestCase {
         // For this example, we're assuming the file_get_contents is called in the API class
         // and we're mocking the return value for the test
     }
+
+    public function testUpdateItemWithNullParent(): void {
+        // Create an item to test with
+        $initialParentId = '33333333-3333-3333-3333-333333333333';
+        $this->fakeStorage->upsertItem(
+            '44444444-4444-4444-4444-444444444444',
+            $initialParentId,
+            'Test Item for Null Parent',
+            'Content'
+        );
+
+        // Verify initial parent
+        $this->assertEquals($initialParentId, $this->fakeStorage->getItemParent('44444444-4444-4444-4444-444444444444'));
+
+        // Mock $_GET, $_SERVER and input data
+        $_GET = ['action' => 'update'];
+        $_SERVER['REQUEST_METHOD'] = 'PUT';
+
+        $inputData = [
+            'id' => '44444444-4444-4444-4444-444444444444',
+            'title' => 'Updated Title',
+            // Explicitly excluding parent field to test null handling
+        ];
+
+        // Set mock request body
+        $this->api->setMockRequestBody($inputData);
+
+        $response = $this->api->processRequest();
+
+        $this->assertTrue($response['success']);
+
+        // Verify the title was updated but parent remained unchanged
+        $this->assertEquals('Updated Title', $this->fakeStorage->getItemTitle('44444444-4444-4444-4444-444444444444'));
+        $this->assertEquals($initialParentId, $this->fakeStorage->getItemParent('44444444-4444-4444-4444-444444444444'));
+    }
 }
