@@ -1,29 +1,22 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // DOM Elements
+    // Elements
     const filesContainer = document.getElementById('files-container');
-    const contentEditor = document.getElementById('contentEditor');
-    const titleInput = document.getElementById('titleInput');
-    const currentFileName = document.getElementById('currentFileName');
-    const saveBtn = document.getElementById('saveBtn');
     const deleteBtn = document.getElementById('deleteBtn');
-    const createFileBtn = document.getElementById('createFileBtn');
+    const currentFileName = document.getElementById('currentFileName');
     const newFileTitle = document.getElementById('newFileTitle');
     const newFileExtension = document.getElementById('newFileExtension');
+    const createFileBtn = document.getElementById('createFileBtn');
     const extensionFilter = document.getElementById('extensionFilter');
     const applyFilter = document.getElementById('applyFilter');
 
-    // State variables
+    // State
     let currentFileId = null;
-    let isModified = false;
 
     // Initialize
     loadFiles();
 
     // Event listeners
-    saveBtn.addEventListener('click', saveCurrentFile);
     deleteBtn.addEventListener('click', deleteCurrentFile);
-    contentEditor.addEventListener('input', markAsModified);
-    titleInput.addEventListener('input', markAsModified);
     createFileBtn.addEventListener('click', createNewFile);
     applyFilter.addEventListener('click', applyExtensionFilter);
 
@@ -88,12 +81,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function selectFile(fileId) {
-        // Check if there are unsaved changes
-        if (isModified) {
-            const confirm = window.confirm('You have unsaved changes. Do you want to discard them?');
-            if (!confirm) return;
-        }
-
         // Update UI
         const fileItems = document.querySelectorAll('.file-item');
         fileItems.forEach(item => item.classList.remove('active'));
@@ -103,83 +90,9 @@ document.addEventListener('DOMContentLoaded', function() {
             selectedItem.classList.add('active');
         }
 
-        // Reset state
-        isModified = false;
-        saveBtn.classList.remove('modified');
-
-        // Enable inputs
-        contentEditor.disabled = false;
-        titleInput.disabled = false;
-
-        // Load file content
+        // Update state
         currentFileId = fileId;
         currentFileName.textContent = fileId;
-
-        fetch(`api/files.php?action=content&id=${fileId}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    contentEditor.value = data.content || '';
-
-                    // Fetch file title
-                    return fetch(`api/files.php?action=metadata&id=${fileId}`);
-                } else {
-                    throw new Error(data.message);
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    titleInput.value = data.title || '';
-                }
-            })
-            .catch(error => {
-                console.error('Error loading file:', error);
-                contentEditor.value = 'Error loading file content';
-            });
-    }
-
-    function markAsModified() {
-        if (!isModified) {
-            isModified = true;
-            saveBtn.classList.add('modified');
-        }
-    }
-
-    function saveCurrentFile() {
-        if (!currentFileId) return;
-
-        const content = contentEditor.value;
-        const title = titleInput.value;
-
-        // Base64 encode the content to ensure binary safety
-        const encodedContent = btoa(unescape(encodeURIComponent(content)));
-
-        fetch('api/files.php?action=update', {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                id: currentFileId,
-                title: title,
-                content: encodedContent
-            })
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    isModified = false;
-                    saveBtn.classList.remove('modified');
-                    alert('File saved successfully');
-                } else {
-                    alert('Error saving file: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error saving file:', error);
-                alert('Network error when saving file');
-            });
     }
 
     function deleteCurrentFile() {
@@ -196,11 +109,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     // Reset UI
                     currentFileId = null;
-                    contentEditor.value = '';
-                    titleInput.value = '';
                     currentFileName.textContent = 'No file selected';
-                    contentEditor.disabled = true;
-                    titleInput.disabled = true;
 
                     // Reload file list
                     loadFiles(extensionFilter.value || null);
