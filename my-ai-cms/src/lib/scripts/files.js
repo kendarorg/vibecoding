@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
     contextMenu.style.display = 'none';
     // State
     let currentFileId = null;
+    let currentFileTitle = null;
 
     // Initialize
     loadFiles();
@@ -66,22 +67,21 @@ document.addEventListener('DOMContentLoaded', function() {
         filesContainer.innerHTML = '';
         files.forEach(file => {
             // Ensure file is a string
-            const fileName = String(file);
             const row = document.createElement('tr');
             row.className = 'file-item';
-            row.dataset.fileId = fileName;
+            row.dataset.fileId = file.id;
 
             // Add file type icon based on extension
-            const extension = fileName.includes('.') ? fileName.split('.').pop().toLowerCase() : '';
+            const extension = file.extension;
             const icon = getIconForExtension(extension);
 
             // Create title cell
             const titleCell = document.createElement('td');
             titleCell.className = 'file-title';
-            titleCell.innerHTML = `<span class="file-type-icon">${icon}</span> ${fileName}`;
+            titleCell.innerHTML = `<span class="file-type-icon">${icon}</span> ${file.title}`;
             titleCell.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
-                showContextMenu(e, fileName);
+                showContextMenu(e, file.id,file.title);
                 return false; // Prevent default context menu
             });
 
@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // If it's an image, show preview
             if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension)) {
-                previewCell.innerHTML = `<img src="api/files.php?action=get&id=${fileName}" width="100" alt="${fileName}">`;
+                previewCell.innerHTML = `<img src="api/files.php?action=get&id=${file.id}" width="100" alt="${file.title}">`;
             } else {
                 previewCell.textContent = 'No preview';
             }
@@ -121,11 +121,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function showContextMenu(e, fileId) {
+    function showContextMenu(e, fileId, title) {
         e.preventDefault();
 
         // Update current file
         currentFileId = fileId;
+        currentFileTitle = title;
 
         // Position the context menu
         contextMenu.style.left = e.pageX + 'px';
@@ -136,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function deleteCurrentFile() {
         if (!currentFileId) return;
 
-        const confirm = window.confirm(`Are you sure you want to delete ${currentFileId}?`);
+        const confirm = window.confirm(`Are you sure you want to delete ${currentFileTitle}?`);
         if (!confirm) return;
 
         fetch(`api/files.php?action=delete&id=${currentFileId}`, {
@@ -147,6 +148,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     // Reset state
                     currentFileId = null;
+                    currentFileTitle=null;
 
                     // Hide context menu
                     contextMenu.style.display = 'none';
@@ -168,8 +170,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function renameCurrentFile() {
         if (!currentFileId) return;
 
-        const newTitle = prompt('Enter new title for the file:', currentFileId);
-        if (!newTitle || newTitle === currentFileId) return;
+        const newTitle = prompt('Enter new title for the file:', currentFileTitle);
+        if (!newTitle || newTitle === currentFileTitle) return;
 
         fetch('api/files.php?action=rename', {
             method: 'POST',
@@ -186,6 +188,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     // Reset state
                     currentFileId = null;
+                    currentFileTitle = null;
 
                     // Hide context menu
                     contextMenu.style.display = 'none';
