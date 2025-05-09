@@ -47,9 +47,28 @@ class FilesStorage {
 
     /**
      * Get the full file path based on the itemId
+     *
+     * @param string $itemId The item ID which may or may not include an extension
+     * @return string The full file path
      */
     private function getFilePath(string $itemId): string {
-        return $this->dataDir . '/' . $itemId;
+        // If the file exists directly with the given ID, return its path
+        $directPath = $this->dataDir . '/' . $itemId;
+        if (file_exists($directPath)) {
+            return $directPath;
+        }
+
+        // If itemId doesn't have an extension, try to find a matching file with extension
+        if (strpos($itemId, '.') === false) {
+            $files = glob($this->dataDir . '/' . $itemId . '.*');
+            if (!empty($files)) {
+                // Return the first matching file
+                return $files[0];
+            }
+        }
+
+        // Default: return path as is (for new files or when no match is found)
+        return $directPath;
     }
 
     public function upsertFile($itemId, $itemTitle, $itemContent = null) {
