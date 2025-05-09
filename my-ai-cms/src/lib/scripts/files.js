@@ -226,7 +226,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Get base64 content (removing the data:mime/type;base64, prefix)
             const base64Content = event.target.result.split(',')[1];
 
-            fetch('api/files.php?action=upload', {
+            fetch('api/files.php?action=create', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
