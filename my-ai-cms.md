@@ -6111,3 +6111,59 @@ This fix:
 1. Converts the file to a string using `String(file)`
 2. Checks if the file name includes a period before splitting it with `fileName.includes('.')`
 3. Uses the string version of the file name everywhere else in the function
+
+### 026 REQ
+
+The context menu is not shown, but i see the context menu div always on the page, can you fix it
+
+### 027 RES
+
+The issue is that the context menu is displayed on the page by default. You need to initially hide it with CSS and then only show it when right-clicking a file. Here's how to fix it:
+
+First, modify the CSS for the context menu. You'll need to add this in your `files.css` file or inline in `files.php`:
+
+```javascript
+function showContextMenu(e, fileId) {
+    e.preventDefault();
+
+    // Update current file
+    currentFileId = fileId;
+
+    // Position the context menu
+    contextMenu.style.left = e.pageX + 'px';
+    contextMenu.style.top = e.pageY + 'px';
+    contextMenu.style.display = 'block';
+}
+```
+
+There are two issues to fix:
+
+1. Add initial styling to hide the context menu by default:
+
+Add this at the start of your JavaScript code, right after getting all the DOM elements:
+
+```javascript
+// Initially hide context menu
+contextMenu.style.display = 'none';
+```
+
+2. Fix the event listeners for the file title to properly show the context menu:
+
+Replace the current context menu event listener in the `renderFileList` function:
+
+```javascript
+// Create title cell
+const titleCell = document.createElement('td');
+titleCell.className = 'file-title';
+titleCell.innerHTML = `<span class="file-type-icon">${icon}</span> ${fileName}`;
+titleCell.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    showContextMenu(e, fileName);
+    return false; // Prevent default context menu
+});
+```
+
+This ensures that:
+1. The context menu is hidden by default when the page loads
+2. The context menu appears only when right-clicking on a file
+3. The default browser context menu is prevented from showing

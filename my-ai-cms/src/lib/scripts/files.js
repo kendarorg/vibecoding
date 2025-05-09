@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const contextRename = document.getElementById('contextRename');
     const contextDelete = document.getElementById('contextDelete');
 
+    contextMenu.style.display = 'none';
     // State
     let currentFileId = null;
 
@@ -78,7 +79,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const titleCell = document.createElement('td');
             titleCell.className = 'file-title';
             titleCell.innerHTML = `<span class="file-type-icon">${icon}</span> ${fileName}`;
-            titleCell.addEventListener('contextmenu', (e) => showContextMenu(e, fileName));
+            titleCell.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                showContextMenu(e, fileName);
+                return false; // Prevent default context menu
+            });
 
             // Create preview cell
             const previewCell = document.createElement('td');
@@ -118,7 +123,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function showContextMenu(e, fileId) {
         e.preventDefault();
-        debugger;
 
         // Update current file
         currentFileId = fileId;
