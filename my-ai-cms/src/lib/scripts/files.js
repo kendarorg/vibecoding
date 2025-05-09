@@ -64,19 +64,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
         filesContainer.innerHTML = '';
         files.forEach(file => {
+            // Ensure file is a string
+            const fileName = String(file);
             const row = document.createElement('tr');
             row.className = 'file-item';
-            row.dataset.fileId = file;
+            row.dataset.fileId = fileName;
 
             // Add file type icon based on extension
-            const extension = file.split('.').pop().toLowerCase();
+            const extension = fileName.includes('.') ? fileName.split('.').pop().toLowerCase() : '';
             const icon = getIconForExtension(extension);
 
             // Create title cell
             const titleCell = document.createElement('td');
             titleCell.className = 'file-title';
-            titleCell.innerHTML = `<span class="file-type-icon">${icon}</span> ${file}`;
-            titleCell.addEventListener('contextmenu', (e) => showContextMenu(e, file));
+            titleCell.innerHTML = `<span class="file-type-icon">${icon}</span> ${fileName}`;
+            titleCell.addEventListener('contextmenu', (e) => showContextMenu(e, fileName));
 
             // Create preview cell
             const previewCell = document.createElement('td');
@@ -84,7 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // If it's an image, show preview
             if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension)) {
-                previewCell.innerHTML = `<img src="api/files.php?action=get&id=${file}" width="100" alt="${file}">`;
+                previewCell.innerHTML = `<img src="api/files.php?action=get&id=${fileName}" width="100" alt="${fileName}">`;
             } else {
                 previewCell.textContent = 'No preview';
             }
@@ -116,6 +118,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function showContextMenu(e, fileId) {
         e.preventDefault();
+        debugger;
 
         // Update current file
         currentFileId = fileId;

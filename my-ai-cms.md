@@ -6054,4 +6054,60 @@ These changes:
 
 The backend API would need corresponding endpoints for file rename and upload functionality.
 
+### 025 REQ
 
+I see the error Error fetching files: TypeError: file.split is not a function on script.js can you fix it
+
+### 025 RES
+
+The error occurs because the files array might contain non-string values. In the `renderFileList` function, you're trying to call `file.split('.').pop()` on each file, but one or more of the file values appear to be objects or another non-string type.
+
+Here's how to fix it:
+
+```javascript
+function renderFileList(files) {
+    if (!files || files.length === 0) {
+        filesContainer.innerHTML = '<tr><td colspan="2" class="empty">No files found</td></tr>';
+        return;
+    }
+
+    filesContainer.innerHTML = '';
+    files.forEach(file => {
+        // Ensure file is a string
+        const fileName = String(file);
+        const row = document.createElement('tr');
+        row.className = 'file-item';
+        row.dataset.fileId = fileName;
+
+        // Add file type icon based on extension
+        const extension = fileName.includes('.') ? fileName.split('.').pop().toLowerCase() : '';
+        const icon = getIconForExtension(extension);
+
+        // Create title cell
+        const titleCell = document.createElement('td');
+        titleCell.className = 'file-title';
+        titleCell.innerHTML = `<span class="file-type-icon">${icon}</span> ${fileName}`;
+        titleCell.addEventListener('contextmenu', (e) => showContextMenu(e, fileName));
+
+        // Create preview cell
+        const previewCell = document.createElement('td');
+        previewCell.className = 'file-preview';
+
+        // If it's an image, show preview
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension)) {
+            previewCell.innerHTML = `<img src="api/files.php?action=get&id=${fileName}" width="100" alt="${fileName}">`;
+        } else {
+            previewCell.textContent = 'No preview';
+        }
+
+        row.appendChild(titleCell);
+        row.appendChild(previewCell);
+        filesContainer.appendChild(row);
+    });
+}
+```
+
+This fix:
+1. Converts the file to a string using `String(file)`
+2. Checks if the file name includes a period before splitting it with `fileName.includes('.')`
+3. Uses the string version of the file name everywhere else in the function
