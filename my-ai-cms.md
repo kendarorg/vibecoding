@@ -6287,3 +6287,297 @@ No changes are needed to your frontend code since your image tags already use th
 ### FIX 029
 
 Change "upload" action to "Create" on files.php
+
+### REQ 030
+
+The files context menu is not shown floating, take as an example the one in storage.php/storage.js
+
+### RES 030
+
+Looking at the files.js implementation, I need to create a similar context menu system as used in the storage.js file. The main issue is that the files context menu isn't floating properly.
+
+Here's how to modify the files.js to implement a floating context menu similar to the one in storage.js:
+
+```javascript
+document.addEventListener('DOMContentLoaded', function() {
+    // DOM elements
+    const filesContainer = document.getElementById('files-container');
+    const contextMenu = document.getElementById('contextMenu');
+    const extensionFilter = document.getElementById('extensionFilter');
+    const applyFilterBtn = document.getElementById('applyFilter');
+    const uploadFileBtn = document.getElementById('uploadFileBtn');
+    const fileUpload = document.getElementById('fileUpload');
+    const uploadFileTitle = document.getElementById('uploadFileTitle');
+    
+    // Context menu elements
+    const contextRename = document.getElementById('contextRename');
+    const contextDelete = document.getElementById('contextDelete');
+    
+    // State variables
+    let currentFileId = null;
+    let currentFileTitle = null;
+    
+    // Load files on page load
+    loadFiles();
+    
+    // Event listeners
+    document.addEventListener('click', function() {
+        hideContextMenu();
+    });
+    
+    applyFilterBtn.addEventListener('click', function() {
+        loadFiles(extensionFilter.value);
+    });
+    
+    extensionFilter.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            loadFiles(extensionFilter.value);
+        }
+    });
+    
+    uploadFileBtn.addEventListener('click', uploadFile);
+    
+    contextRename.addEventListener('click', function() {
+        if (currentFileId) {
+            const newTitle = prompt('Enter new name:', currentFileTitle);
+            if (newTitle && newTitle.trim()) {
+                renameFile(currentFileId, newTitle.trim());
+            }
+        }
+    });
+    
+    contextDelete.addEventListener('click', function() {
+        if (currentFileId && confirm(`Are you sure you want to delete "${currentFileTitle}"?`)) {
+            deleteFile(currentFileId);
+        }
+    });
+    
+    // Function to show context menu
+    function showContextMenu(e, fileId, fileTitle) {
+        e.preventDefault();
+        
+        // Set current selection
+        currentFileId = fileId;
+        currentFileTitle = fileTitle;
+        
+        // Position menu at cursor
+        contextMenu.style.left = e.pageX + 'px';
+        contextMenu.style.top = e.pageY + 'px';
+        contextMenu.style.display = 'block';
+    }
+    
+    // Function to hide context menu
+    function hideContextMenu() {
+        contextMenu.style.display = 'none';
+    }
+    
+    // Function to load files
+    function loadFiles(extensions = '') {
+        filesContainer.innerHTML = '<tr><td colspan="2" class="loading">Loading files...</td></tr>';
+        
+        fetch(`api/files.php?action=list&extensions=${extensions}`)
+            .then(response => response.json())
+            .then(data => {
+                filesContainer.innerHTML = '';
+                
+                if (data.success && data.files && data.files.length > 0) {
+                    data.files.forEach(file => {
+                        const row = createFileRow(file);
+                        filesContainer.appendChild(row);
+                    });
+                } else {
+                    filesContainer.innerHTML = '<tr><td colspan="2" class="empty">No files found</td></tr>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading files:', error);
+                filesContainer.innerHTML = '<tr><td colspan="2" class="error">Error loading files</td></tr>';
+            });
+    }
+    
+    // Function to create a file row
+    function createFileRow(file) {
+        const row = document.createElement('tr');
+        row.className = 'file-row';
+        row.dataset.id = file.id;
+        row.dataset.title = file.title;
+        
+        // Title cell
+        const titleCell = document.createElement('td');
+        titleCell.className = 'file-title';
+        
+        // Create title link
+        const titleLink = document.createElement('a');
+        titleLink.href = `api/files.php?action=content&id=${file.id}`;
+        titleLink.textContent = file.title;
+        titleLink.target = '_blank';
+        
+        titleCell.appendChild(titleLink);
+        
+        // Preview cell
+        const previewCell = document.createElement('td');
+        previewCell.className = 'file-preview';
+        
+        // Check if file is an image
+        const fileExtension = file.id.split('.').pop().toLowerCase();
+        const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+        
+        if (imageExts.includes(fileExtension)) {
+            const img = document.createElement('img');
+            img.src = `api/files.php?action=content&id=${file.id}`;
+            img.alt = file.title;
+            img.className = 'thumbnail';
+            previewCell.appendChild(img);
+        } else {
+            previewCell.textContent = 'No preview';
+        }
+        
+        // Add context menu to row
+        row.addEventListener('contextmenu', function(e) {
+            showContextMenu(e, file.id, file.title);
+        });
+        
+        row.appendChild(titleCell);
+        row.appendChild(previewCell);
+        
+        return row;
+    }
+    
+    // Function to upload a file
+    function uploadFile() {
+        const title = uploadFileTitle.value.trim();
+        if (!title) {
+            alert('Please enter a file title');
+            return;
+        }
+        
+        if (!fileUpload.files || fileUpload.files.length === 0) {
+            alert('Please select a file to upload');
+            return;
+        }
+        
+        const file = fileUpload.files[0];
+        const extension = file.name.split('.').pop().toLowerCase();
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            // Get base64 content without the prefix
+            const base64Content = e.target.result.split(',')[1];
+            
+            // Send to server
+            fetch('api/files.php?action=create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    title: title,
+                    extension: extension,
+                    content: base64Content
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('File uploaded successfully');
+                    // Clear form
+                    uploadFileTitle.value = '';
+                    fileUpload.value = '';
+                    // Reload files
+                    loadFiles(extensionFilter.value);
+                } else {
+                    alert('Error uploading file: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error uploading file:', error);
+                alert('Network error when uploading file');
+            });
+        };
+        
+        reader.readAsDataURL(file);
+    }
+    
+    // Function to rename a file
+    function renameFile(fileId, newTitle) {
+        fetch('api/files.php?action=update', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: fileId,
+                title: newTitle,
+                content: null
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update file in DOM
+                const row = document.querySelector(`.file-row[data-id="${fileId}"]`);
+                if (row) {
+                    const titleLink = row.querySelector('.file-title a');
+                    titleLink.textContent = newTitle;
+                    row.dataset.title = newTitle;
+                }
+                
+                alert('File renamed successfully');
+            } else {
+                alert('Error renaming file: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error renaming file:', error);
+            alert('Network error when renaming file');
+        });
+    }
+    
+    // Function to delete a file
+    function deleteFile(fileId) {
+        fetch(`api/files.php?action=delete&id=${fileId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove file from DOM
+                const row = document.querySelector(`.file-row[data-id="${fileId}"]`);
+                if (row) {
+                    row.parentNode.removeChild(row);
+                }
+                
+                alert('File deleted successfully');
+                
+                // If no files left, show empty message
+                if (filesContainer.children.length === 0) {
+                    filesContainer.innerHTML = '<tr><td colspan="2" class="empty">No files found</td></tr>';
+                }
+            } else {
+                alert('Error deleting file: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting file:', error);
+            alert('Network error when deleting file');
+        });
+    }
+});
+```
+
+The main changes I made:
+
+1. Implemented a proper `showContextMenu()` function that positions the menu at the cursor coordinates
+2. Added event handling for hiding the context menu when clicking elsewhere
+3. Made the context menu appear on right-click of file rows
+4. Stored the current file ID and title when showing the context menu
+5. Properly styled the context menu to appear at the correct position
+6. Implemented full CRUD operations for files with proper API interaction
+
+With these changes, the context menu should float and appear at the cursor position, similar to how it works in the storage.js implementation.
+
+### FIX 031
+
+Does not work refactor by hand
+* Copied the menu from storage.php
+* Changed parameters for called apis (wrong actions)

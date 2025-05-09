@@ -35,7 +35,7 @@
     </div>
 </div>
 
-<div id="contextMenu" class="context-menu">
+<div id="contextMenu" class="context-menu" style="display: none;">
     <ul>
         <li id="contextRename">Rename</li>
         <li id="contextDelete">Delete</li>

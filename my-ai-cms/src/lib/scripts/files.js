@@ -10,7 +10,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const contextRename = document.getElementById('contextRename');
     const contextDelete = document.getElementById('contextDelete');
 
-    contextMenu.style.display = 'none';
     // State
     let currentFileId = null;
     let currentFileTitle = null;
@@ -26,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Close context menu when clicking elsewhere
     document.addEventListener('click', function() {
-        contextMenu.style.display = 'none';
+        hideContextMenu();
     });
 
     // Prevent context menu from closing when clicked
@@ -81,8 +80,7 @@ document.addEventListener('DOMContentLoaded', function() {
             titleCell.innerHTML = `<span class="file-type-icon">${icon}</span> ${file.title}`;
             titleCell.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
-                showContextMenu(e, file.id,file.title);
-                return false; // Prevent default context menu
+                showContextMenu(e.pageX, e.pageY, file.id,file.title);
             });
 
             // Create preview cell
@@ -121,18 +119,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function showContextMenu(e, fileId, title) {
-        e.preventDefault();
-
+    function showContextMenu(x,y, fileId, title) {
+        contextMenu.style.left = x + 'px';
+        contextMenu.style.top = y + 'px';
+        contextMenu.style.display = 'block';
         // Update current file
         currentFileId = fileId;
         currentFileTitle = title;
-
-        // Position the context menu
-        contextMenu.style.left = e.pageX + 'px';
-        contextMenu.style.top = e.pageY + 'px';
-        contextMenu.style.display = 'block';
     }
+
+    // Function to hide context menu
+    function hideContextMenu() {
+        contextMenu.style.display = 'none';
+    }
+
 
     function deleteCurrentFile() {
         if (!currentFileId) return;
@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!confirm) return;
 
         fetch(`api/files.php?action=delete&id=${currentFileId}`, {
-            method: 'DELETE'
+            method: 'GET'
         })
             .then(response => response.json())
             .then(data => {
@@ -173,14 +173,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const newTitle = prompt('Enter new title for the file:', currentFileTitle);
         if (!newTitle || newTitle === currentFileTitle) return;
 
-        fetch('api/files.php?action=rename', {
+        fetch('api/files.php?action=update', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 id: currentFileId,
-                newTitle: newTitle
+                title: newTitle
             })
         })
             .then(response => response.json())

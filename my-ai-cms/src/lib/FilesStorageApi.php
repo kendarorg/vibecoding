@@ -162,7 +162,7 @@ class FilesStorageApi {
         $fileId = Utils::generateUuid().".". ($data['extension'] ?? "unknown");
         $title = $data['title'] ?? null;
         $content ='';
-        if($data['content']!==null){
+        if(array_key_exists("content",$data) && $data['content']!==null){
             $content = base64_decode($data['content']);
         }
 
@@ -201,7 +201,7 @@ class FilesStorageApi {
         $fileId = $data['id'];
         $title = $data['title'] ?? null;
         $content =null;
-        if($data['content']!==null){
+        if(array_key_exists("content",$data) && $data['content']!==null){
             $content = base64_decode($data['content']);
         }
 
