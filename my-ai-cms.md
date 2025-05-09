@@ -828,3 +828,7 @@ Key changes made:
    - Clarified optional parameters behavior
 
 These changes ensure the FlatStorage class follows the new requirements while maintaining the same functionality for tracking item hierarchy and names.
+
+### FIX 003
+
+updated test

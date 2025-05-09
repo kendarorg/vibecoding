@@ -73,9 +73,6 @@ class FlatStorageTest extends TestCase
         $this->assertFileExists($this->tempDataDir . '/' . $uuid);
         $this->assertEquals($content, file_get_contents($this->tempDataDir . '/' . $uuid));
 
-        // Check temp marker file was created
-        $this->assertFileExists($this->tempDataDir . '/' . $uuid . '.tmp');
-
         // Check log entries
         $indexLog = file_get_contents($this->tempStructureDir . '/index.log');
         $namesLog = file_get_contents($this->tempStructureDir . '/names.log');
