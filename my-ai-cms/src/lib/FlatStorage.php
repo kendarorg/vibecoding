@@ -179,10 +179,6 @@ class FlatStorage {
      * Get content of a specific item
      */
     public function getContent(string $itemUuid): string {
-        if ($itemUuid === $this->rootUuid) {
-            return '';
-        }
-
         $itemPath = $this->dataDir . '/' . $itemUuid;
 
         if (file_exists($itemPath)) {

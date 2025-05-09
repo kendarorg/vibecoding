@@ -4,157 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FlatStorage UI</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-
-        .header {
-            background-color: #f5f5f5;
-            padding: 10px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .breadcrumb {
-            display: flex;
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .breadcrumb li {
-            margin-right: 5px;
-        }
-
-        .breadcrumb li:after {
-            content: ">";
-            margin-left: 5px;
-        }
-
-        .breadcrumb li:last-child:after {
-            content: "";
-        }
-
-        .breadcrumb a {
-            color: #0066cc;
-            text-decoration: none;
-        }
-
-        .breadcrumb a:hover {
-            text-decoration: underline;
-        }
-
-        .main-container {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
-
-        .tree-panel {
-            width: 300px;
-            border-right: 1px solid #ddd;
-            overflow: auto;
-            padding: 10px;
-        }
-
-        .content-panel {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 10px;
-        }
-
-        .content-title {
-            font-size: 18px;
-            margin-bottom: 10px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .content-editor {
-            flex: 1;
-            width: 100%;
-            resize: none;
-            border: 1px solid #ddd;
-            padding: 10px;
-            font-family: inherit;
-        }
-
-        .tree-node {
-            margin: 5px 0;
-        }
-
-        .tree-children {
-            margin-left: 20px;
-            display: none;
-        }
-
-        .tree-node.open > .tree-children {
-            display: block;
-        }
-
-        .tree-label {
-            cursor: pointer;
-            user-select: none;
-            padding: 3px;
-        }
-
-        .tree-label:hover {
-            background-color: #f0f0f0;
-        }
-
-        .tree-label.selected {
-            background-color: #e0e0ff;
-        }
-
-        .tree-toggle {
-            display: inline-block;
-            width: 16px;
-            text-align: center;
-            cursor: pointer;
-        }
-
-        .context-menu {
-            position: absolute;
-            background-color: white;
-            border: 1px solid #ddd;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-            z-index: 1000;
-        }
-
-        .context-menu ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .context-menu li {
-            padding: 8px 12px;
-            cursor: pointer;
-        }
-
-        .context-menu li:hover {
-            background-color: #f0f0f0;
-        }
-
-        .save-button {
-            margin-top: 10px;
-            padding: 8px 12px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-
-        .save-button:hover {
-            background-color: #45a049;
-        }
-    </style>
+    <link rel="stylesheet" href="lib/style.css">
 </head>
 <body>
 <div class="header">
@@ -184,7 +34,7 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // DOM elements
         const treePanel = document.getElementById('tree-panel');
         const contextMenu = document.getElementById('context-menu');
@@ -208,11 +58,11 @@
         loadRootItems();
 
         // Event handlers
-        document.addEventListener('click', function() {
+        document.addEventListener('click', function () {
             hideContextMenu();
         });
 
-        contentEditor.addEventListener('input', function() {
+        contentEditor.addEventListener('input', function () {
             if (currentItemId) {
                 // Mark content as modified
                 if (!saveButton.classList.contains('modified')) {
@@ -222,13 +72,13 @@
             }
         });
 
-        saveButton.addEventListener('click', function() {
+        saveButton.addEventListener('click', function () {
             if (currentItemId) {
                 saveContent(currentItemId, contentEditor.value);
             }
         });
 
-        menuRename.addEventListener('click', function() {
+        menuRename.addEventListener('click', function () {
             if (contextMenu.dataset.itemId === '00000000-0000-0000-0000-000000000000') {
                 alert('Cannot rename root item');
                 return;
@@ -240,7 +90,7 @@
             }
         });
 
-        menuDelete.addEventListener('click', function() {
+        menuDelete.addEventListener('click', function () {
             if (contextMenu.dataset.itemId === '00000000-0000-0000-0000-000000000000') {
                 alert('Cannot delete root item');
                 return;
@@ -251,7 +101,7 @@
             }
         });
 
-        menuCreate.addEventListener('click', function() {
+        menuCreate.addEventListener('click', function () {
             const newName = prompt('Enter name for new item:');
             if (newName && newName.trim()) {
                 createItem(contextMenu.dataset.itemId, newName.trim());
@@ -306,7 +156,7 @@
             const toggleSpan = document.createElement('span');
             toggleSpan.className = 'tree-toggle';
             toggleSpan.textContent = item.hasChildren ? '+' : ' ';
-            toggleSpan.addEventListener('click', function(e) {
+            toggleSpan.addEventListener('click', function (e) {
                 e.stopPropagation();
                 toggleNode(nodeDiv, item.id);
             });
@@ -317,13 +167,13 @@
             titleSpan.textContent = item.title;
 
             // Add click handler to select the item
-            titleSpan.addEventListener('click', function(e) {
+            titleSpan.addEventListener('click', function (e) {
                 e.stopPropagation();
                 selectNode(nodeDiv, item.id);
             });
 
             // Add context menu to title
-            titleSpan.addEventListener('contextmenu', function(e) {
+            titleSpan.addEventListener('contextmenu', function (e) {
                 e.preventDefault();
                 showContextMenu(e.pageX, e.pageY, item.id, item.title, parentId);
             });
@@ -446,7 +296,7 @@
                 a.textContent = item.title;
 
                 // Add click handler to navigate to this item
-                a.addEventListener('click', function(e) {
+                a.addEventListener('click', function (e) {
                     e.preventDefault();
                     navigateToBreadcrumb(item.id);
                 });
@@ -507,7 +357,7 @@
 
         // Fetch items from the API
         function fetchItems(parentId) {
-            return fetch(`api.php?action=list&parent=${parentId}`)
+            return fetch(`api/flat.php?action=list&parent=${parentId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -535,7 +385,7 @@
             contentTitle.textContent = node ? node.title : 'Loading...';
 
             // Fetch content
-            fetch(`api.php?action=content&id=${itemId}`)
+            fetch(`api/flat.php?action=content&id=${itemId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -555,8 +405,8 @@
         function saveContent(itemId, content) {
             const node = nodeCache.get(itemId);
 
-            fetch('api.php?action=update', {
-                method: 'PUT',
+            fetch('api/flat.php?action=update', {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
@@ -584,7 +434,7 @@
 
         // Rename item
         function renameItem(itemId, newTitle) {
-            fetch('api.php?action=update', {
+            fetch('api/flat.php?action=update', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
@@ -629,8 +479,8 @@
 
         // Delete item
         function deleteItem(itemId, parentId) {
-            fetch(`api.php?action=delete&id=${itemId}&parent=${parentId}`, {
-                method: 'DELETE'
+            fetch(`api/flat.php?action=delete&id=${itemId}&parent=${parentId}`, {
+                method: 'GET'
             })
                 .then(response => response.json())
                 .then(data => {
@@ -666,7 +516,7 @@
             // Generate UUID for new item
             const itemId = generateUUID();
 
-            fetch('api.php?action=create', {
+            fetch('api/flat.php?action=create', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -734,7 +584,7 @@
 
         // Helper function to generate UUID
         function generateUUID() {
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
                 const r = Math.random() * 16 | 0;
                 const v = c === 'x' ? r : (r & 0x3 | 0x8);
                 return v.toString(16);

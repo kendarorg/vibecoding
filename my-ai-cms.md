@@ -4951,3 +4951,6 @@ class Settings {
 Settings::$root = dirname(__FILE__);
 
 
+### FIX 021
+
+Refactoring

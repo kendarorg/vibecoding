@@ -18,6 +18,18 @@ class FlatStorageApi {
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
         $action = $_GET['action'] ?? null;
 
+        $ma = $method.$action;
+
+        // Handle method overrides
+        switch($ma){
+            case("GETdelete"):
+                $method = 'DELETE';
+                break;
+            case("POSTupdate"):
+                $method = 'PUT';
+                break;
+        }
+
         try {
             switch ($method) {
                 case 'GET':
