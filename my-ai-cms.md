@@ -2917,3 +2917,452 @@ The tests cover all the behavior needed for both methods while maintaining the t
 A private function made protected
 Wrongly Overriding  the children flag on ui
 
+### REQ 013
+
+
+<step>
+Create a php class called FilesStorage that
+* Uses one files as "index"
+	* "structure/names.log": contains a list of items in format ACTION,ITEM_UUID.EXTENSION,ITEM_TITLE
+* The data will be stored under the directory "data" at the same level of "structure"
+
+</step>
+<step>
+Expose these methods
+* upsertFile(ITEM_UUID.EXTENSION,ITEM_TITLE,ITEM_CONTENT)
+	* If the file "data/ITEM_UUID" does not exists
+		* Create the file "data/ITEM_UUID" with content ITEM_CONTENT
+		* Add on "structure/names.log" a line CR,ITEM_UUID,ITEM_TITLE
+	* Else if the file "data/ITEM_UUID" exists
+		* If the last line with matching ITEM_UUID in "structure/names.log" has a different ITEM_TITLE
+			* Add on "structure/names.log" a line RN,ITEM_UUID,ITEM_TITLE
+		* If the content is null, just update the title
+		* If the content is not null save the file
+* deleteFile(ITEM_UUID)
+	* If the file "data/ITEM_UUID.*" exists
+		* Add on "structure/names.log" a line DE,ITEM_UUID,
+		* Delete the file
+* listFiles()
+	* List all the files 
+		* For each founded line retrieve the ITEM_TITLE
+		* Return a list of object in format {"title":"ITEM_TITLE","id":"ITEM_ID","extension":"EXTENSION"}
+
+* listFilesByExtension(EXTENSION ...)
+	* As listFiles() but return all the extensions specified
+* getContent(ITEM_UUID)
+	* Retrieve the content of the file
+</step>
+<step>
+Create the unit tests for the FilesStorage
+</step>
+
+### RES 013
+
+I'll create a `FilesStorage` class to manage files with an index log for tracking changes. Let me implement this solution step by step.
+
+First, let's create the `FilesStorage` class:
+
+```php
+<?php
+
+class FilesStorage {
+    private $dataDir;
+    private $structureDir;
+    private $namesLogFile;
+    
+    public function __construct($basePath = '') {
+        $this->dataDir = rtrim($basePath, '/') . '/data';
+        $this->structureDir = rtrim($basePath, '/') . '/structure';
+        $this->namesLogFile = $this->structureDir . '/names.log';
+        
+        // Ensure directories exist
+        if (!is_dir($this->dataDir)) {
+            mkdir($this->dataDir, 0755, true);
+        }
+        
+        if (!is_dir($this->structureDir)) {
+            mkdir($this->structureDir, 0755, true);
+        }
+        
+        // Ensure names log file exists
+        if (!file_exists($this->namesLogFile)) {
+            file_put_contents($this->namesLogFile, '');
+        }
+    }
+    
+    public function upsertFile($itemId, $itemTitle, $itemContent = null) {
+        // Extract extension if present in itemId
+        $extension = '';
+        if (strpos($itemId, '.') !== false) {
+            list($itemId, $extension) = explode('.', $itemId, 2);
+        }
+        
+        $filePath = $this->dataDir . '/' . $itemId;
+        if ($extension) {
+            $filePath .= '.' . $extension;
+        }
+        
+        $fileExists = file_exists($filePath);
+        
+        // If file doesn't exist, create it and log creation
+        if (!$fileExists) {
+            if ($itemContent !== null) {
+                file_put_contents($filePath, $itemContent);
+            }
+            $this->appendToLog('CR', $itemId . ($extension ? '.' . $extension : ''), $itemTitle);
+        } else {
+            // Check if title has changed
+            $currentTitle = $this->getCurrentTitle($itemId . ($extension ? '.' . $extension : ''));
+            if ($currentTitle !== $itemTitle) {
+                $this->appendToLog('RN', $itemId . ($extension ? '.' . $extension : ''), $itemTitle);
+            }
+            
+            // Update content if provided
+            if ($itemContent !== null) {
+                file_put_contents($filePath, $itemContent);
+            }
+        }
+        
+        return true;
+    }
+    
+    public function deleteFile($itemId) {
+        // Find files matching the pattern (for any extension)
+        $pattern = $this->dataDir . '/' . $itemId . '.*';
+        $files = glob($pattern);
+        
+        if (empty($files)) {
+            // Also check for files without extension
+            if (file_exists($this->dataDir . '/' . $itemId)) {
+                $files[] = $this->dataDir . '/' . $itemId;
+            }
+        }
+        
+        if (!empty($files)) {
+            foreach ($files as $file) {
+                $fileName = basename($file);
+                $this->appendToLog('DE', $fileName, '');
+                unlink($file);
+            }
+            return true;
+        }
+        
+        return false;
+    }
+    
+    public function listFiles() {
+        if (!file_exists($this->namesLogFile)) {
+            return [];
+        }
+        
+        $lines = file($this->namesLogFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        
+        $items = [];
+        $activeItems = [];
+        
+        foreach ($lines as $line) {
+            $parts = explode(',', $line, 3);
+            if (count($parts) < 3) continue;
+            
+            list($action, $itemId, $itemTitle) = $parts;
+            
+            // Extract extension if present
+            $extension = '';
+            if (strpos($itemId, '.') !== false) {
+                list($id, $extension) = explode('.', $itemId, 2);
+            } else {
+                $id = $itemId;
+            }
+            
+            switch ($action) {
+                case 'CR':
+                    $activeItems[$itemId] = [
+                        'id' => $id,
+                        'title' => $itemTitle,
+                        'extension' => $extension
+                    ];
+                    break;
+                case 'RN':
+                    if (isset($activeItems[$itemId])) {
+                        $activeItems[$itemId]['title'] = $itemTitle;
+                    }
+                    break;
+                case 'DE':
+                    unset($activeItems[$itemId]);
+                    break;
+            }
+        }
+        
+        return array_values($activeItems);
+    }
+    
+    public function listFilesByExtension(...$extensions) {
+        $files = $this->listFiles();
+        
+        if (empty($extensions)) {
+            return $files;
+        }
+        
+        return array_filter($files, function($file) use ($extensions) {
+            return in_array($file['extension'], $extensions);
+        });
+    }
+    
+    public function getContent($itemId) {
+        // Try to find the file with or without extension
+        $filePath = $this->dataDir . '/' . $itemId;
+        
+        if (!file_exists($filePath)) {
+            // Look for files with this ID but any extension
+            $pattern = $this->dataDir . '/' . $itemId . '.*';
+            $files = glob($pattern);
+            
+            if (empty($files)) {
+                return null;
+            }
+            
+            $filePath = $files[0]; // Use the first match
+        }
+        
+        return file_get_contents($filePath);
+    }
+    
+    // Helper methods
+    private function appendToLog($action, $itemId, $itemTitle) {
+        $logLine = $action . ',' . $itemId . ',' . $itemTitle . PHP_EOL;
+        file_put_contents($this->namesLogFile, $logLine, FILE_APPEND);
+    }
+    
+    private function getCurrentTitle($itemId) {
+        if (!file_exists($this->namesLogFile)) {
+            return null;
+        }
+        
+        $lines = file($this->namesLogFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $title = null;
+        
+        foreach ($lines as $line) {
+            $parts = explode(',', $line, 3);
+            if (count($parts) < 3) continue;
+            
+            list($action, $id, $itemTitle) = $parts;
+            
+            if ($id === $itemId) {
+                if ($action === 'CR' || $action === 'RN') {
+                    $title = $itemTitle;
+                } else if ($action === 'DE') {
+                    $title = null;
+                }
+            }
+        }
+        
+        return $title;
+    }
+}
+```
+
+Now, let's create unit tests for the `FilesStorage` class:
+
+```php
+<?php
+
+require_once 'FilesStorage.php';
+
+class FilesStorageTest extends PHPUnit\Framework\TestCase {
+    private $storageBasePath;
+    private $storage;
+    
+    protected function setUp(): void {
+        // Create a temporary directory for testing
+        $this->storageBasePath = sys_get_temp_dir() . '/files_storage_test_' . uniqid();
+        mkdir($this->storageBasePath, 0755, true);
+        
+        $this->storage = new FilesStorage($this->storageBasePath);
+    }
+    
+    protected function tearDown(): void {
+        // Clean up the temporary directory
+        $this->removeDirectory($this->storageBasePath);
+    }
+    
+    private function removeDirectory($dir) {
+        if (!is_dir($dir)) {
+            return;
+        }
+        
+        $files = array_diff(scandir($dir), ['.', '..']);
+        
+        foreach ($files as $file) {
+            $path = $dir . '/' . $file;
+            
+            if (is_dir($path)) {
+                $this->removeDirectory($path);
+            } else {
+                unlink($path);
+            }
+        }
+        
+        rmdir($dir);
+    }
+    
+    public function testUpsertNewFile() {
+        // Create a new file
+        $this->storage->upsertFile('test123.txt', 'Test Document', 'This is a test content');
+        
+        // Check if the file exists
+        $this->assertFileExists($this->storageBasePath . '/data/test123.txt');
+        
+        // Check if the content is correct
+        $content = file_get_contents($this->storageBasePath . '/data/test123.txt');
+        $this->assertEquals('This is a test content', $content);
+        
+        // Check if the log entry is correct
+        $logContent = file_get_contents($this->storageBasePath . '/structure/names.log');
+        $this->assertStringContainsString('CR,test123.txt,Test Document', $logContent);
+    }
+    
+    public function testUpsertExistingFileWithTitleChange() {
+        // Create a file
+        $this->storage->upsertFile('test456.md', 'Original Title', 'Original content');
+        
+        // Update the title
+        $this->storage->upsertFile('test456.md', 'New Title', 'Updated content');
+        
+        // Check if the file was updated
+        $content = file_get_contents($this->storageBasePath . '/data/test456.md');
+        $this->assertEquals('Updated content', $content);
+        
+        // Check log entries
+        $logContent = file_get_contents($this->storageBasePath . '/structure/names.log');
+        $this->assertStringContainsString('CR,test456.md,Original Title', $logContent);
+        $this->assertStringContainsString('RN,test456.md,New Title', $logContent);
+    }
+    
+    public function testDeleteFile() {
+        // Create a file
+        $this->storage->upsertFile('delete_me.txt', 'Delete Test', 'Content to delete');
+        
+        // Check if the file exists
+        $this->assertFileExists($this->storageBasePath . '/data/delete_me.txt');
+        
+        // Delete the file
+        $result = $this->storage->deleteFile('delete_me');
+        
+        // Check if deletion was successful
+        $this->assertTrue($result);
+        
+        // Check if the file is gone
+        $this->assertFileDoesNotExist($this->storageBasePath . '/data/delete_me.txt');
+        
+        // Check log entries
+        $logContent = file_get_contents($this->storageBasePath . '/structure/names.log');
+        $this->assertStringContainsString('CR,delete_me.txt,Delete Test', $logContent);
+        $this->assertStringContainsString('DE,delete_me.txt,', $logContent);
+    }
+    
+    public function testListFiles() {
+        // Create several files
+        $this->storage->upsertFile('file1.txt', 'File One', 'Content 1');
+        $this->storage->upsertFile('file2.md', 'File Two', 'Content 2');
+        $this->storage->upsertFile('file3.json', 'File Three', 'Content 3');
+        
+        // Delete one file
+        $this->storage->deleteFile('file2');
+        
+        // Update one file title
+        $this->storage->upsertFile('file1.txt', 'File One Updated', null);
+        
+        // List all files
+        $files = $this->storage->listFiles();
+        
+        // Check results
+        $this->assertCount(2, $files);
+        
+        // Check that file1 is present with updated title
+        $file1 = array_filter($files, function($file) {
+            return $file['id'] === 'file1';
+        });
+        $this->assertCount(1, $file1);
+        $file1 = reset($file1);
+        $this->assertEquals('File One Updated', $file1['title']);
+        $this->assertEquals('txt', $file1['extension']);
+        
+        // Check that file3 is present
+        $file3 = array_filter($files, function($file) {
+            return $file['id'] === 'file3';
+        });
+        $this->assertCount(1, $file3);
+        $file3 = reset($file3);
+        $this->assertEquals('File Three', $file3['title']);
+        $this->assertEquals('json', $file3['extension']);
+        
+        // Ensure file2 is not present (it was deleted)
+        $file2 = array_filter($files, function($file) {
+            return $file['id'] === 'file2';
+        });
+        $this->assertCount(0, $file2);
+    }
+    
+    public function testListFilesByExtension() {
+        // Create several files with different extensions
+        $this->storage->upsertFile('doc1.txt', 'Text Doc', 'Text content');
+        $this->storage->upsertFile('doc2.md', 'Markdown Doc', 'Markdown content');
+        $this->storage->upsertFile('doc3.txt', 'Another Text', 'More text');
+        $this->storage->upsertFile('doc4.json', 'JSON Doc', '{"test": true}');
+        
+        // List only txt files
+        $textFiles = $this->storage->listFilesByExtension('txt');
+        
+        // Check that only txt files are returned
+        $this->assertCount(2, $textFiles);
+        foreach ($textFiles as $file) {
+            $this->assertEquals('txt', $file['extension']);
+        }
+        
+        // List multiple extensions
+        $mixedFiles = $this->storage->listFilesByExtension('md', 'json');
+        
+        // Check that only md and json files are returned
+        $this->assertCount(2, $mixedFiles);
+        foreach ($mixedFiles as $file) {
+            $this->assertTrue(in_array($file['extension'], ['md', 'json']));
+        }
+    }
+    
+    public function testGetContent() {
+        // Create a file
+        $this->storage->upsertFile('content_test.txt', 'Content Test', 'This is the content to retrieve');
+        
+        // Get the content
+        $content = $this->storage->getContent('content_test.txt');
+        
+        // Check if content is correct
+        $this->assertEquals('This is the content to retrieve', $content);
+        
+        // Test getting content without extension in request
+        $contentAlt = $this->storage->getContent('content_test');
+        $this->assertEquals('This is the content to retrieve', $contentAlt);
+        
+        // Test getting content for non-existent file
+        $nonExistentContent = $this->storage->getContent('does_not_exist');
+        $this->assertNull($nonExistentContent);
+    }
+}
+```
+
+The implementation includes:
+
+1. A `FilesStorage` class that:
+   - Manages files in a "data" directory
+   - Tracks actions in "structure/names.log" with action codes (CR = create, RN = rename, DE = delete)
+   - Handles files with or without extensions
+   - Provides methods for creating, updating, deleting, listing, and retrieving file content
+
+2. Comprehensive unit tests that:
+   - Test file creation and update
+   - Test file deletion
+   - Test listing files (with and without filtering by extension)
+   - Test retrieving file content
+   - Use a temporary directory for test isolation
+
+The implementation ensures files are properly tracked with their versions in the names.log file, and supports working with various file extensions.
