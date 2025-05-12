@@ -6581,3 +6581,32 @@ With these changes, the context menu should float and appear at the cursor posit
 Does not work refactor by hand
 * Copied the menu from storage.php
 * Changed parameters for called apis (wrong actions)
+
+### REQ 032
+
+on the files action=create should pass to the api the extension
+
+### RES 033
+
+Looking at your selected code and the FilesStorageApi implementation, I see the issue. The API expects an `extension` parameter to be passed for file creation, but your code is sending `originalFilename` instead.
+
+Let's modify the upload function to extract and send the file extension:
+
+```javascript
+// Extract the file extension from the filename
+const extension = file.name.split('.').pop().toLowerCase();
+
+fetch('api/files.php?action=create', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+        title: title,
+        content: base64Content,
+        extension: extension
+    })
+})
+```
+
+This change extracts the extension from the original filename and passes it in the correct parameter that the FilesStorageApi expects. The backend will use this extension value to properly categorize the file and determine its MIME type.

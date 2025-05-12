@@ -220,7 +220,7 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Please select a file to upload');
             return;
         }
-
+        const extension = file.name.split('.').pop().toLowerCase();
         const reader = new FileReader();
         reader.onload = function(event) {
             // Get base64 content (removing the data:mime/type;base64, prefix)
@@ -234,7 +234,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify({
                     title: title,
                     content: base64Content,
-                    originalFilename: file.name
+                    originalFilename: file.name,
+                    extension:extension
                 })
             })
                 .then(response => response.json())
