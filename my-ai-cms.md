@@ -6983,3 +6983,95 @@ This implementation:
 5. Sets the "se" cookie with the UUID
 6. Loads the session file only once per request
 7. Updates the file whenever session data is modified
+
+### REQ 037
+
+* Create a top menu to choose between storage and files
+* The currently selected page will be storage using the Sessions.php
+* Refreshing the page will read the currentPage using Sessions.php
+* The selection of page will be done with the 'p' query parameter
+* When receiving the 'p' query parameter it will be stored in the currentPage in the Session
+* The session will be updated only when its values changes
+
+### RES 037
+
+I'll implement a top menu system that allows switching between storage and files pages, using the Session class to maintain the current page selection.
+
+Here's how to modify your `src/index.php` file:
+
+```php
+<?php
+require_once "Settings.php";
+
+// Handle page selection via query parameter
+if (isset($_GET['p']) && in_array($_GET['p'], ['storage', 'files'])) {
+    $newPage = $_GET['p'];
+    $currentPage = $session->get('currentPage', 'storage');
+    
+    // Only update the session if the page has changed
+    if ($newPage !== $currentPage) {
+        $session->set('currentPage', $newPage);
+    }
+    
+    // Redirect to remove query parameter (optional)
+    header('Location: index.php');
+    exit;
+}
+
+// Get current page from session
+$currentPage = $session->get('currentPage', 'storage');
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My AI CMS</title>
+    <link rel="stylesheet" href="lib/css/style.css">
+    <style>
+        .top-menu {
+            background-color: #333;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .top-menu a {
+            float: left;
+            color: white;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+        }
+        .top-menu a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+        .top-menu a.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-menu">
+        <a href="index.php?p=storage" class="<?php echo $currentPage === 'storage' ? 'active' : ''; ?>">Storage</a>
+        <a href="index.php?p=files" class="<?php echo $currentPage === 'files' ? 'active' : ''; ?>">Files</a>
+    </div>
+
+<?php
+require_once $currentPage.".php";
+?>
+</body>
+</html>
+```
+
+The implementation:
+
+1. Checks for the `p` query parameter and validates that it's either 'storage' or 'files'
+2. Only updates the session if the page selection has changed
+3. Reads the current page from the session with 'storage' as the default
+4. Creates a top menu with two links that pass the `p` parameter
+5. Highlights the active menu item using the 'active' class
+6. Includes the appropriate page file based on the session's currentPage value
+
+You'll need to create both `storage.php` and `files.php` in the same directory as `index.php` for this to work properly.
