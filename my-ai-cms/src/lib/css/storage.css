@@ -35,11 +35,7 @@
     text-decoration: underline;
 }
 
-.main-container {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-}
+
 
 .tree-panel {
     width: 300px;
