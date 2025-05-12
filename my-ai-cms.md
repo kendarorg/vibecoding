@@ -6764,4 +6764,5 @@ This implementation adds a dedicated "Actions" column with a download button for
 
 ### FIX 035
 
-Remove duplicate context menu
+* Remove duplicate context menu
+* Search returns an object instead of a list

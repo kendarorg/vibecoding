@@ -161,8 +161,11 @@ class FilesStorage {
                     break;
             }
         }
-
-        return array_values($activeItems);
+        $result = [];
+        foreach($activeItems as $key => $item){
+            $result[] = $item;
+        }
+        return $result;
     }
 
     public function listFilesByExtension(...$extensions) {
@@ -171,16 +174,23 @@ class FilesStorage {
                 $extensions = $extensions[0];
             }
         }
-        error_log("AAAAA ".json_encode($extensions));
         $files = $this->listFiles();
 
         if (empty($extensions)) {
-            return $files;
+            $result = [];
+            foreach($files as $key => $item){
+                $result[] = $item;
+            }
+            return $result;
         }
-        error_log("BBB ".json_encode($files));
-        return array_filter($files, function($file) use ($extensions) {
+        $files =  array_filter($files, function($file) use ($extensions) {
             return in_array($file['extension'], $extensions);
         });
+        $result = [];
+        foreach($files as $key => $item){
+            $result[] = $item;
+        }
+        return $result;
     }
 
     public function getContent($itemId) {
