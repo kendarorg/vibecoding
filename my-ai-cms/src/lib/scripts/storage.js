@@ -554,4 +554,122 @@ document.addEventListener('DOMContentLoaded', function () {
             return v.toString(16);
         });
     }
+
+    // Load expanded nodes from session
+    loadExpandedNodesFromSession();
+
+    // Function to toggle a node open/closed
+    function toggleNode(nodeElement, itemId) {
+        const isOpen = nodeElement.classList.contains('open');
+        const toggleSpan = nodeElement.querySelector('.tree-toggle');
+        const childrenContainer = nodeElement.querySelector('.tree-children');
+
+        if (isOpen) {
+            // Close the node
+            nodeElement.classList.remove('open');
+            toggleSpan.textContent = '+';
+
+            // Remove from session
+            removeExpandedNodeFromSession(itemId);
+        } else {
+            // Open the node
+            nodeElement.classList.add('open');
+            toggleSpan.textContent = '-';
+
+            // Add to session
+            addExpandedNodeToSession(itemId);
+
+            // Load children if not already loaded
+            const cachedNode = nodeCache.get(itemId);
+            if (!cachedNode.hasLoadedChildren) {
+                loadNodeChildren(itemId, childrenContainer);
+                cachedNode.hasLoadedChildren = true;
+            }
+        }
+    }
+
+    // New functions to handle session storage of expanded nodes
+    function loadExpandedNodesFromSession() {
+        fetch('api/session.php?action=getExpanded')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.opened && data.opened.length > 0) {
+                    // Process after the tree is loaded
+                    setTimeout(() => {
+                        expandNodesFromSession(data.opened);
+                    }, 500);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading expanded nodes:', error);
+            });
+    }
+
+    function expandNodesFromSession(nodeIds) {
+        // Expand the root first
+        if (nodeIds.includes('00000000-0000-0000-0000-000000000000')) {
+            const rootNode = document.querySelector('.tree-node[data-id="00000000-0000-0000-0000-000000000000"]');
+            if (rootNode && !rootNode.classList.contains('open')) {
+                toggleNode(rootNode, '00000000-0000-0000-0000-000000000000');
+            }
+        }
+
+        // Then process other nodes in sequence (need to wait for children to load)
+        let index = 0;
+        const processNextNode = () => {
+            if (index < nodeIds.length) {
+                const nodeId = nodeIds[index];
+                if (nodeId !== '00000000-0000-0000-0000-000000000000') {
+                    const nodeElement = document.querySelector(`.tree-node[data-id="${nodeId}"]`);
+                    if (nodeElement && !nodeElement.classList.contains('open')) {
+                        toggleNode(nodeElement, nodeId);
+                        // Wait a bit for children to load before processing next node
+                        setTimeout(processNextNode, 100);
+                    } else {
+                        // Node not found yet or already open, try next
+                        index++;
+                        setTimeout(processNextNode, 50);
+                    }
+                } else {
+                    // Skip root node (already processed)
+                    index++;
+                    processNextNode();
+                }
+            }
+        };
+
+        // Start processing non-root nodes
+        index = 0;
+        processNextNode();
+    }
+
+    function addExpandedNodeToSession(nodeId) {
+        fetch('api/session.php?action=addExpanded', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                nodeId: nodeId
+            })
+        })
+            .catch(error => {
+                console.error('Error saving expanded node:', error);
+            });
+    }
+
+    function removeExpandedNodeFromSession(nodeId) {
+        fetch('api/session.php?action=removeExpanded', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                nodeId: nodeId
+            })
+        })
+            .catch(error => {
+                console.error('Error removing expanded node:', error);
+            });
+    }
 });
