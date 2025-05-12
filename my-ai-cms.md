@@ -6767,3 +6767,219 @@ This implementation adds a dedicated "Actions" column with a download button for
 * Remove duplicate context menu
 * Search returns an object instead of a list
 * Formatting of the page
+
+### REQ 036
+
+Setup a session storage with the following characteristic
+* It will be managed by the Session php class
+* When connecting and no session is initialized
+	* Create a file on the directory "sessions" with the .UUID.json name and content {'expire':[currentdate+1 hour]}
+	* Store a cookie containing the UUID called "se" 
+* Subsequent connections should verify that the date specified on the file name is less than the current
+	* If it's expire delete the file, delete the cookie and create a new one
+* Requesting the data inside the session will read the file (once per roundtrip) and store the object on server in memory
+* Every modification of the data will result in changing the json data and saving the file
+
+### RES 036
+
+I'll create a PHP Session class that manages session storage using UUIDs and JSON files in the "sessions" directory with the specified characteristics.
+
+First, let's implement the Session class:
+
+```php
+<?php
+
+class Session {
+    private $sessionId;
+    private $sessionData;
+    private $sessionFile;
+    private $isLoaded = false;
+    private $cookieName = 'se';
+    private $sessionDir = 'sessions';
+    
+    public function __construct() {
+        // Make sure sessions directory exists
+        if (!file_exists($this->sessionDir)) {
+            mkdir($this->sessionDir, 0755, true);
+        }
+        
+        $this->initialize();
+    }
+    
+    private function initialize() {
+        // Check if session cookie exists
+        if (isset($_COOKIE[$this->cookieName])) {
+            $this->sessionId = $_COOKIE[$this->cookieName];
+            $this->sessionFile = $this->sessionDir . '/' . $this->sessionId . '.json';
+            
+            // Check if session file exists and is valid
+            if (file_exists($this->sessionFile)) {
+                $data = $this->loadSessionFile();
+                
+                // Check if session is expired
+                if (isset($data['expire']) && strtotime($data['expire']) > time()) {
+                    $this->sessionData = $data;
+                    $this->isLoaded = true;
+                    
+                    // Update expiration time
+                    $this->setExpiration();
+                    return;
+                }
+                
+                // Session expired, delete file
+                unlink($this->sessionFile);
+            }
+            
+            // Invalid or expired session, clear cookie
+            setcookie($this->cookieName, '', time() - 3600, '/');
+        }
+        
+        // Create new session
+        $this->createNewSession();
+    }
+    
+    private function createNewSession() {
+        // Generate UUID v4
+        $this->sessionId = $this->generateUUID();
+        $this->sessionFile = $this->sessionDir . '/' . $this->sessionId . '.json';
+        
+        // Set initial session data with expiration
+        $this->sessionData = [
+            'expire' => date('Y-m-d H:i:s', time() + 3600)
+        ];
+        
+        // Save session file
+        $this->saveSessionFile();
+        
+        // Set cookie
+        setcookie($this->cookieName, $this->sessionId, time() + 3600, '/');
+    }
+    
+    private function generateUUID() {
+        // Generate UUID v4
+        return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0x0fff) | 0x4000,
+            mt_rand(0, 0x3fff) | 0x8000,
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+        );
+    }
+    
+    private function loadSessionFile() {
+        if (!$this->isLoaded && file_exists($this->sessionFile)) {
+            $content = file_get_contents($this->sessionFile);
+            return json_decode($content, true);
+        }
+        return $this->sessionData;
+    }
+    
+    private function saveSessionFile() {
+        file_put_contents($this->sessionFile, json_encode($this->sessionData));
+    }
+    
+    private function setExpiration() {
+        $this->sessionData['expire'] = date('Y-m-d H:i:s', time() + 3600);
+        $this->saveSessionFile();
+    }
+    
+    public function get($key, $default = null) {
+        // Make sure session data is loaded
+        if (!$this->isLoaded) {
+            $this->sessionData = $this->loadSessionFile();
+            $this->isLoaded = true;
+        }
+        
+        return isset($this->sessionData[$key]) ? $this->sessionData[$key] : $default;
+    }
+    
+    public function set($key, $value) {
+        // Make sure session data is loaded
+        if (!$this->isLoaded) {
+            $this->sessionData = $this->loadSessionFile();
+            $this->isLoaded = true;
+        }
+        
+        $this->sessionData[$key] = $value;
+        $this->saveSessionFile();
+    }
+    
+    public function has($key) {
+        // Make sure session data is loaded
+        if (!$this->isLoaded) {
+            $this->sessionData = $this->loadSessionFile();
+            $this->isLoaded = true;
+        }
+        
+        return isset($this->sessionData[$key]);
+    }
+    
+    public function remove($key) {
+        // Make sure session data is loaded
+        if (!$this->isLoaded) {
+            $this->sessionData = $this->loadSessionFile();
+            $this->isLoaded = true;
+        }
+        
+        if (isset($this->sessionData[$key])) {
+            unset($this->sessionData[$key]);
+            $this->saveSessionFile();
+            return true;
+        }
+        
+        return false;
+    }
+    
+    public function destroy() {
+        if (file_exists($this->sessionFile)) {
+            unlink($this->sessionFile);
+        }
+        
+        setcookie($this->cookieName, '', time() - 3600, '/');
+        $this->sessionData = [];
+        $this->isLoaded = false;
+    }
+    
+    public function getSessionId() {
+        return $this->sessionId;
+    }
+}
+```
+
+Now, here's how you would use this Session class in your application:
+
+```php
+<?php
+require_once 'Session.php';
+
+// Initialize session
+$session = new Session();
+
+// Set session data
+$session->set('username', 'user123');
+$session->set('isLoggedIn', true);
+
+// Get session data
+$username = $session->get('username');
+$isLoggedIn = $session->get('isLoggedIn');
+
+// Check if key exists
+if ($session->has('username')) {
+    echo "Username is set to: " . $session->get('username');
+}
+
+// Remove session data
+$session->remove('tempData');
+
+// Completely destroy the session
+// $session->destroy();
+```
+
+This implementation:
+1. Creates files in a "sessions" directory with UUIDs as filenames
+2. Stores session data in JSON format
+3. Includes expiration checking (1 hour)
+4. Automatically creates new sessions when needed
+5. Sets the "se" cookie with the UUID
+6. Loads the session file only once per request
+7. Updates the file whenever session data is modified
