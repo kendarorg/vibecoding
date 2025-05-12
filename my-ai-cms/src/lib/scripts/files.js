@@ -94,8 +94,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 previewCell.textContent = 'No preview';
             }
 
+            // Actions cell
+            const actionsCell = document.createElement('td');
+            actionsCell.className = 'file-actions';
+
+            // Download button
+            const downloadBtn = document.createElement('button');
+            downloadBtn.className = 'action-btn download-btn';
+            downloadBtn.textContent = 'Download';
+            downloadBtn.addEventListener('click', function() {
+                downloadFile(file.id, file.title, extension);
+            });
+
+            actionsCell.appendChild(downloadBtn);
+
+            // Add context menu to row
+            row.addEventListener('contextmenu', function(e) {
+                showContextMenu(e, file.id, file.title);
+            });
+
             row.appendChild(titleCell);
             row.appendChild(previewCell);
+            row.appendChild(actionsCell);
             filesContainer.appendChild(row);
         });
     }
@@ -265,5 +285,24 @@ document.addEventListener('DOMContentLoaded', function() {
     function applyExtensionFilter() {
         const extensions = extensionFilter.value.trim();
         loadFiles(extensions || null);
+    }
+
+    // Function to download a file
+    function downloadFile(fileId, fileTitle, fileExtension) {
+        // Create a download URL
+        const downloadUrl = `api/files.php?action=get&id=${fileId}`;
+
+        // Create a temporary anchor element
+        const downloadLink = document.createElement('a');
+        downloadLink.href = downloadUrl;
+
+        // Set download attribute with filename
+        const fileName = fileExtension ? `${fileTitle}.${fileExtension}` : fileTitle;
+        downloadLink.setAttribute('download', fileName);
+
+        // Append to body, click and remove
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
     }
 });
