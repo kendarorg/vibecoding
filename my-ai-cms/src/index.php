@@ -1,3 +1,7 @@
+<?php
+
+require_once "Settings.php";
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -9,9 +13,12 @@
 </head>
 <body>
 <?php
+global $session;
+$currentPage = $session->get('currentPage',"storage");
+
 
 //require_once "storage.php";
-require_once "files.php";
+require_once $currentPage.".php";
 
 ?>
 </body>
