@@ -6766,3 +6766,4 @@ This implementation adds a dedicated "Actions" column with a download button for
 
 * Remove duplicate context menu
 * Search returns an object instead of a list
+* Formatting of the page

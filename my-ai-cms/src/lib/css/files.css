@@ -3,16 +3,15 @@
     font-family: Arial, sans-serif;
 }
 
-.container {
-    display: flex;
-    max-width: 1200px;
-    margin: 0 auto;
-    background-color: #fff;
-    border-radius: 5px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+.file-actions {
+    max-width: 300px;
+    border-right: 1px solid #ddd;
+    padding: 15px;
+    overflow-y: auto;
+    max-height: 80vh;
 }
+
 .file-list {
-    width: 300px;
     border-right: 1px solid #ddd;
     padding: 15px;
     overflow-y: auto;

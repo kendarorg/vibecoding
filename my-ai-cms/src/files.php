@@ -1,6 +1,6 @@
 <link rel="stylesheet" href="lib/css/files.css">
-<div class="container">
-    <div class="file-list">
+<div class="main-container">
+    <div class="file-actions">
         <div class="extension-filter">
             <input type="text" id="extensionFilter" class="filter-input" placeholder="Filter by extension (e.g., txt,md,json)">
             <button id="applyFilter">Filter</button>
@@ -17,6 +17,9 @@
             </div>
             <button id="uploadFileBtn">Upload File</button>
         </div>
+    </div>
+    <div class="file-list">
+
 
         <table id="files-table" class="files-table">
             <thead>
