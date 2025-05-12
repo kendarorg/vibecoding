@@ -23,12 +23,13 @@
             <tr>
                 <th>Title</th>
                 <th>Preview</th>
+                <th>Actions</th>
             </tr>
             </thead>
             <tbody id="files-container">
             <!-- Files will be populated here -->
             <tr>
-                <td colspan="2" class="loading">Loading files...</td>
+                <td colspan="3" class="loading">Loading files...</td>
             </tr>
             </tbody>
         </table>

@@ -6586,7 +6586,7 @@ Does not work refactor by hand
 
 on the files action=create should pass to the api the extension
 
-### RES 033
+### RES 032
 
 Looking at your selected code and the FilesStorageApi implementation, I see the issue. The API expects an `extension` parameter to be passed for file creation, but your code is sending `originalFilename` instead.
 
@@ -6610,3 +6610,154 @@ fetch('api/files.php?action=create', {
 ```
 
 This change extracts the extension from the original filename and passes it in the correct parameter that the FilesStorageApi expects. The backend will use this extension value to properly categorize the file and determine its MIME type.
+
+### REQ 033
+
+Add a button to download the file on the table listing the Files
+
+### RES 033
+
+To add a download button to each file in the table listing, I'll modify the files.js script to include this functionality. Here's how to implement it:
+
+1. First, I'll update the `createFileRow` function to add a download button in each row
+2. Style the button appropriately
+3. Add download functionality
+
+```javascript
+// Function to create a file row
+function createFileRow(file) {
+    const row = document.createElement('tr');
+    row.className = 'file-row';
+    row.dataset.id = file.id;
+    row.dataset.title = file.title;
+
+    // Title cell
+    const titleCell = document.createElement('td');
+    titleCell.className = 'file-title';
+
+    // Create title link
+    const titleLink = document.createElement('a');
+    titleLink.href = `api/files.php?action=content&id=${file.id}`;
+    titleLink.textContent = file.title;
+    titleLink.target = '_blank';
+
+    titleCell.appendChild(titleLink);
+
+    // Preview cell
+    const previewCell = document.createElement('td');
+    previewCell.className = 'file-preview';
+
+    // Check if file is an image
+    const fileExtension = file.extension || file.id.split('.').pop().toLowerCase();
+    const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+
+    if (imageExts.includes(fileExtension)) {
+        const img = document.createElement('img');
+        img.src = `api/files.php?action=content&id=${file.id}`;
+        img.alt = file.title;
+        img.className = 'thumbnail';
+        previewCell.appendChild(img);
+    } else {
+        previewCell.textContent = 'No preview';
+    }
+    
+    // Actions cell
+    const actionsCell = document.createElement('td');
+    actionsCell.className = 'file-actions';
+    
+    // Download button
+    const downloadBtn = document.createElement('button');
+    downloadBtn.className = 'action-btn download-btn';
+    downloadBtn.textContent = 'Download';
+    downloadBtn.addEventListener('click', function() {
+        downloadFile(file.id, file.title, fileExtension);
+    });
+    
+    actionsCell.appendChild(downloadBtn);
+
+    // Add context menu to row
+    row.addEventListener('contextmenu', function(e) {
+        showContextMenu(e, file.id, file.title);
+    });
+
+    row.appendChild(titleCell);
+    row.appendChild(previewCell);
+    row.appendChild(actionsCell);
+
+    return row;
+}
+
+// Function to download a file
+function downloadFile(fileId, fileTitle, fileExtension) {
+    // Create a download URL
+    const downloadUrl = `api/files.php?action=content&id=${fileId}`;
+    
+    // Create a temporary anchor element
+    const downloadLink = document.createElement('a');
+    downloadLink.href = downloadUrl;
+    
+    // Set download attribute with filename
+    const fileName = fileExtension ? `${fileTitle}.${fileExtension}` : fileTitle;
+    downloadLink.setAttribute('download', fileName);
+    
+    // Append to body, click and remove
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+}
+```
+
+Now, I need to update the HTML structure to include the new column for actions:
+
+```html
+<table id="files-table" class="files-table">
+    <thead>
+    <tr>
+        <th>Title</th>
+        <th>Preview</th>
+        <th>Actions</th>
+    </tr>
+    </thead>
+    <tbody id="files-container">
+    <!-- Files will be populated here -->
+    <tr>
+        <td colspan="3" class="loading">Loading files...</td>
+    </tr>
+    </tbody>
+</table>
+```
+
+And add CSS for the download button in the `files.css` file:
+
+```css
+.file-actions {
+    text-align: center;
+}
+
+.action-btn {
+    padding: 5px 10px;
+    margin: 0 2px;
+    cursor: pointer;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    background-color: #f8f8f8;
+}
+
+.download-btn {
+    background-color: #4CAF50;
+    color: white;
+    border-color: #45a049;
+}
+
+.download-btn:hover {
+    background-color: #45a049;
+}
+```
+
+This implementation adds a dedicated "Actions" column with a download button for each file. When clicked, it creates a temporary anchor element with the download attribute set to the file name, triggering a file download with the correct filename and extension.
+
+### FIX 034
+
+* Wrong function name
+* Wrong parameter name
+* Wrong api called
