@@ -107,11 +107,11 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             actionsCell.appendChild(downloadBtn);
-
-            // Add context menu to row
-            row.addEventListener('contextmenu', function(e) {
-                showContextMenu(e, file.id, file.title);
-            });
+            //
+            // // Add context menu to row
+            // row.addEventListener('contextmenu', function(e) {
+            //     showContextMenu(e, file.id, file.title);
+            // });
 
             row.appendChild(titleCell);
             row.appendChild(previewCell);
@@ -140,6 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showContextMenu(x,y, fileId, title) {
+
         contextMenu.style.left = x + 'px';
         contextMenu.style.top = y + 'px';
         contextMenu.style.display = 'block';
@@ -189,7 +190,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function renameCurrentFile() {
         if (!currentFileId) return;
-
         const newTitle = prompt('Enter new title for the file:', currentFileTitle);
         if (!newTitle || newTitle === currentFileTitle) return;
 

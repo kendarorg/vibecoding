@@ -6761,3 +6761,7 @@ This implementation adds a dedicated "Actions" column with a download button for
 * Wrong function name
 * Wrong parameter name
 * Wrong api called
+
+### FIX 035
+
+Remove duplicate context menu
