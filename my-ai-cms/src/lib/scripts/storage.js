@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const menuCreate = document.getElementById('menu-create');
 
     // Load root children
-    loadRootItems();
+    //loadRootItems();
 
     // Event handlers
     document.addEventListener('click', function () {
@@ -72,29 +72,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Function to load root items
-    function loadRootItems() {
-        fetchItems('00000000-0000-0000-0000-000000000000').then(items => {
-            // Create root node
-            const rootNode = createTreeNodeElement({
-                id: '00000000-0000-0000-0000-000000000000',
-                title: 'Root',
-                hasChildren: items.length > 0
-            }, null);
-
-            treePanel.innerHTML = '';
-            treePanel.appendChild(rootNode);
-
-            // If items, add them to the root
-            if (items.length > 0) {
-                const childrenContainer = rootNode.querySelector('.tree-children');
-                items.forEach(item => {
-                    const childNode = createTreeNodeElement(item, '00000000-0000-0000-0000-000000000000');
-                    childrenContainer.appendChild(childNode);
-                });
-            }
-        });
-    }
 
     // Function to create a tree node element
     function createTreeNodeElement(item, parentId) {
@@ -265,6 +242,7 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             // If node not in DOM, reload from root
             loadRootItems();
+            //TODO WHAT TO DO HERE?
             // Note: We'd need more complex logic to automatically navigate to a deeply nested node
         }
     }
@@ -542,6 +520,9 @@ document.addEventListener('DOMContentLoaded', function () {
             // Close the node
             nodeElement.classList.remove('open');
             toggleSpan.textContent = '+';
+            childrenContainer.innerHTML='';
+            const cachedNode = nodeCache.get(itemId);
+            cachedNode.hasLoadedChildren=false;
 
             // Remove from session
             removeExpandedNodeFromSession(itemId);
@@ -560,8 +541,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 cachedNode.hasLoadedChildren = true;
             }
         }
-    }
 
+        selectNode(nodeElement, itemId);
+    }
 
 
     function addExpandedNodeToSession(nodeId) {
@@ -574,9 +556,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 nodeId: nodeId
             })
         })
-            .catch(error => {
-                console.error('Error saving expanded node:', error);
-            });
+        .catch(error => {
+            console.error('Error saving expanded node:', error);
+        });
     }
 
     function removeExpandedNodeFromSession(nodeId) {
@@ -589,8 +571,101 @@ document.addEventListener('DOMContentLoaded', function () {
                 nodeId: nodeId
             })
         })
-            .catch(error => {
-                console.error('Error removing expanded node:', error);
-            });
+        .catch(error => {
+            console.error('Error removing expanded node:', error);
+        });
     }
+
+    // Function to load root items
+    function loadRootItems() {
+
+        fetchItems('00000000-0000-0000-0000-000000000000').then(items => {
+            // Create root node
+            const rootNode = createTreeNodeElement({
+                id: '00000000-0000-0000-0000-000000000000',
+                title: 'Root',
+                hasChildren: items.length > 0
+            }, null);
+
+            treePanel.innerHTML = '';
+            treePanel.appendChild(rootNode);
+
+            // If items, add them to the root
+            if (items.length > 0) {
+                const childrenContainer = rootNode.querySelector('.tree-children');
+                items.forEach(item => {
+                    const childNode = createTreeNodeElement(item, '00000000-0000-0000-0000-000000000000');
+                    childrenContainer.appendChild(childNode);
+                });
+            }
+        });
+    }
+
+
+
+
+    document.querySelectorAll('.tree-children').forEach(node => {
+        node.style.display = 'block';
+    });
+
+    document.querySelectorAll('.tree-toggle').forEach(toggleSpan => {
+        var nodeDiv = toggleSpan.parentNode.parentNode;
+        toggleSpan.addEventListener('click', function (e) {
+            e.stopPropagation();
+            toggleNode(nodeDiv, nodeDiv.dataset.id);
+        });
+    });
+
+    document.querySelectorAll('.tree-title').forEach(titleSpan => {
+        var nodeDiv = titleSpan.parentNode.parentNode;
+        titleSpan.addEventListener('click', function (e) {
+            e.stopPropagation();
+            selectNode(nodeDiv, nodeDiv.dataset.id);
+        });
+        titleSpan.addEventListener('contextmenu', function (e) {
+            e.preventDefault();
+            showContextMenu(e.pageX, e.pageY, nodeDiv.dataset.id, titleSpan.textContent, nodeDiv.dataset.parentId);
+        });
+    });
+
+    //Initialize nodes that are already in the DOM
+    document.querySelectorAll('.tree-node').forEach(node => {
+        const id = node.dataset.id;
+        const parent = node.dataset.parent;
+        const title = node.dataset.title;
+        const hasChildren = node.querySelector('.tree-toggle').textContent !== ' ';
+        const isOpen = node.classList.contains('open');
+        nodeCache.set(id, {
+            id: id,
+            title: title,
+            hasChildren: hasChildren,
+            hasLoadedChildren: isOpen && hasChildren,
+            parentId:parent
+        });
+    });
+/*
+    toggleSpan.className = 'tree-toggle';
+    toggleSpan.textContent = item.hasChildren ? '+' : ' ';
+    toggleSpan.addEventListener('click', function (e) {
+        e.stopPropagation();
+        toggleNode(nodeDiv, item.id);
+    });
+
+    // Title span
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'tree-title';
+    titleSpan.textContent = item.title;
+
+    // Add click handler to select the item
+    titleSpan.addEventListener('click', function (e) {
+        e.stopPropagation();
+        selectNode(nodeDiv, item.id);
+    });
+
+    // Add context menu to title
+    titleSpan.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+        showContextMenu(e.pageX, e.pageY, item.id, item.title, parentId);
+    });*/
+
 });

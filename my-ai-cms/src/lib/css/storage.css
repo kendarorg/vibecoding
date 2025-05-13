@@ -82,7 +82,7 @@
 
 .tree-label {
     cursor: pointer;
-    user-select: none;
+    /*user-select: none;*/
     padding: 3px;
 }
 

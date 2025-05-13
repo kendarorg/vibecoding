@@ -7883,3 +7883,513 @@ This test:
 ### FIX 044
 
 Let the path works correctly
+
+### REQ 045
+
+<preconditions>
+* It is possible to retrieve the full path of an item via FlatStorage::getFullPath
+* It is possible to retrieve all the UUID of the open items through Session::get('opened')
+</preconditions>
+<whattodo>
+* When Loading the storage.php 
+	* Load the opened items from the Session
+	* Find their full paths
+	* Show the tree with all the opened items directly in the php page
+</whattodo>
+<beware>
+* The child items should be shown on the tree when needed
+* No api calls should be made in the process
+</beware>
+
+### RES 045
+
+Based on the context, it looks like you're implementing a feature to show a tree with expanded items directly in a PHP page without making API calls. You need to use the Session to get the list of opened items and FlatStorage to get their full paths.
+
+Here's how to modify a `storage.php` file to achieve this:
+
+```php
+<?php
+require_once "Settings.php";
+require_once "lib/Session.php";
+require_once "lib/FlatStorage.php";
+
+// Initialize session and storage
+global $session;
+$storage = new FlatStorage(STRUCTURE_DIR, DATA_DIR);
+
+// Get the list of opened UUIDs from the session
+$openedIds = $session->get('opened', []);
+
+// Root node
+$rootUuid = '00000000-0000-0000-0000-000000000000';
+
+// Function to build tree structure
+function buildTree($parentUuid, $storage, $openedIds) {
+    $children = $storage->listChildren($parentUuid);
+    if (empty($children)) {
+        return '';
+    }
+    
+    $html = '<ul>';
+    foreach ($children as $child) {
+        $isOpen = in_array($child['id'], $openedIds);
+        $hasChildren = $storage->hasChildren($child['id']);
+        
+        $html .= '<li data-id="' . htmlspecialchars($child['id']) . '">';
+        $html .= '<div class="item">';
+        
+        // Add expand/collapse icon if has children
+        if ($hasChildren) {
+            $expandClass = $isOpen ? 'expanded' : 'collapsed';
+            $html .= '<span class="toggle ' . $expandClass . '"></span>';
+        }
+        
+        $html .= '<span class="title">' . htmlspecialchars($child['title']) . '</span>';
+        $html .= '</div>';
+        
+        // If this node is opened and has children, recursively build its subtree
+        if ($isOpen && $hasChildren) {
+            $html .= buildTree($child['id'], $storage, $openedIds);
+        }
+        
+        $html .= '</li>';
+    }
+    $html .= '</ul>';
+    
+    return $html;
+}
+
+// Get full paths for all opened items to ensure parent nodes are also opened
+$expandedIds = [];
+foreach ($openedIds as $id) {
+    $path = $storage->getFullPath($id);
+    foreach ($path as $item) {
+        if (!in_array($item['id'], $expandedIds) && $item['id'] !== $rootUuid) {
+            $expandedIds[] = $item['id'];
+        }
+    }
+}
+
+// Merge with original opened ids to ensure uniqueness
+$expandedIds = array_unique(array_merge($openedIds, $expandedIds));
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Storage Tree</title>
+    <style>
+        .toggle {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            cursor: pointer;
+        }
+        .collapsed::before {
+            content: '▶';
+        }
+        .expanded::before {
+            content: '▼';
+        }
+        ul {
+            list-style-type: none;
+            padding-left: 20px;
+        }
+        .item {
+            padding: 4px;
+            cursor: pointer;
+        }
+        .item:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <div id="tree">
+        <ul>
+            <li data-id="<?= htmlspecialchars($rootUuid) ?>">
+                <div class="item">
+                    <span class="toggle expanded"></span>
+                    <span class="title">Root</span>
+                </div>
+                <?= buildTree($rootUuid, $storage, $expandedIds) ?>
+            </li>
+        </ul>
+    </div>
+
+    <script>
+        // Client-side code to handle expanding/collapsing
+        document.getElementById('tree').addEventListener('click', function(e) {
+            if (e.target.classList.contains('toggle')) {
+                const listItem = e.target.closest('li');
+                const nodeId = listItem.dataset.id;
+                
+                if (e.target.classList.contains('collapsed')) {
+                    e.target.classList.remove('collapsed');
+                    e.target.classList.add('expanded');
+                    
+                    // Instead of making API calls, we'll just toggle the visibility
+                    // of existing content or fetch it via AJAX if needed
+                    let ul = listItem.querySelector('ul');
+                    if (ul) {
+                        ul.style.display = 'block';
+                    }
+                    
+                    // This is where you would normally make an API call to addExpanded
+                    // But we're handling it entirely client-side for now
+                } else {
+                    e.target.classList.remove('expanded');
+                    e.target.classList.add('collapsed');
+                    
+                    let ul = listItem.querySelector('ul');
+                    if (ul) {
+                        ul.style.display = 'none';
+                    }
+                    
+                    // This is where you would normally make an API call to removeExpanded
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+```
+
+This implementation:
+
+1. Gets the list of opened UUIDs from the session
+2. Fetches the full path for each opened item to ensure parent nodes are also expanded
+3. Builds the tree structure recursively, showing expanded nodes based on the session data
+4. Adds client-side JavaScript to handle expanding/collapsing nodes without API calls
+5. Ensures all children of opened items are properly displayed
+
+Note that this solution shows the entire tree directly rendered in PHP without requiring API calls to fetch the structure.
+
+### REQ 046
+
+Seems ok BUT you should follow the structure based on div instead of lists like it is specified in storage.js
+
+### RES 046
+
+Looking at the existing `storage.php` and the JavaScript code, I need to modify my approach to follow the same DOM structure that's used in the frontend JavaScript. The current implementation uses `div` elements with specific classes rather than `ul/li` elements for the tree structure.
+
+Here's the updated implementation for `storage.php`:
+
+```php
+<?php
+require_once 'lib/FlatStorage.php';
+$dataDir = Settings::$root.'/content/data';
+$structureDir = Settings::$root.'/content/structure';
+$storage = new FlatStorage($dataDir, $structureDir);
+global $session;
+
+// Get the list of opened UUIDs from the session
+$openedIds = $session->get('opened', []);
+
+// Function to build tree structure with divs
+function buildTree($parentUuid, $storage, $openedIds) {
+    $children = $storage->listChildren($parentUuid);
+    
+    $html = '<div class="tree-children">';
+    
+    if (empty($children)) {
+        $html .= '<div class="empty-node">No items</div>';
+    } else {
+        foreach ($children as $child) {
+            $isOpen = in_array($child['id'], $openedIds);
+            $hasChildren = $storage->hasChildren($child['id']);
+            
+            $openClass = $isOpen ? 'open' : '';
+            $toggleSymbol = $hasChildren ? ($isOpen ? '-' : '+') : ' ';
+            
+            $html .= '<div class="tree-node ' . $openClass . '" data-id="' . htmlspecialchars($child['id']) . '" data-title="' . htmlspecialchars($child['title']) . '" data-parent="' . htmlspecialchars($parentUuid) . '">';
+            $html .= '<div class="tree-node-content">';
+            $html .= '<span class="tree-toggle">' . $toggleSymbol . '</span>';
+            $html .= '<span class="tree-title">' . htmlspecialchars($child['title']) . '</span>';
+            $html .= '</div>';
+            
+            // If this node has children, add container for them
+            $html .= '<div class="tree-children">';
+            
+            // If this node is opened and has children, recursively build its subtree
+            if ($isOpen && $hasChildren) {
+                $childrenNodes = $storage->listChildren($child['id']);
+                if (empty($childrenNodes)) {
+                    $html .= '<div class="empty-node">No items</div>';
+                } else {
+                    foreach ($childrenNodes as $childNode) {
+                        $childHasChildren = $storage->hasChildren($childNode['id']);
+                        $childIsOpen = in_array($childNode['id'], $openedIds);
+                        $childToggleSymbol = $childHasChildren ? ($childIsOpen ? '-' : '+') : ' ';
+                        $childOpenClass = $childIsOpen ? 'open' : '';
+                        
+                        $html .= '<div class="tree-node ' . $childOpenClass . '" data-id="' . htmlspecialchars($childNode['id']) . '" data-title="' . htmlspecialchars($childNode['title']) . '" data-parent="' . htmlspecialchars($child['id']) . '">';
+                        $html .= '<div class="tree-node-content">';
+                        $html .= '<span class="tree-toggle">' . $childToggleSymbol . '</span>';
+                        $html .= '<span class="tree-title">' . htmlspecialchars($childNode['title']) . '</span>';
+                        $html .= '</div>';
+                        
+                        // Add container for possible grandchildren
+                        $html .= '<div class="tree-children">';
+                        if ($childIsOpen && $childHasChildren) {
+                            // We could continue recursion here, but for simplicity we'll only go 2 levels deep
+                            $html .= '<div class="empty-node">Loading...</div>';
+                        }
+                        $html .= '</div>'; // end tree-children
+                        
+                        $html .= '</div>'; // end tree-node
+                    }
+                }
+            } else if ($hasChildren) {
+                $html .= '<div class="empty-node">Loading...</div>';
+            }
+            
+            $html .= '</div>'; // end tree-children
+            $html .= '</div>'; // end tree-node
+        }
+    }
+    
+    $html .= '</div>'; // end tree-children
+    
+    return $html;
+}
+
+// Get full paths for all opened items
+$expandedIds = [];
+foreach ($openedIds as $id) {
+    $path = $storage->getFullPath($id);
+    foreach ($path as $item) {
+        if (!in_array($item['id'], $expandedIds)) {
+            $expandedIds[] = $item['id'];
+        }
+    }
+}
+$expandedIds = array_unique(array_merge($openedIds, $expandedIds));
+
+// Root node ID
+$rootUuid = '00000000-0000-0000-0000-000000000000';
+?>
+<link rel="stylesheet" href="lib/css/storage.css">
+
+<div class="header">
+    <ul class="breadcrumb" id="breadcrumb">
+        <li><a href="#" data-id="00000000-0000-0000-0000-000000000000">Root</a></li>
+    </ul>
+</div>
+
+<div class="main-container">
+    <div class="tree-panel" id="tree-panel">
+        <div class="tree-node open" data-id="<?= htmlspecialchars($rootUuid) ?>" data-title="Root">
+            <div class="tree-node-content">
+                <span class="tree-toggle">-</span>
+                <span class="tree-title">Root</span>
+            </div>
+            <?= buildTree($rootUuid, $storage, $expandedIds) ?>
+        </div>
+    </div>
+
+    <div class="content-panel">
+        <div class="content-title" id="content-title">No item selected</div>
+        <textarea class="content-editor" id="content-editor"></textarea>
+        <button class="save-button" id="save-button">Save Content</button>
+    </div>
+</div>
+
+<div class="context-menu" id="context-menu" style="display: none;">
+    <ul>
+        <li id="menu-rename">Rename</li>
+        <li id="menu-delete">Delete</li>
+        <li id="menu-create">Create Child Item</li>
+    </ul>
+</div>
+
+<script>
+// Initialize node cache for the client-side JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    // Create node cache from server-rendered tree
+    const nodeCache = new Map();
+    
+    // Initialize nodes that are already in the DOM
+    document.querySelectorAll('.tree-node').forEach(node => {
+        const id = node.dataset.id;
+        const title = node.dataset.title;
+        const hasChildren = node.querySelector('.tree-toggle').textContent !== ' ';
+        const isOpen = node.classList.contains('open');
+        
+        nodeCache.set(id, {
+            id: id,
+            title: title, 
+            hasChildren: hasChildren,
+            hasLoadedChildren: isOpen && hasChildren
+        });
+    });
+    
+    // Make the nodeCache available to the storage.js script
+    window.initialNodeCache = nodeCache;
+});
+</script>
+
+<script src="lib/scripts/storage.js"></script>
+```
+
+This implementation:
+
+1. Gets the opened item IDs from the session
+2. Builds a tree structure that matches the DOM structure used in the JavaScript
+3. Shows all opened items directly on the page without making API calls
+4. Provides a "Loading..." placeholder for deeper levels that would need to be loaded
+5. Sets up a node cache with initial data for the client-side JavaScript to use
+6. Maintains the same structure as the existing page
+
+The implementation preserves all existing functionality while pre-rendering the tree with expanded nodes based on session data.
+
+### REQ 047
+
+Seems ok but use recursion
+
+### RES 047
+
+I'll modify the implementation to fully use recursion. This will make it cleaner and handle more deeply nested items properly.
+
+```php
+<?php
+require_once 'lib/FlatStorage.php';
+$dataDir = Settings::$root.'/content/data';
+$structureDir = Settings::$root.'/content/structure';
+$storage = new FlatStorage($dataDir, $structureDir);
+global $session;
+
+// Get the list of opened UUIDs from the session
+$openedIds = $session->get('opened', []);
+
+// Function to build tree structure recursively
+function buildTree($parentUuid, $storage, $openedIds) {
+    $children = $storage->listChildren($parentUuid);
+    $html = '<div class="tree-children">';
+    
+    if (empty($children)) {
+        $html .= '<div class="empty-node">No items</div>';
+    } else {
+        foreach ($children as $child) {
+            $isOpen = in_array($child['id'], $openedIds);
+            $hasChildren = $storage->hasChildren($child['id']);
+            $toggleSymbol = $hasChildren ? ($isOpen ? '-' : '+') : ' ';
+            $openClass = $isOpen ? 'open' : '';
+            
+            $html .= '<div class="tree-node ' . $openClass . '" data-id="' . htmlspecialchars($child['id']) . '" data-title="' . htmlspecialchars($child['title']) . '" data-parent="' . htmlspecialchars($parentUuid) . '">';
+            $html .= '<div class="tree-node-content">';
+            $html .= '<span class="tree-toggle">' . $toggleSymbol . '</span>';
+            $html .= '<span class="tree-title">' . htmlspecialchars($child['title']) . '</span>';
+            $html .= '</div>';
+            
+            // If this node has children, recursively build its subtree
+            if ($hasChildren) {
+                if ($isOpen) {
+                    $html .= buildTree($child['id'], $storage, $openedIds);
+                } else {
+                    $html .= '<div class="tree-children"><div class="empty-node">Loading...</div></div>';
+                }
+            } else {
+                $html .= '<div class="tree-children"></div>';
+            }
+            
+            $html .= '</div>'; // end tree-node
+        }
+    }
+    
+    $html .= '</div>'; // end tree-children
+    return $html;
+}
+
+// Ensure all parent nodes of opened items are also opened
+$expandedIds = [];
+foreach ($openedIds as $id) {
+    $path = $storage->getFullPath($id);
+    foreach ($path as $item) {
+        if (!in_array($item['id'], $expandedIds)) {
+            $expandedIds[] = $item['id'];
+        }
+    }
+}
+$expandedIds = array_unique(array_merge($openedIds, $expandedIds));
+
+// Root node ID
+$rootUuid = '00000000-0000-0000-0000-000000000000';
+?>
+<link rel="stylesheet" href="lib/css/storage.css">
+
+<div class="header">
+    <ul class="breadcrumb" id="breadcrumb">
+        <li><a href="#" data-id="00000000-0000-0000-0000-000000000000">Root</a></li>
+    </ul>
+</div>
+
+<div class="main-container">
+    <div class="tree-panel" id="tree-panel">
+        <div class="tree-node open" data-id="<?= htmlspecialchars($rootUuid) ?>" data-title="Root">
+            <div class="tree-node-content">
+                <span class="tree-toggle">-</span>
+                <span class="tree-title">Root</span>
+            </div>
+            <?= buildTree($rootUuid, $storage, $expandedIds) ?>
+        </div>
+    </div>
+
+    <div class="content-panel">
+        <div class="content-title" id="content-title">No item selected</div>
+        <textarea class="content-editor" id="content-editor"></textarea>
+        <button class="save-button" id="save-button">Save Content</button>
+    </div>
+</div>
+
+<div class="context-menu" id="context-menu" style="display: none;">
+    <ul>
+        <li id="menu-rename">Rename</li>
+        <li id="menu-delete">Delete</li>
+        <li id="menu-create">Create Child Item</li>
+    </ul>
+</div>
+
+<script>
+// Initialize node cache for the client-side JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    // Create node cache from server-rendered tree
+    const nodeCache = new Map();
+
+    // Initialize nodes that are already in the DOM
+    document.querySelectorAll('.tree-node').forEach(node => {
+        const id = node.dataset.id;
+        const title = node.dataset.title;
+        const hasChildren = node.querySelector('.tree-toggle').textContent !== ' ';
+        const isOpen = node.classList.contains('open');
+
+        nodeCache.set(id, {
+            id: id,
+            title: title,
+            hasChildren: hasChildren,
+            hasLoadedChildren: isOpen && hasChildren
+        });
+    });
+
+    // Make the nodeCache available to the storage.js script
+    window.initialNodeCache = nodeCache;
+});
+</script>
+
+<script src="lib/scripts/storage.js"></script>
+```
+
+This implementation:
+
+1. Uses a single recursive function to build the entire tree
+2. Handles any depth of nesting with the same code
+3. Shows all opened items from the session without making API calls
+4. Preserves the same DOM structure expected by the JavaScript
+5. Properly initializes the node cache for the frontend code
+6. Displays "Loading..." placeholders for unopened nodes with children
+
+The recursive approach is more maintainable and will properly handle any level of depth in the tree structure.
+
+### FIX 048
+
+Now the nodes cache works as expected
