@@ -149,39 +149,86 @@ class FilesStorageApi {
      * Handle POST requests for creating new files
      */
     private function handlePostRequest(?string $action): array {
-        if ($action !== 'create') {
-            throw new InvalidArgumentException('Invalid action specified');
+        if($action==='create'){
+
+
+            // Get request data
+            $data = json_decode($this->getRequestBody(), true);
+            if (!$data) {
+                throw new InvalidArgumentException('Invalid JSON data');
+            }
+
+            $fileId = Utils::generateUuid().".". ($data['extension'] ?? "unknown");
+            $title = $data['title'] ?? null;
+            $content ='';
+            if(array_key_exists("content",$data) && $data['content']!==null){
+                $content = base64_decode($data['content']);
+            }
+
+
+            if (!$fileId) {
+                throw new InvalidArgumentException('Missing file ID');
+            }
+
+            if (!$title) {
+                throw new InvalidArgumentException('Missing file title');
+            }
+
+            $this->storage->upsertFile($fileId, $title, $content);
+
+            return [
+                'success' => true,
+                'message' => 'File created successfully',
+                'id' => $fileId
+            ];
+        }else if ($action === 'upload') {
+// Validate request
+            if (empty($_FILES['file'])) {
+                $response['message'] = 'No file uploaded';
+                $response['success'] = false;
+                return $response;
+            }
+
+            $file = $_FILES['file'];
+            $id = Utils::generateUuid();
+            $title = $_POST['title'] ?? $file['name'];
+
+            // Check upload errors
+            if ($file['error'] !== UPLOAD_ERR_OK) {
+                $response['message'] = 'Upload error: ' . $file['error'];
+                $response['success'] = false;
+                return $response;
+            }
+
+            // Get file extension
+            $fileInfo = pathinfo($file['name']);
+            $extension = $fileInfo['extension'] ?? '';
+
+            // Create a filename with extension
+            $filename = $id;
+            if ($extension) {
+                $filename .= '.' . $extension;
+            }
+
+            // Upload to storage
+            $tmpPath = $file['tmp_name'];
+            $fileContent = file_get_contents($tmpPath);
+
+            if ($this->storage->upsertFile($filename, $title, $fileContent)) {
+                global $basePath;
+                $response['success'] = true;
+                $response['message'] = 'File uploaded successfully';
+                $response['id'] = $id;
+                $response['title'] = $title;
+                $response['url'] = $basePath.'/api/files.php?action=get&id=' . $filename;
+                return $response;
+            } else {
+                $response['message'] = 'Failed to save file';
+                $response['success'] = false;
+                return $response;
+            }
         }
-
-        // Get request data
-        $data = json_decode($this->getRequestBody(), true);
-        if (!$data) {
-            throw new InvalidArgumentException('Invalid JSON data');
-        }
-
-        $fileId = Utils::generateUuid().".". ($data['extension'] ?? "unknown");
-        $title = $data['title'] ?? null;
-        $content ='';
-        if(array_key_exists("content",$data) && $data['content']!==null){
-            $content = base64_decode($data['content']);
-        }
-
-
-        if (!$fileId) {
-            throw new InvalidArgumentException('Missing file ID');
-        }
-
-        if (!$title) {
-            throw new InvalidArgumentException('Missing file title');
-        }
-
-        $this->storage->upsertFile($fileId, $title, $content);
-
-        return [
-            'success' => true,
-            'message' => 'File created successfully',
-            'id' => $fileId
-        ];
+        throw new InvalidArgumentException('Invalid action specified');
     }
 
     /**

@@ -7,6 +7,10 @@ require_once '../Settings.php';
 require_once '../lib/FilesStorage.php';
 require_once '../lib/FilesStorageApi.php';
 
+$requestUri = $_SERVER['REQUEST_URI'];
+$index = strpos($requestUri,"/api/files.php");
+$basePath = substr($requestUri,0,$index);
+
 // Create storage instance
 $dataDir = Settings::$root.'/files/data';
 $structureDir = Settings::$root.'/files/structure';

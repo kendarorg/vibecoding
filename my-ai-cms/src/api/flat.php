@@ -7,6 +7,11 @@ require_once '../Settings.php';
 require_once '../lib/FlatStorage.php';
 require_once '../lib/FlatStorageApi.php';
 
+$requestUri = $_SERVER['REQUEST_URI'];
+$index = strpos($requestUri,"/api/flat.php");
+$basePath = substr($requestUri,0,$index);
+
+
 // Create storage instance
 $dataDir = Settings::$root.'/content/data';
 $structureDir = Settings::$root.'/content/structure';

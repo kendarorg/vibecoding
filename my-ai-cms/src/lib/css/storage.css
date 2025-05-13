@@ -114,3 +114,8 @@
 .save-button:hover {
     background-color: #45a049;
 }
+
+.EasyMDEContainer img {
+    max-width: 300px;
+    height: auto;
+}

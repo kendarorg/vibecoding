@@ -5,6 +5,11 @@ require_once "../lib/Session.php";
 // Initialize session
 global $session;
 
+$requestUri = $_SERVER['REQUEST_URI'];
+$index = strpos($requestUri,"/api/session.php");
+$basePath = substr($requestUri,0,$index);
+
+
 // Set headers for JSON response
 header('Content-Type: application/json');
 
