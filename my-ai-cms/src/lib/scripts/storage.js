@@ -52,9 +52,16 @@ document.addEventListener('DOMContentLoaded', function () {
     // Start in preview mode
     editor.togglePreview();
 
+    let isReallyChanged = false;
+
     // Handle the input event for detecting changes
     editor.codemirror.on('change', function() {
+
         if (currentItemId) {
+            if(!isReallyChanged){
+                isReallyChanged=true;
+                return;
+            }
             // Mark content as modified
             if (!saveButton.classList.contains('modified')) {
                 saveButton.classList.add('modified');
@@ -335,6 +342,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Load content for an item
     function loadContent(itemId) {
+        isReallyChanged=false;
         // Clear editor
         editor.value('');
         saveButton.classList.remove('modified');
@@ -349,6 +357,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    isReallyChanged=false;
                     editor.value(data.content);
                 } else {
                     console.error('API error:', data.message);

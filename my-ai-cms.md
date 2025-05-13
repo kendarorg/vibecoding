@@ -8642,7 +8642,10 @@ You might need to add some CSS to better style the editor in your application's 
 This can be added to your existing CSS file or included inline in the JavaScript.
 
 
-### REQ 050
+### FIX 051
+
+Wrong "modified flag"
+
 ### REQ 050
 ### REQ 050
 ### REQ 050
