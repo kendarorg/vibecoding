@@ -9727,7 +9727,82 @@ The overlay appears immediately when pasting begins and blocks all interaction u
 * Log completion of paste with turndown and images
 
 ### REQ 056
+
+When passing p=UUID to the storage page as Get
+* Load the path of the page corresponding to the uuid
+* Add it to the openedIds
+* Select it and show its content
+
+
 ### RES 056
+
+I'll implement the functionality to load and display a page when passing a UUID via the `p` parameter in the GET request. This requires modifying the `storage.php` file to:
+
+1. Check for the `p` parameter
+2. Add the UUID to `openedIds` 
+3. Set up JavaScript to select and show its content
+
+Here's the implementation to add at the beginning of your `storage.php` file:
+
+```php
+<?php
+
+require_once 'lib/FlatStorage.php';
+$dataDir = Settings::$root.'/content/data';
+$structureDir = Settings::$root.'/content/structure';
+$storage = new FlatStorage($dataDir, $structureDir);
+global $session;
+
+// Get the list of opened UUIDs from the session
+$openedIds = $session->get('opened', []);
+
+// Check if a page UUID was provided in the URL
+$pageUuid = $_GET['p'] ?? null;
+if ($pageUuid && $storage->exists($pageUuid)) {
+    // Add this UUID to opened IDs if not already in the list
+    if (!in_array($pageUuid, $openedIds)) {
+        $openedIds[] = $pageUuid;
+        $session->set('opened', $openedIds);
+    }
+}
+
+// Function to build tree structure recursively
+// ... rest of your existing code
+```
+
+And at the end of the file, add this JavaScript to select and display the page content:
+
+```php
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    <?php if ($pageUuid): ?>
+    // If a page UUID was specified, select and show its content
+    setTimeout(function() {
+        const node = document.querySelector(`.tree-node[data-id="<?= htmlspecialchars($pageUuid) ?>"]`);
+        if (node) {
+            // Select the node
+            const titleElement = node.querySelector('.tree-title');
+            if (titleElement) {
+                titleElement.click();
+            }
+        }
+    }, 100); // Small delay to ensure tree is fully initialized
+    <?php endif; ?>
+});
+</script>
+```
+
+This implementation:
+1. Checks for the `p` parameter in the URL
+2. Validates that the UUID exists in storage
+3. Adds it to the openedIds array and updates the session
+4. Uses JavaScript to find and click the node once the DOM is loaded
+5. The existing tree building code will automatically expand the path to the node because you're already adding the UUID to openedIds
+
+### FIX 056
+
+Missing storage find
+
 ### REQ 057
 ### RES 057
 ### REQ 058

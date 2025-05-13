@@ -9,6 +9,15 @@ global $session;
 // Get the list of opened UUIDs from the session
 $openedIds = $session->get('opened', []);
 
+$pageUuid = $_GET['current'] ?? null;
+if ($pageUuid && $storage->exists($pageUuid)) {
+    // Add this UUID to opened IDs if not already in the list
+    if (!in_array($pageUuid, $openedIds)) {
+        $openedIds[] = $pageUuid;
+        $session->set('opened', $openedIds);
+    }
+}
+
 // Function to build tree structure recursively
 function buildTree($parentUuid, $storage, $openedIds) {
     $children=[];
@@ -113,3 +122,20 @@ $treeContent = buildTree(null, $storage, $expandedIds);
 <script src="lib/scripts/turndown.js"></script>
 <script src="lib/scripts/easymde.min.js"></script>
 <script src="lib/scripts/storage.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        <?php if ($pageUuid): ?>
+        // If a page UUID was specified, select and show its content
+        setTimeout(function() {
+            const node = document.querySelector(`.tree-node[data-id="<?= htmlspecialchars($pageUuid) ?>"]`);
+            if (node) {
+                // Select the node
+                const titleElement = node.querySelector('.tree-title');
+                if (titleElement) {
+                    titleElement.click();
+                }
+            }
+        }, 100); // Small delay to ensure tree is fully initialized
+        <?php endif; ?>
+    });
+</script>
