@@ -18,8 +18,50 @@ document.addEventListener('DOMContentLoaded', function () {
     const menuDelete = document.getElementById('menu-delete');
     const menuCreate = document.getElementById('menu-create');
 
-    // Load root children
-    //loadRootItems();
+    // Replace the content editor with EasyMDE
+    const contentEditorElement = document.getElementById('content-editor');
+
+    // Create a wrapper for the editor
+    const editorWrapper = document.createElement('div');
+    editorWrapper.id = 'editor-wrapper';
+    contentEditorElement.parentNode.insertBefore(editorWrapper, contentEditorElement);
+    editorWrapper.appendChild(contentEditorElement);
+
+    // Initialize EasyMDE
+    editor = new EasyMDE({
+        element: contentEditorElement,
+        spellChecker: false,
+        autosave: {
+            enabled: false
+        },
+        toolbar: [
+            'bold', 'italic', 'heading', '|',
+            'quote', 'unordered-list', 'ordered-list', '|',
+            'link', 'image', '|',
+            'preview', 'side-by-side', 'fullscreen', '|',
+            'guide'
+        ],
+        initialValue: '',
+        status: ['lines', 'words'],
+        renderingConfig: {
+            singleLineBreaks: false,
+            codeSyntaxHighlighting: true
+        }
+    });
+
+    // Start in preview mode
+    editor.togglePreview();
+
+    // Handle the input event for detecting changes
+    editor.codemirror.on('change', function() {
+        if (currentItemId) {
+            // Mark content as modified
+            if (!saveButton.classList.contains('modified')) {
+                saveButton.classList.add('modified');
+                saveButton.textContent = 'Save Content *';
+            }
+        }
+    });
 
     // Event handlers
     document.addEventListener('click', function () {
@@ -294,7 +336,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Load content for an item
     function loadContent(itemId) {
         // Clear editor
-        contentEditor.value = '';
+        editor.value('');
         saveButton.classList.remove('modified');
         saveButton.textContent = 'Save Content';
 
@@ -307,21 +349,22 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    contentEditor.value = data.content;
+                    editor.value(data.content);
                 } else {
                     console.error('API error:', data.message);
-                    contentEditor.value = 'Error loading content';
+                    editor.value('Error loading content');
                 }
             })
             .catch(error => {
                 console.error('Network error:', error);
-                contentEditor.value = 'Error loading content';
+                editor.value('Error loading content');
             });
     }
 
     // Save content
     function saveContent(itemId, content) {
         const node = nodeCache.get(itemId);
+        const editorContent = editor.value();
 
         fetch('api/flat.php?action=update', {
             method: 'POST',
@@ -330,7 +373,7 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             body: JSON.stringify({
                 id: itemId,
-                content: content
+                content: editorContent
             })
         })
             .then(response => response.json())
