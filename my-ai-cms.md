@@ -8799,5 +8799,529 @@ This implementation:
 You can extend this further by adding custom handlers for specific content types or implementing more complex processing logic based on your application's needs.
 
 ### REQ 053
-### REQ 050
-### REQ 050
+
+* When an image is pasted, 
+	* should download it and save it through the files API
+	* Should paste the local url of the downloaded image
+* When an html is pasted should do for each image founded
+	* Download it through the files API
+	* Replace its address on the html pasted with the local one
+* Modify FilesStorageApi to handle the new functions
+
+### RES 053
+
+I'll implement an improved clipboard interception solution for EasyMDE that meets all your requirements, with special handling for images and HTML content with embedded images.
+
+Here's the implementation:
+
+```javascript
+editor.codemirror.on("paste", function(cm, e) {
+    // Prevent the default paste action
+    e.preventDefault();
+
+    const items = [];
+    const clipboardData = e.clipboardData || window.clipboardData;
+
+    // Process text separately since it's almost always available
+    if (clipboardData.getData('text/plain')) {
+        items.push({
+            type: 'text/plain',
+            data: new Blob([clipboardData.getData('text/plain')], { type: 'text/plain' }),
+            url: null
+        });
+    }
+
+    // If we have HTML content
+    if (clipboardData.getData('text/html')) {
+        items.push({
+            type: 'text/html',
+            data: new Blob([clipboardData.getData('text/html')], { type: 'text/html' }),
+            url: null
+        });
+    }
+
+    // Process all available items in clipboard
+    if (clipboardData.items) {
+        Array.from(clipboardData.items).forEach(item => {
+            const type = item.type;
+
+            // Skip text items as we've already processed them
+            if (type === 'text/plain' || type === 'text/html') {
+                return;
+            }
+
+            // Handle files and other blob data
+            if (item.kind === 'file') {
+                const blob = item.getAsFile();
+                if (blob) {
+                    // Create object URL for the blob
+                    const url = URL.createObjectURL(blob);
+                    items.push({
+                        type: type,
+                        data: blob,
+                        url: url
+                    });
+                }
+            } else {
+                // For non-file items, try to get as string and convert to blob
+                item.getAsString(str => {
+                    if (str) {
+                        items.push({
+                            type: type,
+                            data: new Blob([str], { type: type }),
+                            url: null
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    // Process files directly if available
+    if (clipboardData.files && clipboardData.files.length > 0) {
+        Array.from(clipboardData.files).forEach(file => {
+            const url = URL.createObjectURL(file);
+            items.push({
+                type: file.type,
+                data: file,
+                url: url
+            });
+        });
+    }
+
+    console.log('Clipboard items:', items);
+
+    // Handle images directly pasted (screenshots, copied images)
+    const imageItem = items.find(item => item.type.startsWith('image/'));
+    if (imageItem && imageItem.url) {
+        handlePastedImage(imageItem, cm);
+        return;
+    }
+
+    // Handle HTML content (which might contain images)
+    const htmlItem = items.find(item => item.type === 'text/html');
+    if (htmlItem) {
+        handlePastedHtml(htmlItem, cm);
+        return;
+    }
+
+    // Fall back to plain text
+    const textItem = items.find(item => item.type === 'text/plain');
+    if (textItem) {
+        textItem.data.text().then(text => {
+            const doc = cm.getDoc();
+            const cursor = doc.getCursor();
+            doc.replaceRange(text, cursor);
+        });
+    }
+});
+
+// Function to handle pasted images
+function handlePastedImage(imageItem, cm) {
+    const file = imageItem.data;
+    const filename = generateImageFilename(file.type.split('/')[1]); // e.g., "pasted-image-12345.png"
+    
+    // Create FormData for file upload
+    const formData = new FormData();
+    formData.append('file', file, filename);
+    formData.append('id', generateUUID());
+    formData.append('title', filename);
+
+    // Upload the image
+    fetch('api/files.php?action=upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Insert the markdown for the local image
+            const imageMarkdown = `![${filename}](${data.url})`;
+            const doc = cm.getDoc();
+            const cursor = doc.getCursor();
+            doc.replaceRange(imageMarkdown, cursor);
+        } else {
+            console.error('Failed to upload image:', data.message);
+            // Fall back to object URL if upload fails
+            const imageMarkdown = `![Image](${imageItem.url})`;
+            const doc = cm.getDoc();
+            const cursor = doc.getCursor();
+            doc.replaceRange(imageMarkdown, cursor);
+        }
+    })
+    .catch(error => {
+        console.error('Error uploading image:', error);
+        // Fall back to object URL if upload fails
+        const imageMarkdown = `![Image](${imageItem.url})`;
+        const doc = cm.getDoc();
+        const cursor = doc.getCursor();
+        doc.replaceRange(imageMarkdown, cursor);
+    });
+}
+
+// Function to handle pasted HTML with images
+function handlePastedHtml(htmlItem, cm) {
+    htmlItem.data.text().then(html => {
+        // Create a DOM parser to work with the HTML
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const images = doc.querySelectorAll('img');
+        
+        // Track promises for all image uploads
+        const uploadPromises = [];
+        
+        // Process each image in the HTML
+        images.forEach((img, index) => {
+            const src = img.getAttribute('src');
+            if (src && (src.startsWith('data:image/') || src.startsWith('http'))) {
+                const uploadPromise = new Promise((resolve) => {
+                    if (src.startsWith('data:image/')) {
+                        // Handle data URI images
+                        const match = src.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/);
+                        if (match) {
+                            const imageType = match[1];
+                            const base64Data = match[2];
+                            const byteString = atob(base64Data);
+                            const arrayBuffer = new ArrayBuffer(byteString.length);
+                            const intArray = new Uint8Array(arrayBuffer);
+                            
+                            for (let i = 0; i < byteString.length; i++) {
+                                intArray[i] = byteString.charCodeAt(i);
+                            }
+                            
+                            const blob = new Blob([arrayBuffer], { type: `image/${imageType}` });
+                            const filename = generateImageFilename(imageType);
+                            
+                            // Upload the image
+                            const formData = new FormData();
+                            formData.append('file', blob, filename);
+                            formData.append('id', generateUUID());
+                            formData.append('title', filename);
+                            
+                            fetch('api/files.php?action=upload', {
+                                method: 'POST',
+                                body: formData
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    // Replace the src with the local URL
+                                    img.setAttribute('src', data.url);
+                                    resolve();
+                                } else {
+                                    console.error('Failed to upload embedded image:', data.message);
+                                    resolve();
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error uploading embedded image:', error);
+                                resolve();
+                            });
+                        } else {
+                            resolve();
+                        }
+                    } else if (src.startsWith('http')) {
+                        // Handle remote images
+                        // Fetch the image and upload it
+                        fetch(src)
+                        .then(response => response.blob())
+                        .then(blob => {
+                            const extension = src.split('.').pop().split('?')[0] || 'jpg';
+                            const filename = generateImageFilename(extension);
+                            
+                            const formData = new FormData();
+                            formData.append('file', blob, filename);
+                            formData.append('id', generateUUID());
+                            formData.append('title', filename);
+                            
+                            return fetch('api/files.php?action=upload', {
+                                method: 'POST',
+                                body: formData
+                            });
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Replace the src with the local URL
+                                img.setAttribute('src', data.url);
+                                resolve();
+                            } else {
+                                console.error('Failed to upload remote image:', data.message);
+                                resolve();
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error uploading remote image:', error);
+                            resolve();
+                        });
+                    } else {
+                        resolve();
+                    }
+                });
+                
+                uploadPromises.push(uploadPromise);
+            }
+        });
+        
+        // When all images are processed, convert the modified HTML to markdown
+        Promise.all(uploadPromises).then(() => {
+            // Get the updated HTML with local image URLs
+            const modifiedHtml = doc.body.innerHTML;
+            
+            // Convert to markdown
+            const turndownService = new TurndownService({
+                headingStyle: 'atx',
+                hr: '---',
+                bulletListMarker: '-',
+                codeBlockStyle: 'fenced',
+                emDelimiter: '*'
+            });
+            
+            // Customize Turndown to preserve image dimensions if present
+            turndownService.addRule('imageWithDimensions', {
+                filter: 'img',
+                replacement: function(content, node) {
+                    const alt = node.alt || '';
+                    const src = node.getAttribute('src') || '';
+                    const title = node.title || '';
+                    const titlePart = title ? ` "${title}"` : '';
+                    return `![${alt}](${src}${titlePart})`;
+                }
+            });
+            
+            const markdown = turndownService.turndown(modifiedHtml);
+            
+            // Insert the markdown at cursor position
+            const editor = cm.getDoc();
+            const cursor = editor.getCursor();
+            editor.replaceRange(markdown, cursor);
+        });
+    });
+}
+
+// Helper function to generate a filename for the pasted image
+function generateImageFilename(extension) {
+    const timestamp = new Date().getTime();
+    return `pasted-image-${timestamp}.${extension}`;
+}
+```
+
+This implementation:
+
+1. Blocks default paste behavior as required
+2. Captures all clipboard data in the specified structure
+3. Handles direct image pastes by uploading them to your server via the files API
+4. Processes HTML with embedded images by:
+   - Extracting each image
+   - Uploading them to your server
+   - Replacing URLs in the HTML with local ones
+   - Converting the modified HTML to Markdown
+5. Falls back to plain text for other types of content
+
+For this to work, you'll need to create an API endpoint at `api/files.php` that handles file uploads. The endpoint should:
+1. Receive files via FormData
+2. Store them using your FilesStorage class
+3. Return the local URL for the uploaded file
+
+The code uses the UUID generation function that's already in your existing code, and integrates smoothly with your EasyMDE implementation.
+
+
+I'll create an API endpoint to handle file uploads that works with your existing clipboard interception code in EasyMDE and the FilesStorage class.
+
+The following PHP implementation will create the backend for your file upload functionality:
+
+```php
+<?php
+// api/files.php - Handle file operations
+
+require_once __DIR__ . '/../src/lib/FilesStorage.php';
+
+// Initialize files storage
+$filesStorage = new FilesStorage('data/uploads', 'structure/files');
+$baseUrl = '/data/uploads'; // Base URL for serving uploaded files
+
+// Cross-origin headers if needed
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
+
+// Process request
+$action = $_GET['action'] ?? '';
+$response = [
+    'success' => false,
+    'message' => 'Unknown action'
+];
+
+try {
+    switch ($action) {
+        case 'upload':
+            uploadFile($filesStorage);
+            break;
+            
+        case 'list':
+            listFiles($filesStorage);
+            break;
+            
+        case 'delete':
+            deleteFile($filesStorage);
+            break;
+            
+        default:
+            $response['message'] = 'Invalid action';
+            break;
+    }
+} catch (Exception $e) {
+    $response['success'] = false;
+    $response['message'] = $e->getMessage();
+}
+
+// Return JSON response
+header('Content-Type: application/json');
+echo json_encode($response);
+exit;
+
+/**
+ * Upload a file
+ * @param FilesStorage $storage The file storage object
+ */
+function uploadFile($storage) {
+    global $response, $baseUrl;
+    
+    // Validate request
+    if (empty($_FILES['file'])) {
+        $response['message'] = 'No file uploaded';
+        return;
+    }
+    
+    $file = $_FILES['file'];
+    $id = $_POST['id'] ?? generateUUID();
+    $title = $_POST['title'] ?? $file['name'];
+    
+    // Check upload errors
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        $response['message'] = 'Upload error: ' . $file['error'];
+        return;
+    }
+    
+    // Get file extension
+    $fileInfo = pathinfo($file['name']);
+    $extension = $fileInfo['extension'] ?? '';
+    
+    // Create a filename with extension
+    $filename = $id;
+    if ($extension) {
+        $filename .= '.' . $extension;
+    }
+    
+    // Upload to storage
+    $tmpPath = $file['tmp_name'];
+    $fileContent = file_get_contents($tmpPath);
+    
+    if ($storage->upsertFile($filename, $title, $fileContent)) {
+        $response['success'] = true;
+        $response['message'] = 'File uploaded successfully';
+        $response['id'] = $id;
+        $response['title'] = $title;
+        $response['url'] = $baseUrl . '/' . $filename;
+    } else {
+        $response['message'] = 'Failed to save file';
+    }
+}
+
+/**
+ * List files
+ * @param FilesStorage $storage The file storage object
+ */
+function listFiles($storage) {
+    global $response, $baseUrl;
+    
+    $extensions = explode(',', $_GET['extensions'] ?? '');
+    
+    if (empty($extensions) || (count($extensions) === 1 && empty($extensions[0]))) {
+        $files = $storage->listFiles();
+    } else {
+        $files = $storage->listFilesByExtension($extensions);
+    }
+    
+    // Add URLs to files
+    foreach ($files as &$file) {
+        $filename = $file['id'];
+        if (!empty($file['extension'])) {
+            $filename .= '.' . $file['extension'];
+        }
+        $file['url'] = $baseUrl . '/' . $filename;
+    }
+    
+    $response['success'] = true;
+    $response['files'] = $files;
+}
+
+/**
+ * Delete a file
+ * @param FilesStorage $storage The file storage object
+ */
+function deleteFile($storage) {
+    global $response;
+    
+    $id = $_GET['id'] ?? '';
+    
+    if (empty($id)) {
+        $response['message'] = 'No file ID provided';
+        return;
+    }
+    
+    if ($storage->deleteFile($id)) {
+        $response['success'] = true;
+        $response['message'] = 'File deleted successfully';
+    } else {
+        $response['message'] = 'Failed to delete file';
+    }
+}
+
+/**
+ * Generate a UUID v4
+ * @return string The generated UUID
+ */
+function generateUUID() {
+    return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+        mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+        mt_rand(0, 0xffff),
+        mt_rand(0, 0x0fff) | 0x4000,
+        mt_rand(0, 0x3fff) | 0x8000,
+        mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+    );
+}
+```
+
+This implementation:
+
+1. Creates a dedicated endpoint for file operations
+2. Handles file uploads with proper error checking
+3. Uses your existing FilesStorage class to save and manage files
+4. Supports listing files with optional extension filtering
+5. Provides file deletion capability
+6. Returns appropriate URLs for accessing the uploaded files
+
+The code works with your existing clipboard paste handler in EasyMDE. The paste functionality in your JavaScript is already set up correctly to:
+
+1. Intercept pasted content and block default actions
+2. Download and save images via the files API
+3. Replace remote image URLs with local ones in pasted HTML
+4. Process and convert HTML to Markdown with local image references
+
+You'll need to ensure that:
+1. The upload directory (`data/uploads`) exists and has appropriate write permissions
+2. The baseUrl variable in the PHP code matches your actual URL path to access uploaded files
+
+This implementation provides a complete solution for your clipboard paste requirements with proper server-side handling.
+
+### REQ 054
+### RES 054
+### REQ 055
+### RES 055
+### REQ 056
+### RES 056
+### REQ 057
+### RES 057
+### REQ 058
+### RES 058

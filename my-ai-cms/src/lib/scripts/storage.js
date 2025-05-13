@@ -772,33 +772,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
         console.log('Clipboard items:', items);
 
-        // Handle the collected items as needed
-
-
-        // Here you can implement handling of other item types
-        // Process images, HTML content, etc.
-        const textItem = items.find(item => item.type === 'text/plain');
+        // Handle images directly pasted (screenshots, copied images)
         const imageItem = items.find(item => item.type.startsWith('image/'));
-        const htmlItem = items.find(item => item.type === 'text/html');
         if (imageItem && imageItem.url) {
-            const imageMarkdown = `![Image](${imageItem.url})`;
-            const doc = cm.getDoc();
-            const cursor = doc.getCursor();
-            doc.replaceRange(imageMarkdown, cursor);
-        }else if (htmlItem) {
-            htmlItem.data.text().then(html => {
-                // Create a new turndown service
-                const turndownService = new TurndownService();
-                // Convert HTML to Markdown
-                const markdown = turndownService.turndown(html);
-                // Insert the markdown at cursor position
-                const doc = cm.getDoc();
-                const cursor = doc.getCursor();
-                doc.replaceRange(markdown, cursor);
-            });
+            handlePastedImage(imageItem, cm);
+            return;
+        }
 
-        }else if (textItem) {
-            // Convert Blob to text and insert at cursor position
+        // Handle HTML content (which might contain images)
+        const htmlItem = items.find(item => item.type === 'text/html');
+        if (htmlItem) {
+            handlePastedHtml(htmlItem, cm);
+            return;
+        }
+
+        // Fall back to plain text
+        const textItem = items.find(item => item.type === 'text/plain');
+        if (textItem) {
             textItem.data.text().then(text => {
                 const doc = cm.getDoc();
                 const cursor = doc.getCursor();
@@ -806,5 +796,194 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
     });
+
+// Function to handle pasted images
+    function handlePastedImage(imageItem, cm) {
+        const file = imageItem.data;
+        const filename = generateImageFilename(file.type.split('/')[1]); // e.g., "pasted-image-12345.png"
+
+        // Create FormData for file upload
+        const formData = new FormData();
+        formData.append('file', file, filename);
+        formData.append('id', generateUUID());
+        formData.append('title', filename);
+
+        // Upload the image
+        fetch('api/files.php?action=upload', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Insert the markdown for the local image
+                    const imageMarkdown = `![${filename}](${data.url})`;
+                    const doc = cm.getDoc();
+                    const cursor = doc.getCursor();
+                    doc.replaceRange(imageMarkdown, cursor);
+                } else {
+                    console.error('Failed to upload image:', data.message);
+                    // Fall back to object URL if upload fails
+                    const imageMarkdown = `![Image](${imageItem.url})`;
+                    const doc = cm.getDoc();
+                    const cursor = doc.getCursor();
+                    doc.replaceRange(imageMarkdown, cursor);
+                }
+            })
+            .catch(error => {
+                console.error('Error uploading image:', error);
+                // Fall back to object URL if upload fails
+                const imageMarkdown = `![Image](${imageItem.url})`;
+                const doc = cm.getDoc();
+                const cursor = doc.getCursor();
+                doc.replaceRange(imageMarkdown, cursor);
+            });
+    }
+
+// Function to handle pasted HTML with images
+    function handlePastedHtml(htmlItem, cm) {
+        htmlItem.data.text().then(html => {
+            // Create a DOM parser to work with the HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const images = doc.querySelectorAll('img');
+
+            // Track promises for all image uploads
+            const uploadPromises = [];
+
+            // Process each image in the HTML
+            images.forEach((img, index) => {
+                const src = img.getAttribute('src');
+                if (src && (src.startsWith('data:image/') || src.startsWith('http'))) {
+                    const uploadPromise = new Promise((resolve) => {
+                        if (src.startsWith('data:image/')) {
+                            // Handle data URI images
+                            const match = src.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/);
+                            if (match) {
+                                const imageType = match[1];
+                                const base64Data = match[2];
+                                const byteString = atob(base64Data);
+                                const arrayBuffer = new ArrayBuffer(byteString.length);
+                                const intArray = new Uint8Array(arrayBuffer);
+
+                                for (let i = 0; i < byteString.length; i++) {
+                                    intArray[i] = byteString.charCodeAt(i);
+                                }
+
+                                const blob = new Blob([arrayBuffer], { type: `image/${imageType}` });
+                                const filename = generateImageFilename(imageType);
+
+                                // Upload the image
+                                const formData = new FormData();
+                                formData.append('file', blob, filename);
+                                formData.append('id', generateUUID());
+                                formData.append('title', filename);
+
+                                fetch('api/files.php?action=upload', {
+                                    method: 'POST',
+                                    body: formData
+                                })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.success) {
+                                            // Replace the src with the local URL
+                                            img.setAttribute('src', data.url);
+                                            resolve();
+                                        } else {
+                                            console.error('Failed to upload embedded image:', data.message);
+                                            resolve();
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('Error uploading embedded image:', error);
+                                        resolve();
+                                    });
+                            } else {
+                                resolve();
+                            }
+                        } else if (src.startsWith('http')) {
+                            // Handle remote images
+                            // Fetch the image and upload it
+                            fetch(src)
+                                .then(response => response.blob())
+                                .then(blob => {
+                                    const extension = src.split('.').pop().split('?')[0] || 'jpg';
+                                    const filename = generateImageFilename(extension);
+
+                                    const formData = new FormData();
+                                    formData.append('file', blob, filename);
+                                    formData.append('id', generateUUID());
+                                    formData.append('title', filename);
+
+                                    return fetch('api/files.php?action=upload', {
+                                        method: 'POST',
+                                        body: formData
+                                    });
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        // Replace the src with the local URL
+                                        img.setAttribute('src', data.url);
+                                        resolve();
+                                    } else {
+                                        console.error('Failed to upload remote image:', data.message);
+                                        resolve();
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Error uploading remote image:', error);
+                                    resolve();
+                                });
+                        } else {
+                            resolve();
+                        }
+                    });
+
+                    uploadPromises.push(uploadPromise);
+                }
+            });
+
+            // When all images are processed, convert the modified HTML to markdown
+            Promise.all(uploadPromises).then(() => {
+                // Get the updated HTML with local image URLs
+                const modifiedHtml = doc.body.innerHTML;
+
+                // Convert to markdown
+                const turndownService = new TurndownService({
+                    headingStyle: 'atx',
+                    hr: '---',
+                    bulletListMarker: '-',
+                    codeBlockStyle: 'fenced',
+                    emDelimiter: '*'
+                });
+
+                // Customize Turndown to preserve image dimensions if present
+                turndownService.addRule('imageWithDimensions', {
+                    filter: 'img',
+                    replacement: function(content, node) {
+                        const alt = node.alt || '';
+                        const src = node.getAttribute('src') || '';
+                        const title = node.title || '';
+                        const titlePart = title ? ` "${title}"` : '';
+                        return `![${alt}](${src}${titlePart})`;
+                    }
+                });
+
+                const markdown = turndownService.turndown(modifiedHtml);
+
+                // Insert the markdown at cursor position
+                const editor = cm.getDoc();
+                const cursor = editor.getCursor();
+                editor.replaceRange(markdown, cursor);
+            });
+        });
+    }
+
+// Helper function to generate a filename for the pasted image
+    function generateImageFilename(extension) {
+        const timestamp = new Date().getTime();
+        return `pasted-image-${timestamp}.${extension}`;
+    }
 
 });
