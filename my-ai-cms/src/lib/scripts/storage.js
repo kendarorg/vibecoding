@@ -399,7 +399,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Rename item
     function renameItem(itemId, newTitle) {
         fetch('api/flat.php?action=update', {
-            method: 'PUT',
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -606,41 +606,126 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function expandNodesFromSession(nodeIds) {
-        // Expand the root first
-        if (nodeIds.includes('00000000-0000-0000-0000-000000000000')) {
+        // Clone the array to avoid modifying the original
+        const nodesToExpand = [...nodeIds];
+
+        // First expand the root if needed
+        const rootIndex = nodesToExpand.indexOf('00000000-0000-0000-0000-000000000000');
+        if (rootIndex !== -1) {
             const rootNode = document.querySelector('.tree-node[data-id="00000000-0000-0000-0000-000000000000"]');
             if (rootNode && !rootNode.classList.contains('open')) {
                 toggleNode(rootNode, '00000000-0000-0000-0000-000000000000');
             }
+            nodesToExpand.splice(rootIndex, 1);
         }
 
-        // Then process other nodes in sequence (need to wait for children to load)
-        let index = 0;
-        const processNextNode = () => {
-            if (index < nodeIds.length) {
-                const nodeId = nodeIds[index];
-                if (nodeId !== '00000000-0000-0000-0000-000000000000') {
-                    const nodeElement = document.querySelector(`.tree-node[data-id="${nodeId}"]`);
-                    if (nodeElement && !nodeElement.classList.contains('open')) {
-                        toggleNode(nodeElement, nodeId);
-                        // Wait a bit for children to load before processing next node
-                        setTimeout(processNextNode, 100);
-                    } else {
-                        // Node not found yet or already open, try next
-                        index++;
-                        setTimeout(processNextNode, 50);
-                    }
-                } else {
-                    // Skip root node (already processed)
-                    index++;
-                    processNextNode();
-                }
-            }
-        };
+        // Sort nodes by their path depth to expand parents first
+        // This requires building the hierarchy info
+        buildNodeHierarchy(nodesToExpand, function(nodeHierarchy) {
+            // Expand nodes level by level with delays
+            expandNodesByLevel(nodeHierarchy);
+        });
+    }
 
-        // Start processing non-root nodes
-        index = 0;
-        processNextNode();
+    function buildNodeHierarchy(nodeIds, callback) {
+        // First get all node information from API
+        fetch('api/flat.php?action=list')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const allNodes = data.items;
+
+                    // Create a map of nodes by ID for quick lookup
+                    const nodeMap = {};
+                    allNodes.forEach(node => {
+                        nodeMap[node.id] = node;
+                    });
+
+                    // Build hierarchy information for each node
+                    const hierarchyInfo = {};
+
+                    nodeIds.forEach(nodeId => {
+                        if (nodeId in nodeMap) {
+                            const node = nodeMap[nodeId];
+                            let depth = 0;
+                            let parentChain = [];
+                            let currentParent = node.parent;
+
+                            // Traverse up to calculate depth and parent chain
+                            while (currentParent && currentParent !== '00000000-0000-0000-0000-000000000000') {
+                                depth++;
+                                parentChain.unshift(currentParent); // Add to beginning
+                                currentParent = nodeMap[currentParent]?.parent;
+                            }
+
+                            hierarchyInfo[nodeId] = {
+                                id: nodeId,
+                                depth: depth,
+                                parentChain: parentChain
+                            };
+                        }
+                    });
+
+                    callback(hierarchyInfo);
+                } else {
+                    console.error('Error fetching node data:', data.message);
+                    callback({});
+                }
+            })
+            .catch(error => {
+                console.error('Network error:', error);
+                callback({});
+            });
+    }
+
+    function expandNodesByLevel(nodeHierarchy) {
+        // Convert to array and sort by depth
+        const nodeInfoArray = Object.values(nodeHierarchy)
+            .sort((a, b) => a.depth - b.depth);
+
+        // Expand level by level with delays to allow DOM updates
+        let currentLevel = 0;
+        let index = 0;
+
+        function processNextBatch() {
+            // Process all nodes at the current depth level
+            const nodesToProcessNow = [];
+
+            while (index < nodeInfoArray.length && nodeInfoArray[index].depth === currentLevel) {
+                nodesToProcessNow.push(nodeInfoArray[index]);
+                index++;
+            }
+
+            if (nodesToProcessNow.length > 0) {
+                // For each node at this level
+                nodesToProcessNow.forEach(nodeInfo => {
+                    // First ensure all parents are expanded
+                    nodeInfo.parentChain.forEach(parentId => {
+                        const parentNode = document.querySelector(`.tree-node[data-id="${parentId}"]`);
+                        if (parentNode && !parentNode.classList.contains('open')) {
+                            toggleNode(parentNode, parentId);
+                        }
+                    });
+
+                    // Then expand this node
+                    const nodeElement = document.querySelector(`.tree-node[data-id="${nodeInfo.id}"]`);
+                    if (nodeElement && !nodeElement.classList.contains('open')) {
+                        toggleNode(nodeElement, nodeInfo.id);
+                    }
+                });
+
+                // Move to next level after a delay
+                currentLevel++;
+                setTimeout(processNextBatch, 300);
+            } else if (index < nodeInfoArray.length) {
+                // Move to next level
+                currentLevel++;
+                setTimeout(processNextBatch, 100);
+            }
+        }
+
+        // Start processing
+        processNextBatch();
     }
 
     function addExpandedNodeToSession(nodeId) {

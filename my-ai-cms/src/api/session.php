@@ -1,9 +1,9 @@
 <?php
 require_once "../Settings.php";
-require_once "../Sessions.php";
+require_once "../lib/Session.php";
 
 // Initialize session
-$session = new Session();
+global $session;
 
 // Set headers for JSON response
 header('Content-Type: application/json');

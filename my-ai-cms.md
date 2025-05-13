@@ -7386,3 +7386,148 @@ This implementation:
 7. Automatically expands nodes on page load based on the session data
 
 When a tree node is expanded or collapsed, the system will update the session accordingly, enabling the tree state to persist across page refreshes.
+
+### REQ 039
+
+Should open all the nodes stored (when existing) not only the topmosts
+
+### RES 039
+
+Looking at your code in `storage.js`, I can see the issue with the node expansion. The current implementation only expands nodes sequentially but doesn't ensure that parent nodes are expanded before trying to expand their children. Let's fix this to properly expand all stored nodes.
+
+Here's an improved implementation for handling expanded nodes from the session:
+
+```javascript
+function expandNodesFromSession(nodeIds) {
+    // Clone the array to avoid modifying the original
+    const nodesToExpand = [...nodeIds];
+    
+    // First expand the root if needed
+    const rootIndex = nodesToExpand.indexOf('00000000-0000-0000-0000-000000000000');
+    if (rootIndex !== -1) {
+        const rootNode = document.querySelector('.tree-node[data-id="00000000-0000-0000-0000-000000000000"]');
+        if (rootNode && !rootNode.classList.contains('open')) {
+            toggleNode(rootNode, '00000000-0000-0000-0000-000000000000');
+        }
+        nodesToExpand.splice(rootIndex, 1);
+    }
+    
+    // Sort nodes by their path depth to expand parents first
+    // This requires building the hierarchy info
+    buildNodeHierarchy(nodesToExpand, function(nodeHierarchy) {
+        // Expand nodes level by level with delays
+        expandNodesByLevel(nodeHierarchy);
+    });
+}
+
+function buildNodeHierarchy(nodeIds, callback) {
+    // First get all node information from API
+    fetch('api/flat.php?action=list')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const allNodes = data.items;
+                
+                // Create a map of nodes by ID for quick lookup
+                const nodeMap = {};
+                allNodes.forEach(node => {
+                    nodeMap[node.id] = node;
+                });
+                
+                // Build hierarchy information for each node
+                const hierarchyInfo = {};
+                
+                nodeIds.forEach(nodeId => {
+                    if (nodeId in nodeMap) {
+                        const node = nodeMap[nodeId];
+                        let depth = 0;
+                        let parentChain = [];
+                        let currentParent = node.parent;
+                        
+                        // Traverse up to calculate depth and parent chain
+                        while (currentParent && currentParent !== '00000000-0000-0000-0000-000000000000') {
+                            depth++;
+                            parentChain.unshift(currentParent); // Add to beginning
+                            currentParent = nodeMap[currentParent]?.parent;
+                        }
+                        
+                        hierarchyInfo[nodeId] = {
+                            id: nodeId,
+                            depth: depth,
+                            parentChain: parentChain
+                        };
+                    }
+                });
+                
+                callback(hierarchyInfo);
+            } else {
+                console.error('Error fetching node data:', data.message);
+                callback({});
+            }
+        })
+        .catch(error => {
+            console.error('Network error:', error);
+            callback({});
+        });
+}
+
+function expandNodesByLevel(nodeHierarchy) {
+    // Convert to array and sort by depth
+    const nodeInfoArray = Object.values(nodeHierarchy)
+        .sort((a, b) => a.depth - b.depth);
+    
+    // Expand level by level with delays to allow DOM updates
+    let currentLevel = 0;
+    let index = 0;
+    
+    function processNextBatch() {
+        // Process all nodes at the current depth level
+        const nodesToProcessNow = [];
+        
+        while (index < nodeInfoArray.length && nodeInfoArray[index].depth === currentLevel) {
+            nodesToProcessNow.push(nodeInfoArray[index]);
+            index++;
+        }
+        
+        if (nodesToProcessNow.length > 0) {
+            // For each node at this level
+            nodesToProcessNow.forEach(nodeInfo => {
+                // First ensure all parents are expanded
+                nodeInfo.parentChain.forEach(parentId => {
+                    const parentNode = document.querySelector(`.tree-node[data-id="${parentId}"]`);
+                    if (parentNode && !parentNode.classList.contains('open')) {
+                        toggleNode(parentNode, parentId);
+                    }
+                });
+                
+                // Then expand this node
+                const nodeElement = document.querySelector(`.tree-node[data-id="${nodeInfo.id}"]`);
+                if (nodeElement && !nodeElement.classList.contains('open')) {
+                    toggleNode(nodeElement, nodeInfo.id);
+                }
+            });
+            
+            // Move to next level after a delay
+            currentLevel++;
+            setTimeout(processNextBatch, 300);
+        } else if (index < nodeInfoArray.length) {
+            // Move to next level
+            currentLevel++;
+            setTimeout(processNextBatch, 100);
+        }
+    }
+    
+    // Start processing
+    processNextBatch();
+}
+```
+
+This implementation:
+
+1. Gets a complete list of nodes to build the hierarchy information
+2. Calculates the depth and parent chain for each node to expand
+3. Sorts nodes by their depth to ensure parent nodes are expanded first
+4. Processes nodes level by level with delays to allow DOM updates
+5. Ensures all parents in the chain are expanded before attempting to expand a node
+
+This approach should properly expand all nodes stored in the session, not just the topmost ones.
