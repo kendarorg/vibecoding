@@ -12,7 +12,6 @@ $openedIds = $session->get('opened', []);
 // Function to build tree structure recursively
 function buildTree($parentUuid, $storage, $openedIds) {
     $children=[];
-    error_log("BUILD TREE $parentUuid");
     if($parentUuid===null){
         $children[] = [
             'id' => '00000000-0000-0000-0000-000000000000',
@@ -33,7 +32,6 @@ function buildTree($parentUuid, $storage, $openedIds) {
             $hasChildren = $storage->hasChildren($child['id']);
             $toggleSymbol = $hasChildren ? ($isOpen ? '-' : '+') : ' ';
             $openClass = $isOpen ? 'open' : '';
-            error_log(json_encode($child)." Open ".$isOpen);
             $html .= '<div class="tree-node ' . $openClass . '" data-id="' . htmlspecialchars($child['id']) . '" data-title="' . htmlspecialchars($child['title']).'"';
             if($parentUuid!=null){
                 $html.= ' data-parent="' . htmlspecialchars($parentUuid) . '"';
