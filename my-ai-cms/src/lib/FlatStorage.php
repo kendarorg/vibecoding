@@ -191,6 +191,17 @@ class FlatStorage {
         return '';
     }
 
+
+
+    /**
+     * Get content of a specific item
+     */
+    public function exists(string $itemUuid): bool {
+        $itemPath = $this->dataDir . '/' . $itemUuid;
+
+        return file_exists($itemPath);
+    }
+
     /**
      * Get the last known parent of an item
      */
