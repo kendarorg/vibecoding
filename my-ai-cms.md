@@ -7701,3 +7701,181 @@ The server-side rendering significantly improves the initial page load experienc
 ### FIX 042
 
 Fix the generated code
+* Use curl instead of file_get_contents
+* Fixes on logging
+
+### REQ 043
+
+On FlatStorage add a function to get the full path given an UUID getFullPath(UUID)
+WRONG
+On FlatStorage add a function to get the full path given an UUID getFullPath(UUID) deducting all parents to the root reading from the index.log
+And test the just created function inside the flatstoragetest
+
+### RES 043
+
+I'll add a `getFullPath` function to the `FlatStorage` class that traces an item's full path by traversing its ancestors from the index.log file.
+
+```php
+/**
+ * Get the full hierarchical path from root to the specified UUID
+ *
+ * @param string $uuid The unique identifier of the item
+ * @return array Array of items representing the path from root to the item
+ * @throws InvalidArgumentException If the UUID is invalid or not found
+ */
+public function getFullPath(string $uuid): array {
+    // Validate UUID format
+    if (!Utils::isValidUuid($uuid)) {
+        throw new InvalidArgumentException('Invalid UUID format');
+    }
+    
+    // Root UUID case - just return empty path with root
+    if ($uuid === '00000000-0000-0000-0000-000000000000') {
+        return [['id' => $uuid, 'title' => 'Root', 'parent' => null]];
+    }
+    
+    // Get the index file path
+    $indexFile = $this->structureDir . '/index.log';
+    
+    if (!file_exists($indexFile)) {
+        throw new InvalidArgumentException('Index file not found');
+    }
+    
+    // Build the parent-child relationship map from index.log
+    $parentMap = [];
+    $titleMap = [];
+    
+    $lines = file($indexFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    
+    foreach ($lines as $line) {
+        $parts = explode(',', $line, 4);
+        if (count($parts) < 4) continue;
+        
+        list($action, $id, $parent, $title) = $parts;
+        
+        switch ($action) {
+            case 'CR':
+                $parentMap[$id] = $parent;
+                $titleMap[$id] = $title;
+                break;
+            case 'RN':
+                $titleMap[$id] = $title;
+                break;
+            case 'MV':
+                $parentMap[$id] = $parent;
+                break;
+            case 'DE':
+                unset($parentMap[$id]);
+                unset($titleMap[$id]);
+                break;
+        }
+    }
+    
+    // Item not found in the index
+    if (!isset($parentMap[$uuid])) {
+        throw new InvalidArgumentException('Item not found in index');
+    }
+    
+    // Build the path by traversing up the parent hierarchy
+    $path = [];
+    $currentId = $uuid;
+    
+    while ($currentId && $currentId !== '00000000-0000-0000-0000-000000000000') {
+        if (!isset($parentMap[$currentId])) {
+            // Broken chain, can't find parent
+            break;
+        }
+        
+        // Add current item to the path
+        array_unshift($path, [
+            'id' => $currentId,
+            'title' => $titleMap[$currentId] ?? 'Unknown',
+            'parent' => $parentMap[$currentId]
+        ]);
+        
+        // Move to parent
+        $currentId = $parentMap[$currentId];
+    }
+    
+    // Add root to the beginning if not already there
+    if (empty($path) || $path[0]['id'] !== '00000000-0000-0000-0000-000000000000') {
+        array_unshift($path, [
+            'id' => '00000000-0000-0000-0000-000000000000',
+            'title' => 'Root',
+            'parent' => null
+        ]);
+    }
+    
+    return $path;
+}
+```
+
+This function:
+
+1. Validates the UUID format
+2. Handles the root node case specially
+3. Parses the index.log file to build parent-child relationships and titles
+4. Traverses up the hierarchy from the specified UUID to build the complete path
+5. Returns an array of items representing the path from root to the target item
+6. Includes error handling for invalid UUIDs or missing items
+
+Each item in the returned path array includes the ID, title, and parent ID, providing complete context for the item's position in the hierarchy.
+
+I'll create a test function for the `getFullPath` method in the `FlatStorageTest` class. This test will verify that the hierarchical path from root to a specific item is correctly constructed by reading from the index.log file.
+
+```php
+public function testGetFullPath(): void
+{
+    $rootUuid = '00000000-0000-0000-0000-000000000000';
+    
+    // Create a hierarchy of items
+    $level1Uuid = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+    $level2Uuid = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+    $level3Uuid = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+    
+    // Create hierarchy: Root -> Level1 -> Level2 -> Level3
+    $this->storage->upsertItem($level1Uuid, $rootUuid, 'Level 1', 'Level 1 Content');
+    $this->storage->upsertItem($level2Uuid, $level1Uuid, 'Level 2', 'Level 2 Content');
+    $this->storage->upsertItem($level3Uuid, $level2Uuid, 'Level 3', 'Level 3 Content');
+    
+    // Test path from leaf node
+    $path = $this->storage->getFullPath($level3Uuid);
+    
+    // Assert path contains 4 items (root, level1, level2, level3)
+    $this->assertCount(4, $path);
+    
+    // Check order and content of path items
+    $this->assertEquals($rootUuid, $path[0]['id']);
+    $this->assertEquals('Root', $path[0]['title']);
+    $this->assertNull($path[0]['parent']);
+    
+    $this->assertEquals($level1Uuid, $path[1]['id']);
+    $this->assertEquals('Level 1', $path[1]['title']);
+    $this->assertEquals($rootUuid, $path[1]['parent']);
+    
+    $this->assertEquals($level2Uuid, $path[2]['id']);
+    $this->assertEquals('Level 2', $path[2]['title']);
+    $this->assertEquals($level1Uuid, $path[2]['parent']);
+    
+    $this->assertEquals($level3Uuid, $path[3]['id']);
+    $this->assertEquals('Level 3', $path[3]['title']);
+    $this->assertEquals($level2Uuid, $path[3]['parent']);
+    
+    // Test getting path from middle node
+    $midPath = $this->storage->getFullPath($level2Uuid);
+    $this->assertCount(3, $midPath);
+    
+    // Test getting path from root
+    $rootPath = $this->storage->getFullPath($rootUuid);
+    $this->assertCount(1, $rootPath);
+    $this->assertEquals($rootUuid, $rootPath[0]['id']);
+    $this->assertEquals('Root', $rootPath[0]['title']);
+}
+```
+
+This test:
+1. Creates a hierarchy of items with three levels
+2. Tests getting the full path from the leaf node
+3. Verifies that the path contains the correct number of nodes
+4. Checks each node in the path for correct ID, title, and parent
+5. Also tests getting paths from intermediate nodes and the root

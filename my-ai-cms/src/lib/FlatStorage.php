@@ -246,4 +246,92 @@ class FlatStorage {
         $children = $this->listChildren($itemId);
         return !empty($children);
     }
+
+    /**
+     * Get the full hierarchical path from root to the specified UUID
+     *
+     * @param string $uuid The unique identifier of the item
+     * @return array Array of items representing the path from root to the item
+     * @throws InvalidArgumentException If the UUID is invalid or not found
+     */
+    public function getFullPath(string $uuid): array {
+        // Root UUID case - just return empty path with root
+        if ($uuid === '00000000-0000-0000-0000-000000000000') {
+            return [['id' => $uuid, 'title' => 'Root', 'parent' => null]];
+        }
+
+        // Get the index file path
+        $indexFile = $this->structureDir . '/index.log';
+
+        if (!file_exists($indexFile)) {
+            throw new InvalidArgumentException('Index file not found');
+        }
+
+        // Build the parent-child relationship map from index.log
+        $parentMap = [];
+        $titleMap = [];
+
+        $lines = file($indexFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
+        foreach ($lines as $line) {
+            $parts = explode(',', $line, 4);
+            if (count($parts) < 4) continue;
+
+            list($action, $id, $parent, $title) = $parts;
+
+            switch ($action) {
+                case 'CR':
+                    $parentMap[$id] = $parent;
+                    $titleMap[$id] = $title;
+                    break;
+                case 'RN':
+                    $titleMap[$id] = $title;
+                    break;
+                case 'MV':
+                    $parentMap[$id] = $parent;
+                    break;
+                case 'DE':
+                    unset($parentMap[$id]);
+                    unset($titleMap[$id]);
+                    break;
+            }
+        }
+
+        // Item not found in the index
+        if (!isset($parentMap[$uuid])) {
+            throw new InvalidArgumentException('Item not found in index');
+        }
+
+        // Build the path by traversing up the parent hierarchy
+        $path = [];
+        $currentId = $uuid;
+
+        while ($currentId && $currentId !== '00000000-0000-0000-0000-000000000000') {
+            if (!isset($parentMap[$currentId])) {
+                // Broken chain, can't find parent
+                break;
+            }
+
+            // Add current item to the path
+            array_unshift($path, [
+                'id' => $currentId,
+                'title' => $titleMap[$currentId] ?? 'Unknown',
+                'parent' => $parentMap[$currentId]
+            ]);
+
+            // Move to parent
+            $currentId = $parentMap[$currentId];
+        }
+
+        // Add root to the beginning if not already there
+        if (empty($path) || $path[0]['id'] !== '00000000-0000-0000-0000-000000000000') {
+            array_unshift($path, [
+                'id' => '00000000-0000-0000-0000-000000000000',
+                'title' => 'Root',
+                'parent' => null
+            ]);
+        }
+
+        return $path;
+    }
 }

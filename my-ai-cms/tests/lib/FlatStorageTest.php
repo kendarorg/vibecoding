@@ -2,6 +2,7 @@
 
 use PHPUnit\Framework\TestCase;
 
+require_once('../../src/lib/Utils.php');
 require_once('../../src/lib/FlatStorage.php');
 
 class FlatStorageTest extends TestCase
@@ -396,5 +397,53 @@ class FlatStorageTest extends TestCase
 
         // Parent should no longer have children
         $this->assertFalse($this->storage->hasChildren($parentUuid));
+    }
+
+    public function testGetFullPath(): void
+    {
+        $rootUuid = '00000000-0000-0000-0000-000000000000';
+
+        // Create a hierarchy of items
+        $level1Uuid = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+        $level2Uuid = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+        $level3Uuid = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+
+        // Create hierarchy: Root -> Level1 -> Level2 -> Level3
+        $this->storage->upsertItem($level1Uuid, $rootUuid, 'Level 1', 'Level 1 Content');
+        $this->storage->upsertItem($level2Uuid, $level1Uuid, 'Level 2', 'Level 2 Content');
+        $this->storage->upsertItem($level3Uuid, $level2Uuid, 'Level 3', 'Level 3 Content');
+
+        // Test path from leaf node
+        $path = $this->storage->getFullPath($level3Uuid);
+
+        // Assert path contains 4 items (root, level1, level2, level3)
+        $this->assertCount(4, $path);
+
+        // Check order and content of path items
+        $this->assertEquals($rootUuid, $path[0]['id']);
+        $this->assertEquals('Root', $path[0]['title']);
+        $this->assertNull($path[0]['parent']);
+
+        $this->assertEquals($level1Uuid, $path[1]['id']);
+        $this->assertEquals('Level 1', $path[1]['title']);
+        $this->assertEquals($rootUuid, $path[1]['parent']);
+
+        $this->assertEquals($level2Uuid, $path[2]['id']);
+        $this->assertEquals('Level 2', $path[2]['title']);
+        $this->assertEquals($level1Uuid, $path[2]['parent']);
+
+        $this->assertEquals($level3Uuid, $path[3]['id']);
+        $this->assertEquals('Level 3', $path[3]['title']);
+        $this->assertEquals($level2Uuid, $path[3]['parent']);
+
+        // Test getting path from middle node
+        $midPath = $this->storage->getFullPath($level2Uuid);
+        $this->assertCount(3, $midPath);
+
+        // Test getting path from root
+        $rootPath = $this->storage->getFullPath($rootUuid);
+        $this->assertCount(1, $rootPath);
+        $this->assertEquals($rootUuid, $rootPath[0]['id']);
+        $this->assertEquals('Root', $rootPath[0]['title']);
     }
 }
