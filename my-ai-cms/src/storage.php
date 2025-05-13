@@ -108,5 +108,6 @@ $treeContent = buildTree(null, $storage, $expandedIds);
         <li id="menu-create">Create Child Item</li>
     </ul>
 </div>
+<script src="lib/scripts/turndown.js"></script>
 <script src="lib/scripts/easymde.min.js"></script>
 <script src="lib/scripts/storage.js"></script>
