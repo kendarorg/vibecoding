@@ -155,30 +155,6 @@ document.addEventListener('DOMContentLoaded', function () {
         return nodeDiv;
     }
 
-    // Function to toggle a node open/closed
-    function toggleNode(nodeElement, itemId) {
-        const isOpen = nodeElement.classList.contains('open');
-        const toggleSpan = nodeElement.querySelector('.tree-toggle');
-        const childrenContainer = nodeElement.querySelector('.tree-children');
-
-        if (isOpen) {
-            // Close the node
-            nodeElement.classList.remove('open');
-            toggleSpan.textContent = '+';
-        } else {
-            // Open the node
-            nodeElement.classList.add('open');
-            toggleSpan.textContent = '-';
-
-            // Load children if not already loaded
-            const cachedNode = nodeCache.get(itemId);
-            if (!cachedNode.hasLoadedChildren) {
-                loadNodeChildren(itemId, childrenContainer);
-                cachedNode.hasLoadedChildren = true;
-            }
-        }
-    }
-
     // Function to load children for a node
     function loadNodeChildren(parentId, container) {
         // Clear container and add loading indicator
@@ -555,30 +531,66 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Track node toggle in session
-    document.querySelectorAll('.tree-toggle').forEach(toggle => {
-        toggle.addEventListener('click', function() {
-            const node = this.closest('.tree-node');
-            const nodeId = node.dataset.id;
 
-            if (node.classList.contains('open')) {
-                node.classList.remove('open');
-                this.textContent = '+';
-                // Update session
-                fetch('?update_open_nodes&action=close&node_id=' + nodeId);
-            } else {
-                node.classList.add('open');
-                this.textContent = '-';
-                // Update session
-                fetch('?update_open_nodes&action=open&node_id=' + nodeId);
+    // Function to toggle a node open/closed
+    function toggleNode(nodeElement, itemId) {
+        const isOpen = nodeElement.classList.contains('open');
+        const toggleSpan = nodeElement.querySelector('.tree-toggle');
+        const childrenContainer = nodeElement.querySelector('.tree-children');
 
-                // Load children if not already loaded
-                const children = node.querySelector('.tree-children');
-                if (children.children.length === 0 && this.textContent !== ' ') {
-                    // We need to load children - this will still use JS but only for expanding
-                    // You can replace this with the original JS loading code
-                }
+        if (isOpen) {
+            // Close the node
+            nodeElement.classList.remove('open');
+            toggleSpan.textContent = '+';
+
+            // Remove from session
+            removeExpandedNodeFromSession(itemId);
+        } else {
+            // Open the node
+            nodeElement.classList.add('open');
+            toggleSpan.textContent = '-';
+
+            // Add to session
+            addExpandedNodeToSession(itemId);
+
+            // Load children if not already loaded
+            const cachedNode = nodeCache.get(itemId);
+            if (!cachedNode.hasLoadedChildren) {
+                loadNodeChildren(itemId, childrenContainer);
+                cachedNode.hasLoadedChildren = true;
             }
-        });
-    });
+        }
+    }
+
+
+
+    function addExpandedNodeToSession(nodeId) {
+        fetch('api/session.php?action=addExpanded', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                nodeId: nodeId
+            })
+        })
+            .catch(error => {
+                console.error('Error saving expanded node:', error);
+            });
+    }
+
+    function removeExpandedNodeFromSession(nodeId) {
+        fetch('api/session.php?action=removeExpanded', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                nodeId: nodeId
+            })
+        })
+            .catch(error => {
+                console.error('Error removing expanded node:', error);
+            });
+    }
 });

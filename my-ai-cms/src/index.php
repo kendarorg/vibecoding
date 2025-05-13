@@ -1,5 +1,5 @@
 <?php
-
+require_once "lib/Utils.php";
 require_once "Settings.php";
 ?>
 

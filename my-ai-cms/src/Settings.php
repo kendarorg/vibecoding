@@ -1,4 +1,5 @@
 <?php
+require_once 'lib/Utils.php';
 require_once 'lib/Session.php';
 
 class Settings {
