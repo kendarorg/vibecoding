@@ -8393,3 +8393,257 @@ The recursive approach is more maintainable and will properly handle any level o
 ### FIX 048
 
 Now the nodes cache works as expected
+
+### REQ 049
+
+Use easyMDE to visualize and edit the content in storage.php
+* I'll provide the javscript library for easyMDE
+* Initially show in visualization mode
+* Preserve the save button behaviour
+
+### RES 049
+
+I'll implement EasyMDE to enhance the content editing experience in your application. This will provide a better Markdown editing interface with preview capabilities.
+
+Here's how to integrate EasyMDE into your storage.js file:
+
+```javascript
+document.addEventListener('DOMContentLoaded', function () {
+    // Add EasyMDE CSS to the document
+    const easymdeCSS = document.createElement('link');
+    easymdeCSS.rel = 'stylesheet';
+    easymdeCSS.href = 'https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css';
+    document.head.appendChild(easymdeCSS);
+    
+    // Add EasyMDE script
+    const easymdeScript = document.createElement('script');
+    easymdeScript.src = 'https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js';
+    document.head.appendChild(easymdeScript);
+    
+    // State variables
+    let editor = null;
+    
+    // Wait for EasyMDE to load
+    easymdeScript.onload = function() {
+        initializeEditor();
+    };
+    
+    function initializeEditor() {
+        // Replace the content editor with EasyMDE
+        const contentEditorElement = document.getElementById('content-editor');
+        
+        // Create a wrapper for the editor
+        const editorWrapper = document.createElement('div');
+        editorWrapper.id = 'editor-wrapper';
+        contentEditorElement.parentNode.insertBefore(editorWrapper, contentEditorElement);
+        editorWrapper.appendChild(contentEditorElement);
+        
+        // Initialize EasyMDE
+        editor = new EasyMDE({
+            element: contentEditorElement,
+            spellChecker: false,
+            autosave: {
+                enabled: false
+            },
+            toolbar: [
+                'bold', 'italic', 'heading', '|',
+                'quote', 'unordered-list', 'ordered-list', '|',
+                'link', 'image', '|',
+                'preview', 'side-by-side', 'fullscreen', '|',
+                'guide'
+            ],
+            initialValue: '',
+            status: ['lines', 'words'],
+            renderingConfig: {
+                singleLineBreaks: false,
+                codeSyntaxHighlighting: true
+            }
+        });
+        
+        // Start in preview mode
+        editor.togglePreview();
+        
+        // Handle the input event for detecting changes
+        editor.codemirror.on('change', function() {
+            if (currentItemId) {
+                // Mark content as modified
+                if (!saveButton.classList.contains('modified')) {
+                    saveButton.classList.add('modified');
+                    saveButton.textContent = 'Save Content *';
+                }
+            }
+        });
+        
+        // Override the loadContent function to use EasyMDE
+        window.originalLoadContent = loadContent;
+        loadContent = function(itemId) {
+            // Clear editor
+            editor.value('');
+            saveButton.classList.remove('modified');
+            saveButton.textContent = 'Save Content';
+
+            // Update title
+            const node = nodeCache.get(itemId);
+            contentTitle.textContent = node ? node.title : 'Loading...';
+
+            // Fetch content
+            fetch(`api/flat.php?action=content&id=${itemId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        editor.value(data.content);
+                    } else {
+                        console.error('API error:', data.message);
+                        editor.value('Error loading content');
+                    }
+                })
+                .catch(error => {
+                    console.error('Network error:', error);
+                    editor.value('Error loading content');
+                });
+        };
+        
+        // Override the saveContent function
+        window.originalSaveContent = saveContent;
+        saveContent = function(itemId, content) {
+            const node = nodeCache.get(itemId);
+            const editorContent = editor.value();
+
+            fetch('api/flat.php?action=update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    id: itemId,
+                    content: editorContent
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        saveButton.classList.remove('modified');
+                        saveButton.textContent = 'Save Content';
+                        alert('Content saved successfully');
+                    } else {
+                        console.error('API error:', data.message);
+                        alert('Error saving content: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Network error:', error);
+                    alert('Network error when saving content');
+                });
+        };
+
+        // Update save button handler
+        saveButton.addEventListener('click', function() {
+            if (currentItemId) {
+                saveContent(currentItemId);
+            }
+        });
+    }
+    
+    // All the rest of your existing code...
+    // DOM elements
+    const treePanel = document.getElementById('tree-panel');
+    const contextMenu = document.getElementById('context-menu');
+    const contentTitle = document.getElementById('content-title');
+    const contentEditor = document.getElementById('content-editor');
+    const saveButton = document.getElementById('save-button');
+    const breadcrumb = document.getElementById('breadcrumb');
+
+    // State variables
+    let selectedNode = null;
+    let currentItemId = null;
+    const breadcrumbPath = [];
+    const nodeCache = new Map();
+
+    // Context menu handlers
+    const menuRename = document.getElementById('menu-rename');
+    const menuDelete = document.getElementById('menu-delete');
+    const menuCreate = document.getElementById('menu-create');
+
+    // Event handlers
+    document.addEventListener('click', function () {
+        hideContextMenu();
+    });
+
+    // Original content editor event listener is now handled by EasyMDE
+    
+    menuRename.addEventListener('click', function () {
+        if (contextMenu.dataset.itemId === '00000000-0000-0000-0000-000000000000') {
+            alert('Cannot rename root item');
+            return;
+        }
+
+        const newName = prompt('Enter new name:', contextMenu.dataset.itemTitle);
+        if (newName && newName.trim()) {
+            renameItem(contextMenu.dataset.itemId, newName.trim());
+        }
+    });
+
+    menuDelete.addEventListener('click', function () {
+        if (contextMenu.dataset.itemId === '00000000-0000-0000-0000-000000000000') {
+            alert('Cannot delete root item');
+            return;
+        }
+
+        if (confirm(`Are you sure you want to delete "${contextMenu.dataset.itemTitle}"?`)) {
+            deleteItem(contextMenu.dataset.itemId, contextMenu.dataset.parentId);
+        }
+    });
+
+    menuCreate.addEventListener('click', function () {
+        const newName = prompt('Enter name for new item:');
+        if (newName && newName.trim()) {
+            createItem(contextMenu.dataset.itemId, newName.trim());
+        }
+    });
+});
+```
+
+This implementation:
+
+1. Dynamically loads EasyMDE resources (CSS and JavaScript)
+2. Initializes EasyMDE when the script is loaded
+3. Starts in preview mode for better visualization
+4. Preserves the save button behavior and modification tracking
+5. Overrides the `loadContent` and `saveContent` functions to work with EasyMDE
+6. Maintains all the existing tree and context menu functionality
+
+The editor provides a rich set of Markdown editing features, including:
+- Text formatting (bold, italic, headings)
+- Lists and quotes
+- Link and image insertion
+- Preview, side-by-side, and fullscreen modes
+- Markdown guide reference
+
+You might need to add some CSS to better style the editor in your application's context:
+
+```css
+.CodeMirror, .editor-preview {
+    min-height: 300px;
+}
+
+#editor-wrapper {
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.editor-toolbar {
+    border-top: none;
+    border-left: none;
+    border-right: none;
+}
+```
+
+This can be added to your existing CSS file or included inline in the JavaScript.
+
+
+### REQ 050
+### REQ 050
+### REQ 050
+### REQ 050
+### REQ 050

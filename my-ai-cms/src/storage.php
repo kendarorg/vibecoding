@@ -81,6 +81,7 @@ $treeContent = buildTree(null, $storage, $expandedIds);
 
 ?>
 <link rel="stylesheet" href="lib/css/storage.css">
+<link rel="stylesheet" href="lib/css/easymde.min.css">
 
 <div class="header">
     <ul class="breadcrumb" id="breadcrumb">
@@ -107,4 +108,5 @@ $treeContent = buildTree(null, $storage, $expandedIds);
         <li id="menu-create">Create Child Item</li>
     </ul>
 </div>
+<script src="lib/scripts/easymde.min.js"></script>
 <script src="lib/scripts/storage.js"></script>
