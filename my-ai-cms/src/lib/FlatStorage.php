@@ -251,7 +251,7 @@ class FlatStorage {
      * Get the full hierarchical path from root to the specified UUID
      *
      * @param string $uuid The unique identifier of the item
-     * @return array Array of items representing the path from root to the item
+     * @return array The full path
      * @throws InvalidArgumentException If the UUID is invalid or not found
      */
     public function getFullPath(string $uuid): array {
@@ -275,17 +275,17 @@ class FlatStorage {
 
         foreach ($lines as $line) {
             $parts = explode(',', $line, 4);
-            if (count($parts) < 4) continue;
-
-            list($action, $id, $parent, $title) = $parts;
+            if (count($parts) < 3) continue;
+            $action=$parts[0];
+            $id=$parts[1];
+            $parent=$parts[2];
+            if(!array_key_exists($id,$titleMap)){
+                $titleMap[$id]=$this->getLastName($id);
+            }
 
             switch ($action) {
                 case 'CR':
                     $parentMap[$id] = $parent;
-                    $titleMap[$id] = $title;
-                    break;
-                case 'RN':
-                    $titleMap[$id] = $title;
                     break;
                 case 'MV':
                     $parentMap[$id] = $parent;
@@ -323,15 +323,19 @@ class FlatStorage {
             $currentId = $parentMap[$currentId];
         }
 
+        $result =[];
         // Add root to the beginning if not already there
         if (empty($path) || $path[0]['id'] !== '00000000-0000-0000-0000-000000000000') {
-            array_unshift($path, [
+            $result[]=[
                 'id' => '00000000-0000-0000-0000-000000000000',
                 'title' => 'Root',
                 'parent' => null
-            ]);
+            ];
+        }
+        foreach ($path as $item){
+            $result[]=$item;
         }
 
-        return $path;
+        return $result;
     }
 }

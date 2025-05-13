@@ -7879,3 +7879,7 @@ This test:
 3. Verifies that the path contains the correct number of nodes
 4. Checks each node in the path for correct ID, title, and parent
 5. Also tests getting paths from intermediate nodes and the root
+
+### FIX 044
+
+Let the path works correctly
