@@ -9323,7 +9323,409 @@ This implementation provides a complete solution for your clipboard paste requir
 * Keep title sizes on turndown
 
 ### REQ 055
-### RES 055
+
+When pasting block the whole screen until the paste operation is completed
+
+I'll create a UI overlay to block the screen during paste operations, showing a loading indicator. This provides good user feedback while preventing premature interactions.
+
+Here's the implementation:
+
+```javascript
+// Add this to your CSS (you can place it in storage.css or inline it)
+const pasteOverlayStyles = `
+.paste-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    color: white;
+    font-size: 18px;
+}
+
+.paste-spinner {
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top: 4px solid white;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+`;
+
+// Add the styles to the document
+const styleElement = document.createElement('style');
+styleElement.textContent = pasteOverlayStyles;
+document.head.appendChild(styleElement);
+
+// Create overlay elements (but don't add to DOM yet)
+const overlay = document.createElement('div');
+overlay.className = 'paste-overlay';
+overlay.style.display = 'none';
+
+const spinner = document.createElement('div');
+spinner.className = 'paste-spinner';
+
+const message = document.createElement('div');
+message.textContent = 'Processing paste...';
+
+overlay.appendChild(spinner);
+overlay.appendChild(message);
+document.body.appendChild(overlay);
+
+// Show/hide overlay functions
+function showPasteOverlay() {
+    overlay.style.display = 'flex';
+}
+
+function hidePasteOverlay() {
+    overlay.style.display = 'none';
+}
+
+// Modify the paste event handler
+editor.codemirror.on("paste", function(cm, e) {
+    // Prevent the default paste action
+    e.preventDefault();
+    
+    // Show the overlay
+    showPasteOverlay();
+
+    const items = [];
+    const clipboardData = e.clipboardData || window.clipboardData;
+
+    // Process text separately since it's almost always available
+    if (clipboardData.getData('text/plain')) {
+        items.push({
+            type: 'text/plain',
+            data: new Blob([clipboardData.getData('text/plain')], { type: 'text/plain' }),
+            url: null
+        });
+    }
+
+    // If we have HTML content
+    if (clipboardData.getData('text/html')) {
+        items.push({
+            type: 'text/html',
+            data: new Blob([clipboardData.getData('text/html')], { type: 'text/html' }),
+            url: null
+        });
+    }
+
+    // Process all available items in clipboard
+    if (clipboardData.items) {
+        Array.from(clipboardData.items).forEach(item => {
+            const type = item.type;
+
+            // Skip text items as we've already processed them
+            if (type === 'text/plain' || type === 'text/html') {
+                return;
+            }
+
+            // Handle files and other blob data
+            if (item.kind === 'file') {
+                const blob = item.getAsFile();
+                if (blob) {
+                    // Create object URL for the blob
+                    const url = URL.createObjectURL(blob);
+                    items.push({
+                        type: type,
+                        data: blob,
+                        url: url
+                    });
+                }
+            } else {
+                // For non-file items, try to get as string and convert to blob
+                item.getAsString(str => {
+                    if (str) {
+                        items.push({
+                            type: type,
+                            data: new Blob([str], { type: type }),
+                            url: null
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    // Process files directly if available
+    if (clipboardData.files && clipboardData.files.length > 0) {
+        Array.from(clipboardData.files).forEach(file => {
+            const url = URL.createObjectURL(file);
+            items.push({
+                type: file.type,
+                data: file,
+                url: url
+            });
+        });
+    }
+
+    console.log('Clipboard items:', items);
+
+    // Handle images directly pasted (screenshots, copied images)
+    const imageItem = items.find(item => item.type.startsWith('image/'));
+    if (imageItem && imageItem.url) {
+        handlePastedImage(imageItem, cm)
+            .finally(() => {
+                // Hide overlay when complete
+                hidePasteOverlay();
+            });
+        return;
+    }
+
+    // Handle HTML content (which might contain images)
+    const htmlItem = items.find(item => item.type === 'text/html');
+    if (htmlItem) {
+        handlePastedHtml(htmlItem, cm)
+            .finally(() => {
+                // Hide overlay when complete
+                hidePasteOverlay();
+            });
+        return;
+    }
+
+    // Fall back to plain text
+    const textItem = items.find(item => item.type === 'text/plain');
+    if (textItem) {
+        textItem.data.text()
+            .then(text => {
+                const doc = cm.getDoc();
+                const cursor = doc.getCursor();
+                doc.replaceRange(text, cursor);
+            })
+            .finally(() => {
+                // Hide overlay for text paste too
+                hidePasteOverlay();
+            });
+    } else {
+        // If we get here, there was nothing to paste
+        hidePasteOverlay();
+    }
+});
+
+// Update the handler functions to return promises
+function handlePastedImage(imageItem, cm) {
+    return new Promise((resolve, reject) => {
+        const file = imageItem.data;
+        const filename = generateImageFilename(file.type.split('/')[1]);
+
+        // Create FormData for file upload
+        const formData = new FormData();
+        formData.append('file', file, filename);
+        formData.append('id', generateUUID());
+        formData.append('title', filename);
+
+        // Upload the image
+        fetch('api/files.php?action=upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Insert the markdown for the local image
+                const imageMarkdown = `![${filename}](${data.url})`;
+                const doc = cm.getDoc();
+                const cursor = doc.getCursor();
+                doc.replaceRange(imageMarkdown, cursor);
+                resolve();
+            } else {
+                console.error('Failed to upload image:', data.message);
+                // Fall back to object URL if upload fails
+                const imageMarkdown = `![Image](${imageItem.url})`;
+                const doc = cm.getDoc();
+                const cursor = doc.getCursor();
+                doc.replaceRange(imageMarkdown, cursor);
+                resolve();
+            }
+        })
+        .catch(error => {
+            console.error('Error uploading image:', error);
+            // Fall back to object URL if upload fails
+            const imageMarkdown = `![Image](${imageItem.url})`;
+            const doc = cm.getDoc();
+            const cursor = doc.getCursor();
+            doc.replaceRange(imageMarkdown, cursor);
+            resolve();
+        });
+    });
+}
+
+function handlePastedHtml(htmlItem, cm) {
+    return new Promise((resolve, reject) => {
+        htmlItem.data.text().then(html => {
+            // Create a DOM parser to work with the HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const images = doc.querySelectorAll('img');
+
+            // Track promises for all image uploads
+            const uploadPromises = [];
+
+            // Process each image in the HTML
+            images.forEach((img, index) => {
+                const src = img.getAttribute('src');
+                if (src && (src.startsWith('data:image/') || src.startsWith('http'))) {
+                    const uploadPromise = new Promise((resolveImg) => {
+                        if (src.startsWith('data:image/')) {
+                            // Handle data URI images
+                            const match = src.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/);
+                            if (match) {
+                                const imageType = match[1];
+                                const base64Data = match[2];
+                                const byteString = atob(base64Data);
+                                const arrayBuffer = new ArrayBuffer(byteString.length);
+                                const intArray = new Uint8Array(arrayBuffer);
+
+                                for (let i = 0; i < byteString.length; i++) {
+                                    intArray[i] = byteString.charCodeAt(i);
+                                }
+
+                                const blob = new Blob([arrayBuffer], { type: `image/${imageType}` });
+                                const filename = generateImageFilename(imageType);
+
+                                // Upload the image
+                                const formData = new FormData();
+                                formData.append('file', blob, filename);
+                                formData.append('id', generateUUID());
+                                formData.append('title', filename);
+
+                                fetch('api/files.php?action=upload', {
+                                    method: 'POST',
+                                    body: formData
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        // Replace the src with the local URL
+                                        img.setAttribute('src', data.url);
+                                        resolveImg();
+                                    } else {
+                                        console.error('Failed to upload embedded image:', data.message);
+                                        resolveImg();
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Error uploading embedded image:', error);
+                                    resolveImg();
+                                });
+                            } else {
+                                resolveImg();
+                            }
+                        } else if (src.startsWith('http')) {
+                            // Handle remote images
+                            // Fetch the image and upload it
+                            fetch(src)
+                            .then(response => response.blob())
+                            .then(blob => {
+                                const extension = src.split('.').pop().split('?')[0] || 'jpg';
+                                const filename = generateImageFilename(extension);
+
+                                const formData = new FormData();
+                                formData.append('file', blob, filename);
+                                formData.append('id', generateUUID());
+                                formData.append('title', filename);
+
+                                return fetch('api/files.php?action=upload', {
+                                    method: 'POST',
+                                    body: formData
+                                });
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    // Replace the src with the local URL
+                                    img.setAttribute('src', data.url);
+                                    resolveImg();
+                                } else {
+                                    console.error('Failed to upload remote image:', data.message);
+                                    resolveImg();
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error uploading remote image:', error);
+                                resolveImg();
+                            });
+                        } else {
+                            resolveImg();
+                        }
+                    });
+
+                    uploadPromises.push(uploadPromise);
+                }
+            });
+
+            // When all images are processed, convert the modified HTML to markdown
+            Promise.all(uploadPromises).then(() => {
+                // Get the updated HTML with local image URLs
+                const modifiedHtml = doc.body.innerHTML;
+
+                // Convert to markdown
+                const turndownService = new TurndownService({
+                    headingStyle: 'atx',
+                    hr: '---',
+                    bulletListMarker: '-',
+                    codeBlockStyle: 'fenced',
+                    emDelimiter: '*'
+                });
+
+                // Customize Turndown to preserve image dimensions if present
+                turndownService.addRule('imageWithDimensions', {
+                    filter: 'img',
+                    replacement: function(content, node) {
+                        const alt = node.alt || '';
+                        const src = node.getAttribute('src') || '';
+                        const title = node.title || '';
+                        const titlePart = title ? ` "${title}"` : '';
+                        return `![${alt}](${src}${titlePart})`;
+                    }
+                });
+
+                const markdown = turndownService.turndown(modifiedHtml);
+
+                // Insert the markdown at cursor position
+                const editor = cm.getDoc();
+                const cursor = editor.getCursor();
+                editor.replaceRange(markdown, cursor);
+                resolve();
+            });
+        }).catch(error => {
+            console.error('Error processing HTML:', error);
+            reject(error);
+        });
+    });
+}
+```
+
+This solution:
+
+1. Creates a semi-transparent overlay with a spinning loader
+2. Shows the overlay when a paste operation starts
+3. Hides it when the operation completes
+4. Modifies the handler functions to return promises for proper async tracking
+5. Uses Promise.finally() to ensure the overlay is hidden in all cases
+6. Provides visual feedback with a spinner and message during long-running operations
+
+The overlay appears immediately when pasting begins and blocks all interaction until the process completes, letting users know something is happening in the background.
+
+### FIX 055
+
+* Css to show always the save button
+* Allow editing without parent
+* Log completion of paste with turndown and images
+
 ### REQ 056
 ### RES 056
 ### REQ 057

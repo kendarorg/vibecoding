@@ -37,5 +37,7 @@ $currentPage = $session->get('currentPage',"storage");
 require_once $currentPage.".php";
 
 ?>
+
+<script src="lib/scripts/commons.js"></script>
 </body>
 </html>
