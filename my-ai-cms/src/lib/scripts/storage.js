@@ -554,4 +554,31 @@ document.addEventListener('DOMContentLoaded', function () {
             return v.toString(16);
         });
     }
+
+    // Track node toggle in session
+    document.querySelectorAll('.tree-toggle').forEach(toggle => {
+        toggle.addEventListener('click', function() {
+            const node = this.closest('.tree-node');
+            const nodeId = node.dataset.id;
+
+            if (node.classList.contains('open')) {
+                node.classList.remove('open');
+                this.textContent = '+';
+                // Update session
+                fetch('?update_open_nodes&action=close&node_id=' + nodeId);
+            } else {
+                node.classList.add('open');
+                this.textContent = '-';
+                // Update session
+                fetch('?update_open_nodes&action=open&node_id=' + nodeId);
+
+                // Load children if not already loaded
+                const children = node.querySelector('.tree-children');
+                if (children.children.length === 0 && this.textContent !== ' ') {
+                    // We need to load children - this will still use JS but only for expanding
+                    // You can replace this with the original JS loading code
+                }
+            }
+        });
+    });
 });
