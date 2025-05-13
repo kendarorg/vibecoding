@@ -7531,3 +7531,7 @@ This implementation:
 5. Ensures all parents in the chain are expanded before attempting to expand a node
 
 This approach should properly expand all nodes stored in the session, not just the topmost ones.
+
+### Fix 040
+
+Removed all autoload expansion

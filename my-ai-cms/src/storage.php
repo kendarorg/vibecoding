@@ -1,4 +1,6 @@
+<?php
 
+?>
 <link rel="stylesheet" href="lib/css/storage.css">
 
 <div class="header">
