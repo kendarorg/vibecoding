@@ -958,6 +958,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     emDelimiter: '*'
                 });
 
+                turndownService.keep(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']).filter = function(node) {
+                    return node.nodeName.match(/^H[1-6]$/);
+                };
+
+                turndownService.keep(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']).replacement = function(content, node) {
+                    const level = parseInt(node.tagName.charAt(1));
+                    const hashes = '#'.repeat(level);
+                    return `\n${hashes} ${content}\n\n`;
+                };
+
                 // Customize Turndown to preserve image dimensions if present
                 turndownService.addRule('imageWithDimensions', {
                     filter: 'img',
