@@ -1,15 +1,24 @@
 <?php
 
+require_once 'lib/FlatStorage.php';
+$dataDir = Settings::$root.'/content/data';
+$structureDir = Settings::$root.'/content/structure';
+$storage = new FlatStorage($dataDir, $structureDir);
+
 // Function to fetch items from the API
 function fetchItems($parentId) {
-    $response = file_get_contents("api/flat.php?action=list&parent={$parentId}");
-    $data = json_decode($response, true);
+    global $storage;
+    $items =$storage->listChildren($parentId);
+    // Add additional information about each item
+    foreach ($items as &$item) {
+        // Check if this item has children
+        $hasChildren = $storage->hasChildren($item['id']);
+        $item['hasChildren'] = $hasChildren;
 
-    if (isset($data['success']) && $data['success']) {
-        return $data['items'];
+        // Add parent information explicitly
+        $item['parent'] = $parentId;
     }
-
-    return [];
+    return $items;
 }
 
 
@@ -27,6 +36,7 @@ function renderTree($parentId = '00000000-0000-0000-0000-000000000000', $level =
 
     foreach ($items as $item) {
         $id = $item['id'];
+        Utils::errorLog("RENDERING ITEM: $id");
         $title = htmlspecialchars($item['title']);
         $hasChildren = $item['hasChildren'] ?? false;
 

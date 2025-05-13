@@ -16,4 +16,9 @@ class Utils {
             mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
         );
     }
+
+    public static function errorLog($message) {
+
+        error_log('[ERROR] '.date('Y-m-d H:i:s')." ".$message);
+    }
 }
