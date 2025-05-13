@@ -94,9 +94,11 @@ $treeContent = buildTree(null, $storage, $expandedIds);
         <?= $treeContent ?>
     </div>
 
-    <div class="content-panel">
+    <div class="content-panel" style="display:none;">
         <div class="content-title" id="content-title">No item selected</div>
-        <textarea class="content-editor" id="content-editor"></textarea>
+        <div style="overflow: scroll;">
+            <textarea class="content-editor" id="content-editor"></textarea>
+        </div>
         <button class="save-button" id="save-button">Save Content</button>
     </div>
 </div>

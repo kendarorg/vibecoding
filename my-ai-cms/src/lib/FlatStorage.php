@@ -59,7 +59,7 @@ class FlatStorage {
                 if($itemUuid === $this->rootUuid){
                     return;
                 }
-                throw new InvalidArgumentException('Parent UUID is required for new items');
+                return;
             }
 
             // New item - add creation entries

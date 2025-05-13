@@ -46,7 +46,8 @@ document.addEventListener('DOMContentLoaded', function () {
         renderingConfig: {
             singleLineBreaks: false,
             codeSyntaxHighlighting: true
-        }
+        },
+        scrollbarStyle: 'native'
     });
 
     // Start in preview mode
@@ -220,6 +221,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Load content
         currentItemId = itemId;
+
         loadContent(itemId);
 
         // Update breadcrumb
@@ -342,6 +344,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Load content for an item
     function loadContent(itemId) {
+        document.querySelector('.content-panel').style.display='flex';
         isReallyChanged=false;
         // Clear editor
         editor.value('');
@@ -696,112 +699,144 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    let waitPasteCompletion =0;
+
     editor.codemirror.on("paste", function(cm, e) {
-        // Prevent the default paste action
-        e.preventDefault();
+        try {
+            // Prevent the default paste action
+            e.preventDefault();
+            // Show the overlay
+            console.log("STARTING PASTE")
+            showPasteOverlay();
 
-        const items = [];
-        const clipboardData = e.clipboardData || window.clipboardData;
+            const items = [];
+            const clipboardData = e.clipboardData || window.clipboardData;
 
-        // Process text separately since it's almost always available
-        if (clipboardData.getData('text/plain')) {
-            items.push({
-                type: 'text/plain',
-                data: new Blob([clipboardData.getData('text/plain')], { type: 'text/plain' }),
-                url: null
-            });
-        }
+            // Process text separately since it's almost always available
+            if (clipboardData.getData('text/plain')) {
+                items.push({
+                    type: 'text/plain',
+                    data: new Blob([clipboardData.getData('text/plain')], {type: 'text/plain'}),
+                    url: null
+                });
+            }
 
-        // If we have HTML content
-        if (clipboardData.getData('text/html')) {
-            items.push({
-                type: 'text/html',
-                data: new Blob([clipboardData.getData('text/html')], { type: 'text/html' }),
-                url: null
-            });
-        }
+            // If we have HTML content
+            if (clipboardData.getData('text/html')) {
+                items.push({
+                    type: 'text/html',
+                    data: new Blob([clipboardData.getData('text/html')], {type: 'text/html'}),
+                    url: null
+                });
+            }
 
-        // Process all available items in clipboard
-        if (clipboardData.items) {
-            Array.from(clipboardData.items).forEach(item => {
-                const type = item.type;
+            // Process all available items in clipboard
+            if (clipboardData.items) {
+                Array.from(clipboardData.items).forEach(item => {
+                    const type = item.type;
 
-                // Skip text items as we've already processed them
-                if (type === 'text/plain' || type === 'text/html') {
-                    return;
-                }
-
-                // Handle files and other blob data
-                if (item.kind === 'file') {
-                    const blob = item.getAsFile();
-                    if (blob) {
-                        // Create object URL for the blob
-                        const url = URL.createObjectURL(blob);
-                        items.push({
-                            type: type,
-                            data: blob,
-                            url: url
-                        });
+                    // Skip text items as we've already processed them
+                    if (type === 'text/plain' || type === 'text/html') {
+                        return;
                     }
-                } else {
-                    // For non-file items, try to get as string and convert to blob
-                    item.getAsString(str => {
-                        if (str) {
+
+                    // Handle files and other blob data
+                    if (item.kind === 'file') {
+                        const blob = item.getAsFile();
+                        if (blob) {
+                            // Create object URL for the blob
+                            const url = URL.createObjectURL(blob);
                             items.push({
                                 type: type,
-                                data: new Blob([str], { type: type }),
-                                url: null
+                                data: blob,
+                                url: url
                             });
                         }
-                    });
-                }
-            });
-        }
-
-        // Process files directly if available
-        if (clipboardData.files && clipboardData.files.length > 0) {
-            Array.from(clipboardData.files).forEach(file => {
-                const url = URL.createObjectURL(file);
-                items.push({
-                    type: file.type,
-                    data: file,
-                    url: url
+                    } else {
+                        // For non-file items, try to get as string and convert to blob
+                        item.getAsString(str => {
+                            if (str) {
+                                items.push({
+                                    type: type,
+                                    data: new Blob([str], {type: type}),
+                                    url: null
+                                });
+                            }
+                        });
+                    }
                 });
-            });
-        }
+            }
 
-        console.log('Clipboard items:', items);
+            // Process files directly if available
+            if (clipboardData.files && clipboardData.files.length > 0) {
+                Array.from(clipboardData.files).forEach(file => {
+                    const url = URL.createObjectURL(file);
+                    items.push({
+                        type: file.type,
+                        data: file,
+                        url: url
+                    });
+                });
+            }
 
-        // Handle images directly pasted (screenshots, copied images)
-        const imageItem = items.find(item => item.type.startsWith('image/'));
-        if (imageItem && imageItem.url) {
-            handlePastedImage(imageItem, cm);
-            return;
-        }
+            console.log('Clipboard items:', items);
 
-        // Handle HTML content (which might contain images)
-        const htmlItem = items.find(item => item.type === 'text/html');
-        if (htmlItem) {
-            handlePastedHtml(htmlItem, cm);
-            return;
-        }
+            // Handle images directly pasted (screenshots, copied images)
+            const imageItem = items.find(item => item.type.startsWith('image/'));
+            const htmlItem = items.find(item => item.type === 'text/html');
+            const textItem = items.find(item => item.type === 'text/plain');
+            if (imageItem && imageItem.url) {
+                handlePastedImage(imageItem, cm);
+            }else if (htmlItem) {
+                handlePastedHtml(htmlItem, cm);
 
-        // Fall back to plain text
-        const textItem = items.find(item => item.type === 'text/plain');
-        if (textItem) {
-            textItem.data.text().then(text => {
-                const doc = cm.getDoc();
-                const cursor = doc.getCursor();
-                doc.replaceRange(text, cursor);
-            });
+            }else if (textItem) {
+                waitPasteCompletion=1;
+                textItem.data.text().then(text => {
+                    const doc = cm.getDoc();
+                    const cursor = doc.getCursor();
+                    doc.replaceRange(text, cursor);
+                    waitPasteCompletion=0;
+                });
+            }
+            let counter = 30;
+            waitFor(()=>{
+                counter--;
+                if(counter===0){
+                    alert("ERROR DOWNLOADING");
+                    hidePasteOverlay();
+                    return true;
+                }
+                console.log("WAITER "+waitPasteCompletion);
+                if(waitPasteCompletion===0 ){
+                    console.log("ENDING PASTE");
+                    hidePasteOverlay();
+                    return true;
+                }
+                return false;
+            })
+        }catch (e) {
+            alert("ERROR DOWNLOADING");
+            hidePasteOverlay();
         }
     });
+
+    function waitFor(booleanProducer) {
+        setTimeout(() => {
+            console.log("Waited for 3 seconds");
+            if(!booleanProducer()){
+                waitFor(booleanProducer);
+            }
+        }, 500);
+
+    }
 
 // Function to handle pasted images
     function handlePastedImage(imageItem, cm) {
         const file = imageItem.data;
         const filename = generateImageFilename(file.type.split('/')[1]); // e.g., "pasted-image-12345.png"
 
+        waitPasteCompletion=1;
         // Create FormData for file upload
         const formData = new FormData();
         formData.append('file', file, filename);
@@ -829,6 +864,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     const cursor = doc.getCursor();
                     doc.replaceRange(imageMarkdown, cursor);
                 }
+                console.log("Image uploaded successfully");
+                waitPasteCompletion=0;
             })
             .catch(error => {
                 console.error('Error uploading image:', error);
@@ -837,11 +874,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 const doc = cm.getDoc();
                 const cursor = doc.getCursor();
                 doc.replaceRange(imageMarkdown, cursor);
+                waitPasteCompletion=0;
             });
     }
 
 // Function to handle pasted HTML with images
     function handlePastedHtml(htmlItem, cm) {
+        waitPasteCompletion=1;
         htmlItem.data.text().then(html => {
             // Create a DOM parser to work with the HTML
             const parser = new DOMParser();
@@ -853,6 +892,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Process each image in the HTML
             images.forEach((img, index) => {
+
                 const src = img.getAttribute('src');
                 if (src && (src.startsWith('data:image/') || src.startsWith('http'))) {
                     const uploadPromise = new Promise((resolve) => {
@@ -893,6 +933,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                             console.error('Failed to upload embedded image:', data.message);
                                             resolve();
                                         }
+                                        console.log("Image uploaded successfully (embedded)");
                                     })
                                     .catch(error => {
                                         console.error('Error uploading embedded image:', error);
@@ -930,6 +971,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                         console.error('Failed to upload remote image:', data.message);
                                         resolve();
                                     }
+                                    console.log("Image uploaded successfully (remote) "+src);
                                 })
                                 .catch(error => {
                                     console.error('Error uploading remote image:', error);
@@ -945,7 +987,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             // When all images are processed, convert the modified HTML to markdown
-            Promise.all(uploadPromises).then(() => {
+            return Promise.all(uploadPromises).then(() => {
                 // Get the updated HTML with local image URLs
                 const modifiedHtml = doc.body.innerHTML;
 
@@ -968,24 +1010,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     return `\n${hashes} ${content}\n\n`;
                 };
 
-                // Customize Turndown to preserve image dimensions if present
-                turndownService.addRule('imageWithDimensions', {
-                    filter: 'img',
-                    replacement: function(content, node) {
-                        const alt = node.alt || '';
-                        const src = node.getAttribute('src') || '';
-                        const title = node.title || '';
-                        const titlePart = title ? ` "${title}"` : '';
-                        return `![${alt}](${src}${titlePart})`;
-                    }
-                });
-
                 const markdown = turndownService.turndown(modifiedHtml);
 
                 // Insert the markdown at cursor position
                 const editor = cm.getDoc();
                 const cursor = editor.getCursor();
                 editor.replaceRange(markdown, cursor);
+                waitPasteCompletion=0;
             });
         });
     }
