@@ -52,7 +52,7 @@ class Session {
 
     private function createNewSession() {
         // Generate UUID v4
-        $this->sessionId = $this->generateUUID();
+        $this->sessionId = Utils::generateUuid();
         $this->sessionFile = $this->sessionDir . '/' . $this->sessionId . '.json';
 
         // Set initial session data with expiration
@@ -65,17 +65,6 @@ class Session {
 
         // Set cookie
         setcookie($this->cookieName, $this->sessionId, time() + 3600, '/');
-    }
-
-    private function generateUUID() {
-        // Generate UUID v4
-        return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
-            mt_rand(0, 0xffff),
-            mt_rand(0, 0x0fff) | 0x4000,
-            mt_rand(0, 0x3fff) | 0x8000,
-            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
-        );
     }
 
     private function loadSessionFile() {
