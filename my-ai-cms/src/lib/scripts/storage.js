@@ -695,29 +695,116 @@ document.addEventListener('DOMContentLoaded', function () {
             parentId:parent
         });
     });
-/*
-    toggleSpan.className = 'tree-toggle';
-    toggleSpan.textContent = item.hasChildren ? '+' : ' ';
-    toggleSpan.addEventListener('click', function (e) {
-        e.stopPropagation();
-        toggleNode(nodeDiv, item.id);
-    });
 
-    // Title span
-    const titleSpan = document.createElement('span');
-    titleSpan.className = 'tree-title';
-    titleSpan.textContent = item.title;
-
-    // Add click handler to select the item
-    titleSpan.addEventListener('click', function (e) {
-        e.stopPropagation();
-        selectNode(nodeDiv, item.id);
-    });
-
-    // Add context menu to title
-    titleSpan.addEventListener('contextmenu', function (e) {
+    editor.codemirror.on("paste", function(cm, e) {
+        // Prevent the default paste action
         e.preventDefault();
-        showContextMenu(e.pageX, e.pageY, item.id, item.title, parentId);
-    });*/
+
+        const items = [];
+        const clipboardData = e.clipboardData || window.clipboardData;
+
+        // Process text separately since it's almost always available
+        if (clipboardData.getData('text/plain')) {
+            items.push({
+                type: 'text/plain',
+                data: new Blob([clipboardData.getData('text/plain')], { type: 'text/plain' }),
+                url: null
+            });
+        }
+
+        // If we have HTML content
+        if (clipboardData.getData('text/html')) {
+            items.push({
+                type: 'text/html',
+                data: new Blob([clipboardData.getData('text/html')], { type: 'text/html' }),
+                url: null
+            });
+        }
+
+        // Process all available items in clipboard
+        if (clipboardData.items) {
+            Array.from(clipboardData.items).forEach(item => {
+                const type = item.type;
+
+                // Skip text items as we've already processed them
+                if (type === 'text/plain' || type === 'text/html') {
+                    return;
+                }
+
+                // Handle files and other blob data
+                if (item.kind === 'file') {
+                    const blob = item.getAsFile();
+                    if (blob) {
+                        // Create object URL for the blob
+                        const url = URL.createObjectURL(blob);
+                        items.push({
+                            type: type,
+                            data: blob,
+                            url: url
+                        });
+                    }
+                } else {
+                    // For non-file items, try to get as string and convert to blob
+                    item.getAsString(str => {
+                        if (str) {
+                            items.push({
+                                type: type,
+                                data: new Blob([str], { type: type }),
+                                url: null
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
+        // Process files directly if available
+        if (clipboardData.files && clipboardData.files.length > 0) {
+            Array.from(clipboardData.files).forEach(file => {
+                const url = URL.createObjectURL(file);
+                items.push({
+                    type: file.type,
+                    data: file,
+                    url: url
+                });
+            });
+        }
+
+        console.log('Clipboard items:', items);
+
+        // Handle the collected items as needed
+
+
+        // Here you can implement handling of other item types
+        // Process images, HTML content, etc.
+        const textItem = items.find(item => item.type === 'text/plain');
+        const imageItem = items.find(item => item.type.startsWith('image/'));
+        const htmlItem = items.find(item => item.type === 'text/html');
+        if (imageItem && imageItem.url) {
+            const imageMarkdown = `![Image](${imageItem.url})`;
+            const doc = cm.getDoc();
+            const cursor = doc.getCursor();
+            doc.replaceRange(imageMarkdown, cursor);
+        }else if (htmlItem) {
+            htmlItem.data.text().then(html => {
+                // Create a new turndown service
+                const turndownService = new TurndownService();
+                // Convert HTML to Markdown
+                const markdown = turndownService.turndown(html);
+                // Insert the markdown at cursor position
+                const doc = cm.getDoc();
+                const cursor = doc.getCursor();
+                doc.replaceRange(markdown, cursor);
+            });
+
+        }else if (textItem) {
+            // Convert Blob to text and insert at cursor position
+            textItem.data.text().then(text => {
+                const doc = cm.getDoc();
+                const cursor = doc.getCursor();
+                doc.replaceRange(text, cursor);
+            });
+        }
+    });
 
 });
