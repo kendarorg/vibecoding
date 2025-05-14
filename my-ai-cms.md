@@ -9869,5 +9869,338 @@ Add this CSS for the error notifications:
     background-color: #F0FFF0;
     border-left: 4px solid #008000;
 }
+```
+### REQ 058
+
+Create a replacement for javscript prompt and confirm with a floating dialog
+---
+Can you give a prompt example for the promise
+
+### RES 058
+
+I'll help you create a floating dialog replacement for JavaScript's prompt and confirm functions.
+
+Here's a solution using HTML, CSS, and JavaScript that provides a more modern and customizable alternative:
+
+```javascript
+/**
+ * FloatingDialog - A replacement for JavaScript's native prompt and confirm dialogs
+ * 
+ * Usage:
+ * 
+ * // For a prompt dialog (returns a Promise)
+ * FloatingDialog.prompt('Enter your name:', 'Default value')
+ *   .then(result => console.log('User entered:', result))
+ *   .catch(() => console.log('User cancelled'));
+ *
+ * // For a confirm dialog (returns a Promise)
+ * FloatingDialog.confirm('Are you sure you want to delete this item?')
+ *   .then(() => console.log('User confirmed'))
+ *   .catch(() => console.log('User cancelled'));
+ */
+class FloatingDialog {
+  static #dialogContainer = null;
+  
+  static #createContainer() {
+    if (this.#dialogContainer) return this.#dialogContainer;
+    
+    this.#dialogContainer = document.createElement('div');
+    this.#dialogContainer.className = 'floating-dialog-container';
+    
+    const style = document.createElement('style');
+    style.textContent = `
+      .floating-dialog-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+      }
+      
+      .floating-dialog {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        width: 400px;
+        max-width: 90%;
+        padding: 20px;
+        animation: dialog-fade-in 0.2s ease-out;
+      }
+      
+      .floating-dialog-title {
+        font-size: 18px;
+        margin-bottom: 15px;
+      }
+      
+      .floating-dialog-input {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+      }
+      
+      .floating-dialog-buttons {
+        display: flex;
+        justify-content: flex-end;
+      }
+      
+      .floating-dialog-button {
+        padding: 8px 16px;
+        margin-left: 10px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      
+      .floating-dialog-button-cancel {
+        background-color: #f1f1f1;
+      }
+      
+      .floating-dialog-button-confirm {
+        background-color: #4285f4;
+        color: white;
+      }
+      
+      @keyframes dialog-fade-in {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    `;
+    
+    document.head.appendChild(style);
+    document.body.appendChild(this.#dialogContainer);
+    
+    return this.#dialogContainer;
+  }
+  
+  static prompt(message, defaultValue = '') {
+    return new Promise((resolve, reject) => {
+      const container = this.#createContainer();
+      
+      const dialog = document.createElement('div');
+      dialog.className = 'floating-dialog';
+      
+      const title = document.createElement('div');
+      title.className = 'floating-dialog-title';
+      title.textContent = message;
+      
+      const input = document.createElement('input');
+      input.className = 'floating-dialog-input';
+      input.value = defaultValue;
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          resolve(input.value);
+          this.#closeDialog();
+        } else if (e.key === 'Escape') {
+          reject();
+          this.#closeDialog();
+        }
+      });
+      
+      const buttons = document.createElement('div');
+      buttons.className = 'floating-dialog-buttons';
+      
+      const cancelButton = document.createElement('button');
+      cancelButton.className = 'floating-dialog-button floating-dialog-button-cancel';
+      cancelButton.textContent = 'Cancel';
+      cancelButton.addEventListener('click', () => {
+        reject();
+        this.#closeDialog();
+      });
+      
+      const confirmButton = document.createElement('button');
+      confirmButton.className = 'floating-dialog-button floating-dialog-button-confirm';
+      confirmButton.textContent = 'OK';
+      confirmButton.addEventListener('click', () => {
+        resolve(input.value);
+        this.#closeDialog();
+      });
+      
+      buttons.appendChild(cancelButton);
+      buttons.appendChild(confirmButton);
+      
+      dialog.appendChild(title);
+      dialog.appendChild(input);
+      dialog.appendChild(buttons);
+      
+      container.innerHTML = '';
+      container.appendChild(dialog);
+      
+      // Focus the input after rendering
+      setTimeout(() => input.focus(), 0);
+    });
+  }
+  
+  static confirm(message) {
+    return new Promise((resolve, reject) => {
+      const container = this.#createContainer();
+      
+      const dialog = document.createElement('div');
+      dialog.className = 'floating-dialog';
+      
+      const title = document.createElement('div');
+      title.className = 'floating-dialog-title';
+      title.textContent = message;
+      
+      const buttons = document.createElement('div');
+      buttons.className = 'floating-dialog-buttons';
+      
+      const cancelButton = document.createElement('button');
+      cancelButton.className = 'floating-dialog-button floating-dialog-button-cancel';
+      cancelButton.textContent = 'Cancel';
+      cancelButton.addEventListener('click', () => {
+        reject();
+        this.#closeDialog();
+      });
+      
+      const confirmButton = document.createElement('button');
+      confirmButton.className = 'floating-dialog-button floating-dialog-button-confirm';
+      confirmButton.textContent = 'OK';
+      confirmButton.addEventListener('click', () => {
+        resolve();
+        this.#closeDialog();
+      });
+      
+      buttons.appendChild(cancelButton);
+      buttons.appendChild(confirmButton);
+      
+      dialog.appendChild(title);
+      dialog.appendChild(buttons);
+      
+      container.innerHTML = '';
+      container.appendChild(dialog);
+      
+      // Focus the confirm button after rendering
+      setTimeout(() => confirmButton.focus(), 0);
+      
+      window.addEventListener('keydown', function onKeyDown(e) {
+        if (e.key === 'Enter') {
+          resolve();
+          this.#closeDialog();
+          window.removeEventListener('keydown', onKeyDown);
+        } else if (e.key === 'Escape') {
+          reject();
+          this.#closeDialog();
+          window.removeEventListener('keydown', onKeyDown);
+        }
+      }.bind(this));
+    });
+  }
+  
+  static #closeDialog() {
+    if (this.#dialogContainer) {
+      this.#dialogContainer.innerHTML = '';
+    }
+  }
+}
+```
+
+This implementation:
+
+1. Creates a class with static methods for `prompt()` and `confirm()`
+2. Uses Promises to handle async/await and then/catch patterns
+3. Supports keyboard navigation (Enter to confirm, Escape to cancel)
+4. Is styled with a modern look and includes a subtle animation
+5. Works well on both desktop and mobile
+6. Can be easily extended with additional dialog types or customization options
+
+You can use it like this:
+
+```javascript
+// Example usage with async/await
+async function askUserInfo() {
+  try {
+    const name = await FloatingDialog.prompt('What is your name?', '');
+    if (await FloatingDialog.confirm(`Hello ${name}, do you want to continue?`)) {
+      console.log('User confirmed');
+    } else {
+      console.log('User cancelled');
+    }
+  } catch (e) {
+    console.log('Dialog was cancelled');
+  }
+}
+
+// Or with traditional Promises
+function deleteItem() {
+  FloatingDialog.confirm('Are you sure you want to delete this item?')
+    .then(() => {
+      // User clicked OK
+      console.log('Item deleted');
+    })
+    .catch(() => {
+      // User clicked Cancel or pressed Escape
+      console.log('Deletion cancelled');
+    });
+}
+```
+
+I noticed there's a bug in your `floatingPrompt` function - it's incorrectly using `FloatingDialog.confirm` instead of `FloatingDialog.prompt` and not passing the input value to the callback.
+
+Here's the corrected version of the `floatingPrompt` function:
+
+```javascript
+function floatingPrompt(message, defaultValue = '', callback) {
+    FloatingDialog.prompt(message, defaultValue)
+        .then((value) => {
+            // User clicked OK
+            callback(value);
+        })
+        .catch(() => {
+            // User clicked Cancel or pressed Escape
+            callback(null);
+        });
+}
+```
+
+Example usage:
+
+```javascript
+// Using the Promise directly
+FloatingDialog.prompt('Enter your name:', 'Guest')
+    .then(name => {
+        console.log('Hello, ' + name + '!');
+    })
+    .catch(() => {
+        console.log('User cancelled the prompt');
+    });
+
+// Using the callback wrapper
+floatingPrompt('Enter your name:', 'Guest', (result) => {
+    if (result !== null) {
+        console.log('Hello, ' + result + '!');
+    } else {
+        console.log('User cancelled the prompt');
+    }
+});
+
+// With async/await
+async function getUserName() {
+    try {
+        const name = await FloatingDialog.prompt('Enter your name:', 'Guest');
+        console.log('Hello, ' + name + '!');
+    } catch (e) {
+        console.log('User cancelled the prompt');
+    }
+}
+```
+### FIX 058
+
+* Replaced confirms and prompt
+
+### REQ 058
+### RES 058
+### REQ 058
+### RES 058
+### REQ 058
+### RES 058
 ### REQ 058
 ### RES 058
