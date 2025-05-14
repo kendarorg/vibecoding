@@ -480,6 +480,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         currentItemId = null;
                         contentTitle.textContent = 'No item selected';
                         contentEditor.value = '';
+                        document.querySelector('.content-panel').style.display='none';
                     }
 
                     // Remove from cache
