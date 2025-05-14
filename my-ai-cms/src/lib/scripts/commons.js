@@ -1,41 +1,3 @@
-// Add this to your CSS (you can place it in storage.css or inline it)
-const pasteOverlayStyles = `
-.paste-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-    color: white;
-    font-size: 18px;
-}
-
-.paste-spinner {
-    border: 4px solid rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    border-top: 4px solid white;
-    width: 40px;
-    height: 40px;
-    animation: spin 1s linear infinite;
-    margin-bottom: 15px;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-`;
-
-// Add the styles to the document
-const styleElement = document.createElement('style');
-styleElement.textContent = pasteOverlayStyles;
-document.head.appendChild(styleElement);
 
 // Create overlay elements (but don't add to DOM yet)
 const overlay = document.createElement('div');
@@ -85,4 +47,164 @@ function showWarning(message){
 }
 function showNotification(message){
     showMessage('notification','Notification',message);
+}
+
+class FloatingDialog {
+    static #dialogContainer = null;
+
+    static #createContainer() {
+        if (this.#dialogContainer) return this.#dialogContainer;
+
+        this.#dialogContainer = document.createElement('div');
+        this.#dialogContainer.className = 'floating-dialog-container';
+
+        document.body.appendChild(this.#dialogContainer);
+
+        return this.#dialogContainer;
+    }
+
+    static prompt(message, defaultValue = '') {
+        return new Promise((resolve, reject) => {
+            const container = this.#createContainer();
+
+            const dialog = document.createElement('div');
+            dialog.className = 'floating-dialog';
+
+            const title = document.createElement('div');
+            title.className = 'floating-dialog-title';
+            title.textContent = message;
+
+            const input = document.createElement('input');
+            input.className = 'floating-dialog-input';
+            input.value = defaultValue;
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    resolve(input.value);
+                    this.#closeDialog();
+                } else if (e.key === 'Escape') {
+                    reject();
+                    this.#closeDialog();
+                }
+            });
+
+            const buttons = document.createElement('div');
+            buttons.className = 'floating-dialog-buttons';
+
+            const cancelButton = document.createElement('button');
+            cancelButton.className = 'floating-dialog-button floating-dialog-button-cancel';
+            cancelButton.textContent = 'Cancel';
+            cancelButton.addEventListener('click', () => {
+                reject();
+                this.#closeDialog();
+            });
+
+            const confirmButton = document.createElement('button');
+            confirmButton.className = 'floating-dialog-button floating-dialog-button-confirm';
+            confirmButton.textContent = 'OK';
+            confirmButton.addEventListener('click', () => {
+                resolve(input.value);
+                this.#closeDialog();
+            });
+
+            buttons.appendChild(cancelButton);
+            buttons.appendChild(confirmButton);
+
+            dialog.appendChild(title);
+            dialog.appendChild(input);
+            dialog.appendChild(buttons);
+
+            container.innerHTML = '';
+            container.appendChild(dialog);
+
+            // Focus the input after rendering
+            setTimeout(() => input.focus(), 0);
+        });
+    }
+
+    static confirm(message) {
+        return new Promise((resolve, reject) => {
+            const container = this.#createContainer();
+
+            const dialog = document.createElement('div');
+            dialog.className = 'floating-dialog';
+
+            const title = document.createElement('div');
+            title.className = 'floating-dialog-title';
+            title.textContent = message;
+
+            const buttons = document.createElement('div');
+            buttons.className = 'floating-dialog-buttons';
+
+            const cancelButton = document.createElement('button');
+            cancelButton.className = 'floating-dialog-button floating-dialog-button-cancel';
+            cancelButton.textContent = 'Cancel';
+            cancelButton.addEventListener('click', () => {
+                reject();
+                this.#closeDialog();
+            });
+
+            const confirmButton = document.createElement('button');
+            confirmButton.className = 'floating-dialog-button floating-dialog-button-confirm';
+            confirmButton.textContent = 'OK';
+            confirmButton.addEventListener('click', () => {
+                resolve();
+                this.#closeDialog();
+            });
+
+            buttons.appendChild(cancelButton);
+            buttons.appendChild(confirmButton);
+
+            dialog.appendChild(title);
+            dialog.appendChild(buttons);
+
+            container.innerHTML = '';
+            container.appendChild(dialog);
+
+            // Focus the confirm button after rendering
+            setTimeout(() => confirmButton.focus(), 0);
+
+            window.addEventListener('keydown', function onKeyDown(e) {
+                if (e.key === 'Enter') {
+                    resolve();
+                    this.#closeDialog();
+                    window.removeEventListener('keydown', onKeyDown);
+                } else if (e.key === 'Escape') {
+                    reject();
+                    this.#closeDialog();
+                    window.removeEventListener('keydown', onKeyDown);
+                }
+            }.bind(this));
+        });
+    }
+
+    static #closeDialog() {
+
+        if (this.#dialogContainer) {
+            this.#dialogContainer.innerHTML = '';
+        }
+        document.body.removeChild(this.#dialogContainer);
+        this.#dialogContainer=null;
+    }
+}
+
+function floatingConfirm(message,cbk) {
+    FloatingDialog.confirm(message)
+        .then(() => {
+            // User clicked OK
+            cbk(true);
+        })
+        .catch(() => {
+            // User clicked Cancel or pressed Escape
+            cbk(false);
+        });
+}
+
+function floatingPrompt(message,cbk,defaultValue='') {
+    FloatingDialog.prompt(message,defaultValue)
+        .then(name => {
+            cbk(true,name);
+        })
+        .catch(() => {
+            cbk(false)
+        });
 }

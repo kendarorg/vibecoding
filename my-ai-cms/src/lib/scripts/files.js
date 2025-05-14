@@ -158,73 +158,83 @@ document.addEventListener('DOMContentLoaded', function() {
     function deleteCurrentFile() {
         if (!currentFileId) return;
 
-        const confirm = window.confirm(`Are you sure you want to delete ${currentFileTitle}?`);
-        if (!confirm) return;
+        floatingConfirm(`Are you sure you want to delete ${currentFileTitle}?`,
+            (confirm)=>{
+                if (confirm) {
+                    fetch(`api/files.php?action=delete&id=${currentFileId}`, {
+                        method: 'GET'
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Reset state
+                                currentFileId = null;
+                                currentFileTitle=null;
 
-        fetch(`api/files.php?action=delete&id=${currentFileId}`, {
-            method: 'GET'
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Reset state
-                    currentFileId = null;
-                    currentFileTitle=null;
+                                // Hide context menu
+                                contextMenu.style.display = 'none';
 
-                    // Hide context menu
-                    contextMenu.style.display = 'none';
+                                // Reload file list
+                                loadFiles(extensionFilter.value || null);
 
-                    // Reload file list
-                    loadFiles(extensionFilter.value || null);
-
-                    showNotification('File deleted successfully');
-                } else {
-                    showError('Error deleting file: ' + data.message);
+                                showNotification('File deleted successfully');
+                            } else {
+                                showError('Error deleting file: ' + data.message);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error deleting file:', error);
+                            showError('Network error when deleting file');
+                        });
                 }
-            })
-            .catch(error => {
-                console.error('Error deleting file:', error);
-                showError('Network error when deleting file');
             });
+
+
     }
 
     function renameCurrentFile() {
         if (!currentFileId) return;
-        const newTitle = prompt('Enter new title for the file:', currentFileTitle);
-        if (!newTitle || newTitle === currentFileTitle) return;
+        floatingPrompt('Enter new title for the file:', currentFileTitle,
+            (result,newTitle)=>{
+                if (result && newTitle && newTitle.trim()) {
+                    if (newTitle === currentFileTitle) return;
+                    fetch('api/files.php?action=update', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            id: currentFileId,
+                            title: newTitle
+                        })
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Reset state
+                                currentFileId = null;
+                                currentFileTitle = null;
 
-        fetch('api/files.php?action=update', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                id: currentFileId,
-                title: newTitle
-            })
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Reset state
-                    currentFileId = null;
-                    currentFileTitle = null;
+                                // Hide context menu
+                                contextMenu.style.display = 'none';
 
-                    // Hide context menu
-                    contextMenu.style.display = 'none';
+                                // Reload file list
+                                loadFiles(extensionFilter.value || null);
 
-                    // Reload file list
-                    loadFiles(extensionFilter.value || null);
-
-                    showNotification('File renamed successfully');
-                } else {
-                    showError('Error renaming file: ' + data.message);
+                                showNotification('File renamed successfully');
+                            } else {
+                                showError('Error renaming file: ' + data.message);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error renaming file:', error);
+                            showError('Network error when renaming file');
+                        });
                 }
-            })
-            .catch(error => {
-                console.error('Error renaming file:', error);
-                showError('Network error when renaming file');
             });
+
+
+
     }
 
     function uploadFile() {

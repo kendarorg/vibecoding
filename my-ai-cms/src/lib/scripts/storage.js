@@ -98,10 +98,15 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        const newName = prompt('Enter new name:', contextMenu.dataset.itemTitle);
-        if (newName && newName.trim()) {
-            renameItem(contextMenu.dataset.itemId, newName.trim());
-        }
+
+        // Prompt for new name
+        floatingPrompt('Enter new name:'+contextMenu.dataset.itemTitle,
+            (result,newName)=>{
+            if (result && newName && newName.trim()) {
+                renameItem(contextMenu.dataset.itemId, newName.trim());
+            }
+        });
+
     });
 
     menuDelete.addEventListener('click', function () {
@@ -110,16 +115,21 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        if (confirm(`Are you sure you want to delete "${contextMenu.dataset.itemTitle}"?`)) {
-            deleteItem(contextMenu.dataset.itemId, contextMenu.dataset.parentId);
-        }
+        floatingConfirm(`Are you sure you want to delete "${contextMenu.dataset.itemTitle}"?`,
+            (confirm)=>{
+                if(confirm){
+                    deleteItem(contextMenu.dataset.itemId, contextMenu.dataset.parentId);
+                }
+            });
     });
 
     menuCreate.addEventListener('click', function () {
-        const newName = prompt('Enter name for new item:');
-        if (newName && newName.trim()) {
-            createItem(contextMenu.dataset.itemId, newName.trim());
-        }
+        floatingPrompt('Enter name for new item:',
+            (result,newName)=>{
+                if (result && newName && newName.trim()) {
+                    createItem(contextMenu.dataset.itemId, newName.trim());
+                }
+            });
     });
 
 
@@ -438,6 +448,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             contentTitle.textContent = newTitle;
                             updateBreadcrumb(itemId);
                         }
+                        showNotification("Name changed");
                     }
                 } else {
                     console.error('API error:', data.message);
