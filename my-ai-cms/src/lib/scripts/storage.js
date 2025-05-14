@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     menuRename.addEventListener('click', function () {
         if (contextMenu.dataset.itemId === '00000000-0000-0000-0000-000000000000') {
-            alert('Cannot rename root item');
+            showError('Cannot rename root item');
             return;
         }
 
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     menuDelete.addEventListener('click', function () {
         if (contextMenu.dataset.itemId === '00000000-0000-0000-0000-000000000000') {
-            alert('Cannot delete root item');
+            showError('Cannot delete root item');
             return;
         }
 
@@ -393,15 +393,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (data.success) {
                     saveButton.classList.remove('modified');
                     saveButton.textContent = 'Save Content';
-                    alert('Content saved successfully');
+                    showNotification('Content saved successfully');
                 } else {
                     console.error('API error:', data.message);
-                    alert('Error saving content: ' + data.message);
+                    showError('Error saving content: ' + data.message);
                 }
             })
             .catch(error => {
                 console.error('Network error:', error);
-                alert('Network error when saving content');
+                showError('Network error when saving content');
             });
     }
 
@@ -441,12 +441,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 } else {
                     console.error('API error:', data.message);
-                    alert('Error renaming item: ' + data.message);
+                    showError('Error renaming item: ' + data.message);
                 }
             })
             .catch(error => {
                 console.error('Network error:', error);
-                alert('Network error when renaming item');
+                showError('Network error when renaming item');
             });
     }
 
@@ -475,12 +475,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     nodeCache.delete(itemId);
                 } else {
                     console.error('API error:', data.message);
-                    alert('Error deleting item: ' + data.message);
+                    showError('Error deleting item: ' + data.message);
                 }
             })
             .catch(error => {
                 console.error('Network error:', error);
-                alert('Network error when deleting item');
+                showError('Network error when deleting item');
             });
     }
 
@@ -546,12 +546,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 } else {
                     console.error('API error:', data.message);
-                    alert('Error creating item: ' + data.message);
+                    showError('Error creating item: ' + data.message);
                 }
             })
             .catch(error => {
                 console.error('Network error:', error);
-                alert('Network error when creating item');
+                showError('Network error when creating item');
             });
     }
 
@@ -803,7 +803,7 @@ document.addEventListener('DOMContentLoaded', function () {
             waitFor(()=>{
                 counter--;
                 if(counter===0){
-                    alert("ERROR DOWNLOADING");
+                    showEorr("Error downloading images");
                     hidePasteOverlay();
                     return true;
                 }
@@ -816,7 +816,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return false;
             })
         }catch (e) {
-            alert("ERROR DOWNLOADING");
+            showError("Error downloading images");
             hidePasteOverlay();
         }
     });

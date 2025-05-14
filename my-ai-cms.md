@@ -9804,6 +9804,70 @@ This implementation:
 Missing storage find
 
 ### REQ 057
+
+If there is an error calling the apis you should show a message higlighiting the reason, same goes for warning and notifications
 ### RES 057
+
+I'll add the JavaScript functions to properly handle API responses and redirect or show error messages accordingly.
+
+```
+// Helper function to display message
+function showMessage(type,label,error) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = type+'-notification notification';
+    errorDiv.innerHTML = `<strong>${label}:</strong> ${message}`;
+    
+    document.body.appendChild(errorDiv);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        errorDiv.style.opacity = '0';
+        setTimeout(() => {
+            document.body.removeChild(errorDiv);
+        }, 500);
+    }, 5000);
+}
+
+function showError(message){
+	showMessage('error','Error',message);
+}
+function showWarning(message){
+	showMessage('warn','Warning',message);
+}
+function showNotification(message){
+	showMessage('notification','Notification',message);
+}
+```
+Add this CSS for the error notifications:
+
+```css
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    color: #333;
+    padding: 12px 20px;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1100;
+    max-width: 400px;
+    transition: opacity 0.5s ease;
+    opacity: 1;
+}
+
+.error-notification{
+    background-color: #ffeeee;
+    border-left: 4px solid #ff4444;
+}
+
+.warn-notification{
+    background-color: #FFFFE0;
+    border-left: 4px solid #FFFF00;
+}
+
+.notification-notification{
+    background-color: #F0FFF0;
+    border-left: 4px solid #008000;
+}
 ### REQ 058
 ### RES 058

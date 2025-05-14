@@ -60,3 +60,29 @@ function showPasteOverlay() {
 function hidePasteOverlay() {
     overlay.style.display = 'none';
 }
+
+// Helper function to display messages
+function showMessage(type,label,message) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = type+'-notification notification';
+    errorDiv.innerHTML = `<strong>${label}:</strong> ${message}`;
+    document.body.appendChild(errorDiv);
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        errorDiv.style.opacity = '0';
+        setTimeout(() => {
+            document.body.removeChild(errorDiv);
+        }, 500);
+    }, 5000);
+}
+
+function showError(message){
+    showMessage('error','Error',message);
+}
+function showWarning(message){
+    showMessage('warn','Warning',message);
+}
+function showNotification(message){
+    showMessage('notification','Notification',message);
+}

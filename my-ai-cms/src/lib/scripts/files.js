@@ -177,14 +177,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Reload file list
                     loadFiles(extensionFilter.value || null);
 
-                    alert('File deleted successfully');
+                    showNotification('File deleted successfully');
                 } else {
-                    alert('Error deleting file: ' + data.message);
+                    showError('Error deleting file: ' + data.message);
                 }
             })
             .catch(error => {
                 console.error('Error deleting file:', error);
-                alert('Network error when deleting file');
+                showError('Network error when deleting file');
             });
     }
 
@@ -216,14 +216,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Reload file list
                     loadFiles(extensionFilter.value || null);
 
-                    alert('File renamed successfully');
+                    showNotification('File renamed successfully');
                 } else {
-                    alert('Error renaming file: ' + data.message);
+                    showError('Error renaming file: ' + data.message);
                 }
             })
             .catch(error => {
                 console.error('Error renaming file:', error);
-                alert('Network error when renaming file');
+                showError('Network error when renaming file');
             });
     }
 
@@ -232,12 +232,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const file = fileUpload.files[0];
 
         if (!title) {
-            alert('Please enter a file title');
+            showWarning('Please enter a file title');
             return;
         }
 
         if (!file) {
-            alert('Please select a file to upload');
+            showWarning('Please select a file to upload');
             return;
         }
         const extension = file.name.split('.').pop().toLowerCase();
@@ -268,14 +268,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Reload file list
                         loadFiles(extensionFilter.value || null);
 
-                        alert('File uploaded successfully');
+                        showNotification('File uploaded successfully');
                     } else {
-                        alert('Error uploading file: ' + data.message);
+                        showError('Error uploading file: ' + data.message);
                     }
                 })
                 .catch(error => {
                     console.error('Error uploading file:', error);
-                    alert('Network error when uploading file');
+                    showError('Network error when uploading file');
                 });
         };
 
