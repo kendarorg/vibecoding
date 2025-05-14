@@ -10194,7 +10194,11 @@ async function getUserName() {
 ```
 ### FIX 058
 
-* Replaced confirms and prompt
+* Adding dialog for confirm and prompt
+* Used new dialog everywhere
+* Removed css for waiting from code
+* Hide current item when deleting
+
 
 ### REQ 058
 ### RES 058
