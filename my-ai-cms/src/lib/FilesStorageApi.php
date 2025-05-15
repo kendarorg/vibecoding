@@ -214,13 +214,20 @@ class FilesStorageApi {
             $tmpPath = $file['tmp_name'];
             $fileContent = file_get_contents($tmpPath);
 
-            if ($this->storage->upsertFile($filename, $title, $fileContent)) {
+            $realUUId=$this->storage->upsertFile($filename, $title, $fileContent);
+            if ($extension) {
+                $filename = $realUUId.'.' . $extension;
+            }else{
+                $filename = $realUUId;
+            }
+            if ($realUUId) {
                 global $basePath;
                 $response['success'] = true;
                 $response['message'] = 'File uploaded successfully';
-                $response['id'] = $id;
+                $response['id'] = $realUUId;
                 $response['title'] = $title;
                 $response['url'] = $basePath.'/api/files.php?action=get&id=' . $filename;
+
                 return $response;
             } else {
                 $response['message'] = 'Failed to save file';

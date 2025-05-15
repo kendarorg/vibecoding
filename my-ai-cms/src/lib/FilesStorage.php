@@ -135,6 +135,9 @@ class FilesStorage {
                 $filemd5 = md5($itemContent);
                 $existingUuid = $this->getUuidByChecksum($filemd5);
 
+                Utils::errorLog("Existing UUID: " . $existingUuid." with md5: " . $filemd5);
+
+
                 if ($existingUuid !== null) {
                     // Return the existing UUID instead of creating a new file
                     return $existingUuid;
