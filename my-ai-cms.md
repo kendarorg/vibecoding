@@ -10549,6 +10549,9 @@ Here are the changes I made:
 
 This implementation satisfies all the requirements for checksum logging and deduplication.
 
+### FIX 060
+Use the UUID returned by filestorage as fileid 
+
 ### REQ 058
 ### RES 058
 ### REQ 058
