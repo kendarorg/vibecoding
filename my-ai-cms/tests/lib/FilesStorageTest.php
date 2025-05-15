@@ -196,4 +196,124 @@ class FilesStorageTest extends PHPUnit\Framework\TestCase {
         $nonExistentContent = $this->storage->getContent('does_not_exist');
         $this->assertNull($nonExistentContent);
     }
+
+    public function testExists(): void
+    {
+        // Create a file
+        $this->storage->upsertFile('exists_test.txt', 'Exists Test', 'Content');
+
+        // Test exists with full filename
+        $this->assertTrue($this->storage->exists('exists_test.txt'));
+
+        // Test exists without extension
+        $this->assertTrue($this->storage->exists('exists_test'));
+
+        // Test non-existent file
+        $this->assertFalse($this->storage->exists('non_existent_file'));
+    }
+
+    public function testGetFullPath(): void
+    {
+        // Create a file
+        $this->storage->upsertFile('path_test.txt', 'Path Test', 'Content');
+
+        // Get the full path
+        $fullPath = $this->storage->getFullPath('path_test');
+
+        // Check if the path is correct
+        $this->assertEquals($this->tempDataDir . '/path_test.txt', $fullPath);
+
+        // Test with full filename
+        $fullPathWithExt = $this->storage->getFullPath('path_test.txt');
+        $this->assertEquals($this->tempDataDir . '/path_test.txt', $fullPathWithExt);
+    }
+
+    public function testInvalidFilenameForGetFullPath(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->storage->getFullPath('');
+    }
+
+    public function testFileWithSpecialCharactersInTitle(): void
+    {
+        // Create file with special characters in title
+        $specialTitle = 'Test,File\\with"special$characters*';
+        $this->storage->upsertFile('special_title.txt', $specialTitle, 'Test Content');
+
+        // List all files
+        $files = $this->storage->listFiles();
+
+        // Find our file
+        $found = false;
+        foreach ($files as $file) {
+            if ($file['id'] === 'special_title') {
+                $this->assertEquals($specialTitle, $file['title']);
+                $found = true;
+                break;
+            }
+        }
+        $this->assertTrue($found, 'File with special characters in title should be found');
+    }
+
+    public function testEmptyDirectories(): void
+    {
+        // Create a new storage with empty directories
+        $emptyDir = $this->tempDataDir . '_empty';
+        $emptyStructure = $this->tempStructureDir . '_empty';
+
+        if (!file_exists($emptyDir)) {
+            mkdir($emptyDir, 0755, true);
+        }
+
+        if (!file_exists($emptyStructure)) {
+            mkdir($emptyStructure, 0755, true);
+        }
+
+        $emptyStorage = new FilesStorage($emptyDir, $emptyStructure);
+
+        // Test listing files in an empty storage
+        $files = $emptyStorage->listFiles();
+        $this->assertIsArray($files);
+        $this->assertEmpty($files);
+
+        // Clean up
+        rmdir($emptyDir);
+        rmdir($emptyStructure);
+    }
+
+    public function testDeleteNonExistentFile(): void
+    {
+        // This should return false but not throw an exception
+        $result = $this->storage->deleteFile('non_existent_file');
+        $this->assertFalse($result);
+
+        // Verify the operation was still logged
+        $namesLog = file_get_contents($this->tempStructureDir . '/names.log');
+        $this->assertStringContainsString("DE,non_existent_file,", $namesLog);
+    }
+
+    public function testUpsertFileWithNullContent(): void
+    {
+        // Create initial file
+        $this->storage->upsertFile('null_content.txt', 'Initial Title', 'Initial content');
+
+        // Update only the title, keeping content
+        $this->storage->upsertFile('null_content.txt', 'Updated Title', null);
+
+        // Verify content wasn't changed
+        $content = file_get_contents($this->tempDataDir . '/null_content.txt');
+        $this->assertEquals('Initial content', $content);
+
+        // Verify title was updated
+        $files = $this->storage->listFiles();
+        $found = false;
+        foreach ($files as $file) {
+            if ($file['id'] === 'null_content') {
+                $this->assertEquals('Updated Title', $file['title']);
+                $found = true;
+                break;
+            }
+        }
+        $this->assertTrue($found, 'File with updated title should be found');
+    }
 }

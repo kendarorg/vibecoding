@@ -10552,9 +10552,332 @@ This implementation satisfies all the requirements for checksum logging and dedu
 ### FIX 060
 Use the UUID returned by filestorage as fileid 
 
-### REQ 058
-### RES 058
-### REQ 058
-### RES 058
+### REQ 061
+
+* Update the FilesStorageTest with the missing tests
+* Update the FlatStorageTest with the missing tests
+----
+* Update the FilesStorageTest with the missing tests
+### RES 061
+
+Looking at the code, I notice the `FlatStorageTest` class already has a comprehensive set of tests, but you'd like to add missing tests. Let me add tests for methods that appear to be missing coverage.
+
+Here are the additional tests to add to `FlatStorageTest.php`:
+
+```php
+public function testGetItemParent(): void
+{
+    $rootUuid = '00000000-0000-0000-0000-000000000000';
+    
+    // Create a hierarchy of items
+    $parentUuid = 'dddd1111-dddd-1111-dddd-111111111111';
+    $childUuid = 'dddd2222-dddd-2222-dddd-222222222222';
+    
+    $this->storage->upsertItem($parentUuid, $rootUuid, 'Parent Item', 'Parent Content');
+    $this->storage->upsertItem($childUuid, $parentUuid, 'Child Item', 'Child Content');
+    
+    // Test getting the parent
+    $parentId = $this->storage->getItemParent($childUuid);
+    $this->assertEquals($parentUuid, $parentId);
+    
+    // Root's parent should be null
+    $rootParent = $this->storage->getItemParent($rootUuid);
+    $this->assertNull($rootParent);
+}
+
+public function testExists(): void
+{
+    $rootUuid = '00000000-0000-0000-0000-000000000000';
+    $itemUuid = 'eeee1111-eeee-1111-eeee-111111111111';
+    $nonExistentUuid = 'ffff9999-ffff-9999-ffff-999999999999';
+    
+    // Create an item
+    $this->storage->upsertItem($itemUuid, $rootUuid, 'Test Item', 'Test Content');
+    
+    // Test exists
+    $this->assertTrue($this->storage->exists($itemUuid));
+    $this->assertFalse($this->storage->exists($nonExistentUuid));
+}
+
+public function testMoveWithChildren(): void
+{
+    $rootUuid = '00000000-0000-0000-0000-000000000000';
+    
+    // Create a hierarchy structure
+    $parent1Uuid = 'gggg1111-gggg-1111-gggg-111111111111';
+    $parent2Uuid = 'gggg2222-gggg-2222-gggg-222222222222';
+    $childUuid = 'gggg3333-gggg-3333-gggg-333333333333';
+    $grandchildUuid = 'gggg4444-gggg-4444-gggg-444444444444';
+    
+    // Create the items in a hierarchy
+    $this->storage->upsertItem($parent1Uuid, $rootUuid, 'Parent 1', 'Parent 1 Content');
+    $this->storage->upsertItem($parent2Uuid, $rootUuid, 'Parent 2', 'Parent 2 Content');
+    $this->storage->upsertItem($childUuid, $parent1Uuid, 'Child', 'Child Content');
+    $this->storage->upsertItem($grandchildUuid, $childUuid, 'Grandchild', 'Grandchild Content');
+    
+    // Verify initial hierarchy
+    $childrenOfParent1 = $this->storage->listChildren($parent1Uuid);
+    $this->assertCount(1, $childrenOfParent1);
+    $this->assertEquals($childUuid, $childrenOfParent1[0]['id']);
+    
+    $childrenOfChild = $this->storage->listChildren($childUuid);
+    $this->assertCount(1, $childrenOfChild);
+    $this->assertEquals($grandchildUuid, $childrenOfChild[0]['id']);
+    
+    // Move child to parent2
+    $this->storage->upsertItem($childUuid, $parent2Uuid, 'Child', 'Child Content');
+    
+    // Verify the move happened correctly
+    $childrenOfParent1After = $this->storage->listChildren($parent1Uuid);
+    $this->assertCount(0, $childrenOfParent1After, 'Parent 1 should have no children after move');
+    
+    $childrenOfParent2After = $this->storage->listChildren($parent2Uuid);
+    $this->assertCount(1, $childrenOfParent2After, 'Parent 2 should have one child after move');
+    $this->assertEquals($childUuid, $childrenOfParent2After[0]['id']);
+    
+    // Verify grandchild relationship is maintained
+    $childrenOfChildAfter = $this->storage->listChildren($childUuid);
+    $this->assertCount(1, $childrenOfChildAfter, 'Child should still have its grandchild');
+    $this->assertEquals($grandchildUuid, $childrenOfChildAfter[0]['id']);
+}
+
+public function testItemWithInvalidCharactersInTitle(): void
+{
+    $rootUuid = '00000000-0000-0000-0000-000000000000';
+    $itemUuid = 'hhhh1111-hhhh-1111-hhhh-111111111111';
+    
+    // Create item with special characters in title
+    $specialTitle = 'Test,Item\\with"special$characters*';
+    $this->storage->upsertItem($itemUuid, $rootUuid, $specialTitle, 'Test Content');
+    
+    // Retrieve and verify the title was preserved
+    $children = $this->storage->listChildren($rootUuid);
+    $found = false;
+    foreach ($children as $child) {
+        if ($child['id'] === $itemUuid) {
+            $this->assertEquals($specialTitle, $child['title']);
+            $found = true;
+            break;
+        }
+    }
+    $this->assertTrue($found, 'Item with special characters in title should be found');
+}
+
+public function testEmptyDataDir(): void
+{
+    // Create a new storage with empty directories
+    $emptyDir = $this->tempDataDir . '_empty';
+    $emptyStructure = $this->tempStructureDir . '_empty';
+    
+    if (!file_exists($emptyDir)) {
+        mkdir($emptyDir, 0755, true);
+    }
+    
+    if (!file_exists($emptyStructure)) {
+        mkdir($emptyStructure, 0755, true);
+    }
+    
+    $emptyStorage = new FlatStorage($emptyDir, $emptyStructure);
+    
+    // Test listing children of root in an empty storage
+    $rootChildren = $emptyStorage->listChildren('00000000-0000-0000-0000-000000000000');
+    $this->assertIsArray($rootChildren);
+    $this->assertEmpty($rootChildren);
+    
+    // Clean up
+    rmdir($emptyDir);
+    rmdir($emptyStructure);
+}
+
+public function testInvalidUuidForGetFullPath(): void
+{
+    $this->expectException(InvalidArgumentException::class);
+    $this->storage->getFullPath('invalid-uuid-format');
+}
+
+public function testDeleteNonExistentItem(): void
+{
+    $rootUuid = '00000000-0000-0000-0000-000000000000';
+    $nonExistentUuid = 'iiii9999-iiii-9999-iiii-999999999999';
+    
+    // This should not throw an exception but just do nothing
+    $this->storage->deleteItem($nonExistentUuid, $rootUuid);
+    
+    // Verify the operation was logged even for non-existent item
+    $indexLog = file_get_contents($this->tempStructureDir . '/index.log');
+    $this->assertStringContainsString("DE,$nonExistentUuid,$rootUuid", $indexLog);
+}
+
+public function testRenameItem(): void
+{
+    $rootUuid = '00000000-0000-0000-0000-000000000000';
+    $itemUuid = 'jjjj1111-jjjj-1111-jjjj-111111111111';
+    
+    // Create an item
+    $initialTitle = 'Initial Title';
+    $this->storage->upsertItem($itemUuid, $rootUuid, $initialTitle, 'Content');
+    
+    // Rename the item
+    $newTitle = 'New Title';
+    $this->storage->upsertItem($itemUuid, $rootUuid, $newTitle, null);
+    
+    // Verify the rename happened
+    $children = $this->storage->listChildren($rootUuid);
+    $found = false;
+    foreach ($children as $child) {
+        if ($child['id'] === $itemUuid) {
+            $this->assertEquals($newTitle, $child['title']);
+            $found = true;
+            break;
+        }
+    }
+    $this->assertTrue($found, 'Renamed item should be found with new title');
+    
+    // Check the names log
+    $namesLog = file_get_contents($this->tempStructureDir . '/names.log');
+    $this->assertStringContainsString("RN,$itemUuid,$newTitle", $namesLog);
+}
+```
+
+These tests cover the following functionality:
+1. `getItemParent` method (which appears to be used internally)
+2. `exists` method
+3. Moving items with children (maintaining hierarchy)
+4. Handling items with special characters in the title
+5. Empty data directory behavior
+6. Invalid UUID handling for `getFullPath`
+7. Deleting non-existent items
+8. Renaming items (title change only)
+
+Add these methods to your existing `FlatStorageTest` class to increase test coverage.
+-----
+
+Looking at your FilesStorageTest class compared to the FlatStorageTest, I'll create additional missing tests to ensure complete coverage of the FilesStorage class. Here are the tests you should add:
+
+```php
+public function testExists(): void
+{
+    // Create a file
+    $this->storage->upsertFile('exists_test.txt', 'Exists Test', 'Content');
+    
+    // Test exists with full filename
+    $this->assertTrue($this->storage->exists('exists_test.txt'));
+    
+    // Test exists without extension
+    $this->assertTrue($this->storage->exists('exists_test'));
+    
+    // Test non-existent file
+    $this->assertFalse($this->storage->exists('non_existent_file'));
+}
+
+public function testGetFullPath(): void
+{
+    // Create a file
+    $this->storage->upsertFile('path_test.txt', 'Path Test', 'Content');
+    
+    // Get the full path
+    $fullPath = $this->storage->getFullPath('path_test');
+    
+    // Check if the path is correct
+    $this->assertEquals($this->tempDataDir . '/path_test.txt', $fullPath);
+    
+    // Test with full filename
+    $fullPathWithExt = $this->storage->getFullPath('path_test.txt');
+    $this->assertEquals($this->tempDataDir . '/path_test.txt', $fullPathWithExt);
+}
+
+public function testInvalidFilenameForGetFullPath(): void
+{
+    $this->expectException(InvalidArgumentException::class);
+    $this->storage->getFullPath('');
+}
+
+public function testFileWithSpecialCharactersInTitle(): void
+{
+    // Create file with special characters in title
+    $specialTitle = 'Test,File\\with"special$characters*';
+    $this->storage->upsertFile('special_title.txt', $specialTitle, 'Test Content');
+
+    // List all files
+    $files = $this->storage->listFiles();
+    
+    // Find our file
+    $found = false;
+    foreach ($files as $file) {
+        if ($file['id'] === 'special_title') {
+            $this->assertEquals($specialTitle, $file['title']);
+            $found = true;
+            break;
+        }
+    }
+    $this->assertTrue($found, 'File with special characters in title should be found');
+}
+
+public function testEmptyDirectories(): void
+{
+    // Create a new storage with empty directories
+    $emptyDir = $this->tempDataDir . '_empty';
+    $emptyStructure = $this->tempStructureDir . '_empty';
+
+    if (!file_exists($emptyDir)) {
+        mkdir($emptyDir, 0755, true);
+    }
+
+    if (!file_exists($emptyStructure)) {
+        mkdir($emptyStructure, 0755, true);
+    }
+
+    $emptyStorage = new FilesStorage($emptyDir, $emptyStructure);
+
+    // Test listing files in an empty storage
+    $files = $emptyStorage->listFiles();
+    $this->assertIsArray($files);
+    $this->assertEmpty($files);
+
+    // Clean up
+    rmdir($emptyDir);
+    rmdir($emptyStructure);
+}
+
+public function testDeleteNonExistentFile(): void
+{
+    // This should return false but not throw an exception
+    $result = $this->storage->deleteFile('non_existent_file');
+    $this->assertFalse($result);
+    
+    // Verify the operation was still logged
+    $namesLog = file_get_contents($this->tempStructureDir . '/names.log');
+    $this->assertStringContainsString("DE,non_existent_file,", $namesLog);
+}
+
+public function testUpsertFileWithNullContent(): void
+{
+    // Create initial file
+    $this->storage->upsertFile('null_content.txt', 'Initial Title', 'Initial content');
+    
+    // Update only the title, keeping content
+    $this->storage->upsertFile('null_content.txt', 'Updated Title', null);
+    
+    // Verify content wasn't changed
+    $content = file_get_contents($this->tempDataDir . '/null_content.txt');
+    $this->assertEquals('Initial content', $content);
+    
+    // Verify title was updated
+    $files = $this->storage->listFiles();
+    $found = false;
+    foreach ($files as $file) {
+        if ($file['id'] === 'null_content') {
+            $this->assertEquals('Updated Title', $file['title']);
+            $found = true;
+            break;
+        }
+    }
+    $this->assertTrue($found, 'File with updated title should be found');
+}
+```
+
+These tests complement your existing ones and provide better coverage by testing additional functionality similar to what's covered in the FlatStorageTest.
+### REQ 062
+### RES 062
 ### REQ 058
 ### RES 058
