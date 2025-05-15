@@ -10199,6 +10199,10 @@ async function getUserName() {
 * Removed css for waiting from code
 * Hide current item when deleting
 
+### FIX 059
+
+Adding icons
+
 
 ### REQ 058
 ### RES 058
