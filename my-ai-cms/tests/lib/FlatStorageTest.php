@@ -446,4 +446,177 @@ class FlatStorageTest extends TestCase
         $this->assertEquals($rootUuid, $rootPath[0]['id']);
         $this->assertEquals('Root', $rootPath[0]['title']);
     }
+
+    public function testGetItemParent(): void
+    {
+        $rootUuid = '00000000-0000-0000-0000-000000000000';
+
+        // Create a hierarchy of items
+        $parentUuid = 'dddd1111-dddd-1111-dddd-111111111111';
+        $childUuid = 'dddd2222-dddd-2222-dddd-222222222222';
+
+        $this->storage->upsertItem($parentUuid, $rootUuid, 'Parent Item', 'Parent Content');
+        $this->storage->upsertItem($childUuid, $parentUuid, 'Child Item', 'Child Content');
+
+        // Test getting the parent
+        $parentId = $this->storage->getItemParent($childUuid);
+        $this->assertEquals($parentUuid, $parentId);
+
+        // Root's parent should be null
+        $rootParent = $this->storage->getItemParent($rootUuid);
+        $this->assertNull($rootParent);
+    }
+
+    public function testExists(): void
+    {
+        $rootUuid = '00000000-0000-0000-0000-000000000000';
+        $itemUuid = 'eeee1111-eeee-1111-eeee-111111111111';
+        $nonExistentUuid = 'ffff9999-ffff-9999-ffff-999999999999';
+
+        // Create an item
+        $this->storage->upsertItem($itemUuid, $rootUuid, 'Test Item', 'Test Content');
+
+        // Test exists
+        $this->assertTrue($this->storage->exists($itemUuid));
+        $this->assertFalse($this->storage->exists($nonExistentUuid));
+    }
+
+    public function testMoveWithChildren(): void
+    {
+        $rootUuid = '00000000-0000-0000-0000-000000000000';
+
+        // Create a hierarchy structure
+        $parent1Uuid = 'gggg1111-gggg-1111-gggg-111111111111';
+        $parent2Uuid = 'gggg2222-gggg-2222-gggg-222222222222';
+        $childUuid = 'gggg3333-gggg-3333-gggg-333333333333';
+        $grandchildUuid = 'gggg4444-gggg-4444-gggg-444444444444';
+
+        // Create the items in a hierarchy
+        $this->storage->upsertItem($parent1Uuid, $rootUuid, 'Parent 1', 'Parent 1 Content');
+        $this->storage->upsertItem($parent2Uuid, $rootUuid, 'Parent 2', 'Parent 2 Content');
+        $this->storage->upsertItem($childUuid, $parent1Uuid, 'Child', 'Child Content');
+        $this->storage->upsertItem($grandchildUuid, $childUuid, 'Grandchild', 'Grandchild Content');
+
+        // Verify initial hierarchy
+        $childrenOfParent1 = $this->storage->listChildren($parent1Uuid);
+        $this->assertCount(1, $childrenOfParent1);
+        $this->assertEquals($childUuid, $childrenOfParent1[0]['id']);
+
+        $childrenOfChild = $this->storage->listChildren($childUuid);
+        $this->assertCount(1, $childrenOfChild);
+        $this->assertEquals($grandchildUuid, $childrenOfChild[0]['id']);
+
+        // Move child to parent2
+        $this->storage->upsertItem($childUuid, $parent2Uuid, 'Child', 'Child Content');
+
+        // Verify the move happened correctly
+        $childrenOfParent1After = $this->storage->listChildren($parent1Uuid);
+        $this->assertCount(0, $childrenOfParent1After, 'Parent 1 should have no children after move');
+
+        $childrenOfParent2After = $this->storage->listChildren($parent2Uuid);
+        $this->assertCount(1, $childrenOfParent2After, 'Parent 2 should have one child after move');
+        $this->assertEquals($childUuid, $childrenOfParent2After[0]['id']);
+
+        // Verify grandchild relationship is maintained
+        $childrenOfChildAfter = $this->storage->listChildren($childUuid);
+        $this->assertCount(1, $childrenOfChildAfter, 'Child should still have its grandchild');
+        $this->assertEquals($grandchildUuid, $childrenOfChildAfter[0]['id']);
+    }
+
+    public function testItemWithInvalidCharactersInTitle(): void
+    {
+        $rootUuid = '00000000-0000-0000-0000-000000000000';
+        $itemUuid = 'hhhh1111-hhhh-1111-hhhh-111111111111';
+
+        // Create item with special characters in title
+        $specialTitle = 'Test,Item\\with"special$characters*';
+        $this->storage->upsertItem($itemUuid, $rootUuid, $specialTitle, 'Test Content');
+
+        // Retrieve and verify the title was preserved
+        $children = $this->storage->listChildren($rootUuid);
+        $found = false;
+        foreach ($children as $child) {
+            if ($child['id'] === $itemUuid) {
+                $this->assertEquals($specialTitle, $child['title']);
+                $found = true;
+                break;
+            }
+        }
+        $this->assertTrue($found, 'Item with special characters in title should be found');
+    }
+
+    public function testEmptyDataDir(): void
+    {
+        // Create a new storage with empty directories
+        $emptyDir = $this->tempDataDir . '_empty';
+        $emptyStructure = $this->tempStructureDir . '_empty';
+
+        if (!file_exists($emptyDir)) {
+            mkdir($emptyDir, 0755, true);
+        }
+
+        if (!file_exists($emptyStructure)) {
+            mkdir($emptyStructure, 0755, true);
+        }
+
+        $emptyStorage = new FlatStorage($emptyDir, $emptyStructure);
+
+        // Test listing children of root in an empty storage
+        $rootChildren = $emptyStorage->listChildren('00000000-0000-0000-0000-000000000000');
+        $this->assertIsArray($rootChildren);
+        $this->assertEmpty($rootChildren);
+
+        // Clean up
+        rmdir($emptyDir);
+        rmdir($emptyStructure);
+    }
+
+    public function testInvalidUuidForGetFullPath(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->storage->getFullPath('invalid-uuid-format');
+    }
+
+    public function testDeleteNonExistentItem(): void
+    {
+        $rootUuid = '00000000-0000-0000-0000-000000000000';
+        $nonExistentUuid = 'iiii9999-iiii-9999-iiii-999999999999';
+
+        // This should not throw an exception but just do nothing
+        $this->storage->deleteItem($nonExistentUuid, $rootUuid);
+
+        // Verify the operation was logged even for non-existent item
+        $indexLog = file_get_contents($this->tempStructureDir . '/index.log');
+        $this->assertStringContainsString("DE,$nonExistentUuid,$rootUuid", $indexLog);
+    }
+
+    public function testRenameItem(): void
+    {
+        $rootUuid = '00000000-0000-0000-0000-000000000000';
+        $itemUuid = 'jjjj1111-jjjj-1111-jjjj-111111111111';
+
+        // Create an item
+        $initialTitle = 'Initial Title';
+        $this->storage->upsertItem($itemUuid, $rootUuid, $initialTitle, 'Content');
+
+        // Rename the item
+        $newTitle = 'New Title';
+        $this->storage->upsertItem($itemUuid, $rootUuid, $newTitle, null);
+
+        // Verify the rename happened
+        $children = $this->storage->listChildren($rootUuid);
+        $found = false;
+        foreach ($children as $child) {
+            if ($child['id'] === $itemUuid) {
+                $this->assertEquals($newTitle, $child['title']);
+                $found = true;
+                break;
+            }
+        }
+        $this->assertTrue($found, 'Renamed item should be found with new title');
+
+        // Check the names log
+        $namesLog = file_get_contents($this->tempStructureDir . '/names.log');
+        $this->assertStringContainsString("RN,$itemUuid,$newTitle", $namesLog);
+    }
 }
