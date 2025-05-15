@@ -6,11 +6,13 @@ class FilesStorage {
     private $dataDir;
     private $structureDir;
     private $namesLogFile;
+    private $checksumsLogFile;
 
     public function __construct(string $dataDir = 'data',string $indexDir = 'structure') {
         $this->dataDir = $dataDir;
         $this->structureDir = $indexDir;
         $this->namesLogFile = $this->structureDir . '/names.log';
+        $this->checksumsLogFile = $this->structureDir . '/checksums.log';
 
         // Ensure directories exist
         if (!is_dir($this->dataDir)) {
@@ -21,9 +23,13 @@ class FilesStorage {
             mkdir($this->structureDir, 0755, true);
         }
 
-        // Ensure names log file exists
+        // Ensure log files exist
         if (!file_exists($this->namesLogFile)) {
             file_put_contents($this->namesLogFile, '');
+        }
+
+        if (!file_exists($this->checksumsLogFile)) {
+            file_put_contents($this->checksumsLogFile, '');
         }
     }
 
@@ -73,6 +79,48 @@ class FilesStorage {
         return $directPath;
     }
 
+    /**
+     * Check if a file with the given MD5 checksum exists and return its UUID
+     *
+     * @param string $filemd5 The MD5 checksum to check
+     * @return string|null The UUID of the file if found, null otherwise
+     */
+    private function getUuidByChecksum($filemd5) {
+        if (!file_exists($this->checksumsLogFile)) {
+            return null;
+        }
+
+        $lines = file($this->checksumsLogFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $uuidByChecksum = [];
+
+        foreach ($lines as $line) {
+            $parts = explode(',', $line, 3);
+            if (count($parts) < 3) continue;
+
+            list($action, $uuid, $checksum) = $parts;
+
+            if ($action === 'CR' || $action === 'UP') {
+                $uuidByChecksum[$checksum] = $uuid;
+            } elseif ($action === 'DE' && isset($uuidByChecksum[$checksum])) {
+                unset($uuidByChecksum[$checksum]);
+            }
+        }
+
+        return isset($uuidByChecksum[$filemd5]) ? $uuidByChecksum[$filemd5] : null;
+    }
+
+    /**
+     * Log checksum information
+     *
+     * @param string $action The action (CR, UP, DE)
+     * @param string $uuid The UUID of the file
+     * @param string $filemd5 The MD5 checksum of the file
+     */
+    private function logChecksum($action, $uuid, $filemd5) {
+        $logLine = $action . ',' . $uuid . ',' . $filemd5 . PHP_EOL;
+        file_put_contents($this->checksumsLogFile, $logLine, FILE_APPEND);
+    }
+
     public function upsertFile($itemId, $itemTitle, $itemContent = null) {
         $filePath = $this->getFilePath($itemId);
         $fileExists = file_exists($filePath);
@@ -83,11 +131,23 @@ class FilesStorage {
         // If file doesn't exist, create it and log creation
         if (!$fileExists) {
             if ($itemContent !== null) {
+                // Check if we already have a file with this checksum
+                $filemd5 = md5($itemContent);
+                $existingUuid = $this->getUuidByChecksum($filemd5);
+
+                if ($existingUuid !== null) {
+                    // Return the existing UUID instead of creating a new file
+                    return $existingUuid;
+                }
+
                 file_put_contents($filePath, $itemContent);
+                $this->appendToLog('CR', $basename, $itemTitle);
+                $this->logChecksum('CR', $basename, $filemd5);
             } else {
                 file_put_contents($filePath, '');
+                $this->appendToLog('CR', $basename, $itemTitle);
+                $this->logChecksum('CR', $basename, md5(''));
             }
-            $this->appendToLog('CR', $basename, $itemTitle);
         } else {
             // Check if title has changed
             $currentTitle = $this->getCurrentTitle($basename);
@@ -98,10 +158,13 @@ class FilesStorage {
             // Update content if provided
             if ($itemContent !== null) {
                 file_put_contents($filePath, $itemContent);
+                // Log the updated checksum
+                $filemd5 = md5($itemContent);
+                $this->logChecksum('UP', $basename, $filemd5);
             }
         }
 
-        return true;
+        return $itemId;
     }
 
     public function deleteFile($itemId) {
@@ -111,7 +174,12 @@ class FilesStorage {
             // Extract basename for log
             [$basename, $extension] = $this->parseItemId(basename($filePath));
 
+            // Get file checksum before deleting
+            $filemd5 = md5(file_get_contents($filePath));
+
             $this->appendToLog('DE', $basename, '');
+            $this->logChecksum('DE', $basename, $filemd5);
+
             unlink($filePath);
             return true;
         }
