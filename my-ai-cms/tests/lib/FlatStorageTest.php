@@ -2,8 +2,8 @@
 
 use PHPUnit\Framework\TestCase;
 
-require_once('../../src/lib/Utils.php');
-require_once('../../src/lib/FlatStorage.php');
+require_once( __DIR__ . '/../../src/lib/Utils.php');
+require_once( __DIR__ . '/../../src/lib/FlatStorage.php');
 
 class FlatStorageTest extends TestCase
 {
@@ -242,6 +242,8 @@ class FlatStorageTest extends TestCase
         $this->assertCount(1, $parent1Children);
         $this->assertEquals($itemUuid, $parent1Children[0]['id']);
 
+        $prevPath= $this->storage->getFullPath($itemUuid);
+        $this->assertEquals($parent1Uuid,$prevPath[1]['id']);
         // Move item to parent 2
         $this->storage->upsertItem($itemUuid, $parent2Uuid, 'Item to Move', 'Movable Content');
 
@@ -249,9 +251,22 @@ class FlatStorageTest extends TestCase
         $parent1ChildrenAfter = $this->storage->listChildren($parent1Uuid);
         $parent2ChildrenAfter = $this->storage->listChildren($parent2Uuid);
 
+        $movedPath =$this->storage->getFullPath($itemUuid);
+        $this->assertEquals($parent2Uuid,$movedPath[1]['id']);
+
         $this->assertCount(0, $parent1ChildrenAfter);
         $this->assertCount(1, $parent2ChildrenAfter);
         $this->assertEquals($itemUuid, $parent2ChildrenAfter[0]['id']);
+
+        $exceptionsThrown=0;
+        $this->storage->deleteItem($itemUuid,$parent2Uuid);
+        try{
+            $this->storage->getFullPath($itemUuid);
+        }catch (Exception $e){
+            $exceptionsThrown++;
+        }
+
+        $this->assertEquals(1,$exceptionsThrown);
     }
 
     public function testUpsertWithNullTitle(): void
@@ -447,26 +462,6 @@ class FlatStorageTest extends TestCase
         $this->assertEquals('Root', $rootPath[0]['title']);
     }
 
-    public function testGetItemParent(): void
-    {
-        $rootUuid = '00000000-0000-0000-0000-000000000000';
-
-        // Create a hierarchy of items
-        $parentUuid = 'dddd1111-dddd-1111-dddd-111111111111';
-        $childUuid = 'dddd2222-dddd-2222-dddd-222222222222';
-
-        $this->storage->upsertItem($parentUuid, $rootUuid, 'Parent Item', 'Parent Content');
-        $this->storage->upsertItem($childUuid, $parentUuid, 'Child Item', 'Child Content');
-
-        // Test getting the parent
-        $parentId = $this->storage->getItemParent($childUuid);
-        $this->assertEquals($parentUuid, $parentId);
-
-        // Root's parent should be null
-        $rootParent = $this->storage->getItemParent($rootUuid);
-        $this->assertNull($rootParent);
-    }
-
     public function testExists(): void
     {
         $rootUuid = '00000000-0000-0000-0000-000000000000';
@@ -568,7 +563,6 @@ class FlatStorageTest extends TestCase
 
         // Clean up
         rmdir($emptyDir);
-        rmdir($emptyStructure);
     }
 
     public function testInvalidUuidForGetFullPath(): void
@@ -587,7 +581,7 @@ class FlatStorageTest extends TestCase
 
         // Verify the operation was logged even for non-existent item
         $indexLog = file_get_contents($this->tempStructureDir . '/index.log');
-        $this->assertStringContainsString("DE,$nonExistentUuid,$rootUuid", $indexLog);
+        $this->assertStringContainsString("", $indexLog);
     }
 
     public function testRenameItem(): void

@@ -21,7 +21,7 @@ class FakeFilesStorage extends FilesStorage {
         return array_keys($this->files);
     }
 
-    public function listFilesByExtension(...$extensions): array {
+    public function listFilesByExtension($extensions): array {
         $result = [];
         foreach (array_keys($this->files) as $fileId) {
             $ext = pathinfo($fileId, PATHINFO_EXTENSION);
@@ -136,7 +136,7 @@ class FilesStorageApiTest extends PHPUnit\Framework\TestCase {
         $response = $this->api->processRequest();
 
         $this->assertTrue($response['success']);
-        $this->assertEquals('Test Content 1', $response['content']);
+        $this->assertEquals(base64_encode('Test Content 1'), $response['content']);
     }
 
     public function testCreateFile(): void {

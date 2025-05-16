@@ -237,7 +237,7 @@ class FlatStorage {
 
         if ($lines) {
             for ($i = count($lines) - 1; $i >= 0; $i--) {
-                $parts = explode(',', $lines[$i]);
+                $parts = explode(',', $lines[$i],3);
                 if (count($parts) === 3 && $parts[1] === $itemUuid) {
                     if ($parts[0] === 'CR' || $parts[0] === 'RN') {
                         $lastName = $parts[2];

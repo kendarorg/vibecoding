@@ -239,13 +239,11 @@ class FilesStorage {
         return $result;
     }
 
-    public function listFilesByExtension(...$extensions) {
-        if($extensions!=null && is_array($extensions) && count($extensions)==1){
-            if(is_array($extensions) && !is_string($extensions)){
-                $extensions = $extensions[0];
-            }
-        }
+    public function listFilesByExtension($extensions) {
         $files = $this->listFiles();
+        if(is_string($extensions)){
+            $extensions = explode(",",$extensions);
+        }
 
         if (empty($extensions)) {
             $result = [];
@@ -254,6 +252,7 @@ class FilesStorage {
             }
             return $result;
         }
+
         $files =  array_filter($files, function($file) use ($extensions) {
             return in_array($file['extension'], $extensions);
         });

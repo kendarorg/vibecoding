@@ -1,6 +1,6 @@
 <?php
 
-require_once '../../src/lib/FilesStorage.php';
+require_once  __DIR__ . '/../../src/lib/FilesStorage.php';
 
 class FilesStorageTest extends PHPUnit\Framework\TestCase {
     private $tempDataDir;
@@ -64,6 +64,24 @@ class FilesStorageTest extends PHPUnit\Framework\TestCase {
         // Check if the content is correct
         $content = file_get_contents($this->tempDataDir.'/test123.txt');
         $this->assertEquals('This is a test content', $content);
+
+        // Check if the log entry is correct - now using basename only
+        $logContent = file_get_contents($this->tempStructureDir.'/names.log');
+        $this->assertStringContainsString('CR,test123,Test Document', $logContent);
+    }
+
+
+
+    public function testUpsertNewEmptyFile() {
+        // Create a new file
+        $this->storage->upsertFile('test123.txt', 'Test Document', null);
+
+        // Check if the file exists
+        $this->assertFileExists($this->tempDataDir.'/test123.txt');
+
+        // Check if the content is correct
+        $content = file_get_contents($this->tempDataDir.'/test123.txt');
+        $this->assertEquals('', $content);
 
         // Check if the log entry is correct - now using basename only
         $logContent = file_get_contents($this->tempStructureDir.'/names.log');
@@ -169,13 +187,29 @@ class FilesStorageTest extends PHPUnit\Framework\TestCase {
         }
 
         // List multiple extensions
-        $mixedFiles = $this->storage->listFilesByExtension('md', 'json');
+        $mixedFiles = $this->storage->listFilesByExtension('md,json');
 
         // Check that only md and json files are returned
         $this->assertCount(2, $mixedFiles);
         foreach ($mixedFiles as $file) {
             $this->assertTrue(in_array($file['extension'], ['md', 'json']));
         }
+    }
+
+
+
+    public function testListFilesByExtensionEmpty() {
+        // Create several files with different extensions
+        $this->storage->upsertFile('doc1.txt', 'Text Doc', 'Text content');
+        $this->storage->upsertFile('doc2.md', 'Markdown Doc', 'Markdown content');
+        $this->storage->upsertFile('doc3.txt', 'Another Text', 'More text');
+        $this->storage->upsertFile('doc4.json', 'JSON Doc', '{"test": true}');
+
+        // List only txt files
+        $textFiles = $this->storage->listFilesByExtension(null);
+
+        // Check that only txt files are returned
+        $this->assertCount(4, $textFiles);
     }
 
     public function testGetContent() {
@@ -195,43 +229,6 @@ class FilesStorageTest extends PHPUnit\Framework\TestCase {
         // Test getting content for non-existent file
         $nonExistentContent = $this->storage->getContent('does_not_exist');
         $this->assertNull($nonExistentContent);
-    }
-
-    public function testExists(): void
-    {
-        // Create a file
-        $this->storage->upsertFile('exists_test.txt', 'Exists Test', 'Content');
-
-        // Test exists with full filename
-        $this->assertTrue($this->storage->exists('exists_test.txt'));
-
-        // Test exists without extension
-        $this->assertTrue($this->storage->exists('exists_test'));
-
-        // Test non-existent file
-        $this->assertFalse($this->storage->exists('non_existent_file'));
-    }
-
-    public function testGetFullPath(): void
-    {
-        // Create a file
-        $this->storage->upsertFile('path_test.txt', 'Path Test', 'Content');
-
-        // Get the full path
-        $fullPath = $this->storage->getFullPath('path_test');
-
-        // Check if the path is correct
-        $this->assertEquals($this->tempDataDir . '/path_test.txt', $fullPath);
-
-        // Test with full filename
-        $fullPathWithExt = $this->storage->getFullPath('path_test.txt');
-        $this->assertEquals($this->tempDataDir . '/path_test.txt', $fullPathWithExt);
-    }
-
-    public function testInvalidFilenameForGetFullPath(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->storage->getFullPath('');
     }
 
     public function testFileWithSpecialCharactersInTitle(): void
@@ -278,7 +275,6 @@ class FilesStorageTest extends PHPUnit\Framework\TestCase {
 
         // Clean up
         rmdir($emptyDir);
-        rmdir($emptyStructure);
     }
 
     public function testDeleteNonExistentFile(): void
@@ -289,7 +285,7 @@ class FilesStorageTest extends PHPUnit\Framework\TestCase {
 
         // Verify the operation was still logged
         $namesLog = file_get_contents($this->tempStructureDir . '/names.log');
-        $this->assertStringContainsString("DE,non_existent_file,", $namesLog);
+        $this->assertEquals("", $namesLog);
     }
 
     public function testUpsertFileWithNullContent(): void

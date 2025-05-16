@@ -2,10 +2,10 @@
 
 use PHPUnit\Framework\TestCase;
 
-require_once('../../src/lib/FlatStorage.php');
-require_once('../../src/lib/FlatStorageApi.php');
+require_once( __DIR__ . '/../../src/lib/FlatStorage.php');
+require_once( __DIR__ . '/../../src/lib/FlatStorageApi.php');
 
-class FlatStorageApiTest extends TestCase
+class FlatStorageApiChildTest extends TestCase
 {
     private FlatStorage $storage;
     private FlatStorageApi $api;

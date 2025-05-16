@@ -10877,6 +10877,11 @@ public function testUpsertFileWithNullContent(): void
 ```
 
 These tests complement your existing ones and provide better coverage by testing additional functionality similar to what's covered in the FlatStorageTest.
+
+### FIX 061
+
+Fixing coverage
+
 ### REQ 062
 ### RES 062
 ### REQ 058
