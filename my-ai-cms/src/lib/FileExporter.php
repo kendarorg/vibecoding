@@ -61,8 +61,6 @@ class FileExporter {
                     $result[]=$item["id"];
                 }
                 $filePath = join("/",$result);
-
-                error_log($filePath);
                 $dirPath = $tempDir . '/' .dirname($filePath);
                 if(!file_exists($dirPath)){
                     mkdir($dirPath,077, true);
@@ -70,17 +68,14 @@ class FileExporter {
 
                 $mdPath = $tempDir . '/' . $filePath . '.md';
                 $htmlPath = $tempDir . '/' . $filePath . '.html';
-                error_log($mdPath);
                 $content = $this->processMarkdownContent($fileData['content'],count($arrayPath)-1);
                 file_put_contents(Utils::sanitizeFileName($mdPath),
                     $content);
 
                 $mkd->setContent($content);
-                error_log($htmlPath);
                 $content = "<html><head><title>".htmlentities($item['title'])."</title></head><body>".$mkd->toHtml()."</body></html>";
                 file_put_contents(Utils::sanitizeFileName($htmlPath),
                     $content);
-                error_log("==============================");
             }
 
             foreach ($imageFiles as  $fileData) {
