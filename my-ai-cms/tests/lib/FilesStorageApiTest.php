@@ -10,11 +10,12 @@ class FakeFilesStorage extends FilesStorage {
         // Skip parent constructor
     }
 
-    public function upsertFile($fileId, $title, $content=null): void {
+    public function upsertFile($fileId, $title, $content=null): string {
         $this->files[$fileId] = $title;
         if ($content !== null) {
             $this->fileContents[$fileId] = $content;
         }
+        return $fileId;
     }
 
     public function listFiles(): array {
@@ -58,6 +59,9 @@ class FakeFilesStorage extends FilesStorage {
 class TestableFilesStorageApi extends FilesStorageApi {
     private ?string $mockRequestBody = null;
 
+    public function addHeader($header) {
+
+    }
     public function setMockRequestBody(array $data): void {
         $this->mockRequestBody = json_encode($data);
     }
@@ -137,6 +141,74 @@ class FilesStorageApiTest extends PHPUnit\Framework\TestCase {
 
         $this->assertTrue($response['success']);
         $this->assertEquals(base64_encode('Test Content 1'), $response['content']);
+    }
+
+    public function testGetFileForDownload(): void {
+        // Mock $_GET and $_SERVER
+        $_GET = [
+            'action' => 'get',
+            'id' => 'test-file-1.txt'
+        ];
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+
+        ob_start();
+        $response = $this->api->processRequest();
+        $output = ob_get_clean();
+
+        $this->assertNull($response);
+        $this->assertEquals('Test Content 1', $output);
+    }
+
+    public function testHandlePostRequestWithUploadAction(): void {
+        // Mock $_FILES and $_POST
+        $_FILES['file'] = [
+            'name' => 'test-upload.txt',
+            'type' => 'text/plain',
+            'tmp_name' => 'php://memory',
+            'error' => UPLOAD_ERR_OK,
+            'size' => 20
+        ];
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+        $_GET = [
+            'action' => 'upload'
+        ];
+
+        $_POST['title'] = 'Test Upload Title';
+
+        // Mock file_get_contents to return test content
+        $testContent = 'Test upload content';
+
+        // Create a mock for the API that overrides necessary methods
+       /* $apiMock = $this->getMockBuilder(FilesStorageApi::class)
+            ->setConstructorArgs([$this->fakeStorage])
+            ->onlyMethods(['getRequestBody'])
+            ->getMock();
+
+        // Setup the mock to return our test content
+        $apiMock->expects($this->once())
+            ->method('getRequestBody')
+            ->willReturn(json_encode([
+                'title' => 'Test Upload Title',
+                'content' => base64_encode($testContent)
+            ]));
+
+        // Process the request
+        $response = $apiMock->handlePostRequest('upload');*/
+
+
+        $response = $this->api->processRequest();
+
+        // Assertions
+        $this->assertTrue($response['success']);
+        $this->assertStringContainsString('File uploaded successfully', $response['message']);
+        $this->assertArrayHasKey('id', $response);
+        $this->assertArrayHasKey('title', $response);
+        $this->assertArrayHasKey('url', $response);
+        $this->assertEquals('Test Upload Title', $response['title']);
+
+        // Verify the file was created in storage
+        $savedContent = $this->fakeStorage->getContent($response['id']);
+        $this->assertNotNull($savedContent);
     }
 
     public function testCreateFile(): void {
@@ -396,4 +468,6 @@ class FilesStorageApiTest extends PHPUnit\Framework\TestCase {
         $this->assertFalse($response['success']);
         $this->assertStringContainsString('Unsupported HTTP method', $response['message']);
     }
+
+
 }
