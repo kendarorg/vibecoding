@@ -10883,6 +10883,160 @@ These tests complement your existing ones and provide better coverage by testing
 Fixing coverage
 
 ### REQ 062
+* Implement the missing testes on FilesStorageApi inside FilesStorageApiTest
+* Implement the missing testes on FlatStorageApi inside FlatStorageApiTest
+------------
+* Implement the missing testes on FlatStorageApi inside FlatStorageApiTest
+
 ### RES 062
+
+I'll implement the missing tests for FilesStorageApiTest class based on the existing test patterns.
+
+Here are additional tests for FilesStorageApiTest:
+
+```php
+public function testUpdateContentOnly(): void {
+    // Mock $_GET, $_SERVER and input data
+    $_GET = ['action' => 'update'];
+    $_SERVER['REQUEST_METHOD'] = 'PUT';
+
+    $content = base64_encode('Updated Content Only');
+    $inputData = [
+        'id' => 'test-file-1.txt',
+        'content' => $content
+    ];
+
+    // Setup input stream
+    $this->api->setMockRequestBody($inputData);
+
+    $response = $this->api->processRequest();
+
+    $this->assertTrue($response['success']);
+
+    // Verify only content was updated
+    $this->assertEquals('Test File 1', $this->fakeStorage->getFileTitle('test-file-1.txt'));
+    $this->assertEquals('Updated Content Only', $this->fakeStorage->getContent('test-file-1.txt'));
+}
+
+public function testFileNotFound(): void {
+    // Mock $_GET and $_SERVER
+    $_GET = [
+        'action' => 'content',
+        'id' => 'non-existent-file.txt'
+    ];
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+
+    $response = $this->api->processRequest();
+
+    $this->assertFalse($response['success']);
+    $this->assertStringContainsString('File not found', $response['message']);
+}
+
+public function testCreateFileWithMissingParameters(): void {
+    // Mock $_GET, $_SERVER and input data
+    $_GET = ['action' => 'create'];
+    $_SERVER['REQUEST_METHOD'] = 'POST';
+
+    $inputData = [
+        // Missing title
+        'extension' => 'txt',
+        'content' => base64_encode('Some content')
+    ];
+
+    // Setup input stream
+    $this->api->setMockRequestBody($inputData);
+
+    $response = $this->api->processRequest();
+
+    $this->assertFalse($response['success']);
+    $this->assertStringContainsString('Missing required parameters', $response['message']);
+}
+
+public function testUpdateNonExistentFile(): void {
+    // Mock $_GET, $_SERVER and input data
+    $_GET = ['action' => 'update'];
+    $_SERVER['REQUEST_METHOD'] = 'PUT';
+
+    $inputData = [
+        'id' => 'non-existent-file.txt',
+        'title' => 'Updated Title',
+        'content' => base64_encode('Updated Content')
+    ];
+
+    // Setup input stream
+    $this->api->setMockRequestBody($inputData);
+
+    $response = $this->api->processRequest();
+
+    $this->assertFalse($response['success']);
+    $this->assertStringContainsString('File not found', $response['message']);
+}
+
+public function testDeleteNonExistentFile(): void {
+    // Mock $_GET and $_SERVER
+    $_GET = [
+        'action' => 'delete',
+        'id' => 'non-existent-file.txt'
+    ];
+    $_SERVER['REQUEST_METHOD'] = 'DELETE';
+
+    $response = $this->api->processRequest();
+
+    $this->assertFalse($response['success']);
+    $this->assertStringContainsString('File not found', $response['message']);
+}
+
+public function testEmptyExtensionList(): void {
+    // Mock $_GET and $_SERVER
+    $_GET = [
+        'action' => 'list',
+        'extension' => ''
+    ];
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+
+    $response = $this->api->processRequest();
+
+    $this->assertTrue($response['success']);
+    // Should return all files since no extension filter is effectively applied
+    $this->assertCount(3, $response['files']);
+}
+
+public function testNonMatchingExtensionList(): void {
+    // Mock $_GET and $_SERVER
+    $_GET = [
+        'action' => 'list',
+        'extension' => 'php,html'
+    ];
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+
+    $response = $this->api->processRequest();
+
+    $this->assertTrue($response['success']);
+    // No files should match these extensions
+    $this->assertCount(0, $response['files']);
+}
+
+public function testInvalidRequestMethod(): void {
+    // Mock $_GET and $_SERVER with unsupported method
+    $_GET = ['action' => 'create'];
+    $_SERVER['REQUEST_METHOD'] = 'OPTIONS';
+
+    $response = $this->api->processRequest();
+
+    $this->assertFalse($response['success']);
+    $this->assertStringContainsString('Invalid request method', $response['message']);
+}
+```
+
+These tests cover various scenarios:
+- Updating only content
+- Handling non-existent files
+- Creating files with missing parameters
+- Updating non-existent files
+- Deleting non-existent files
+- Testing empty and non-matching extension lists
+- Testing invalid request methods
+
+The tests follow the same pattern as the existing ones, providing good coverage for the FilesStorageApi functionality.
 ### REQ 058
 ### RES 058
