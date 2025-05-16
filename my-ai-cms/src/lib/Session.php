@@ -43,7 +43,7 @@ class Session {
             }
 
             // Invalid or expired session, clear cookie
-            setcookie($this->cookieName, '', time() - 3600, '/');
+            $this->setCookie($this->cookieName, '', time() - 3600, '/');
         }
 
         // Create new session
@@ -64,7 +64,7 @@ class Session {
         $this->saveSessionFile();
 
         // Set cookie
-        setcookie($this->cookieName, $this->sessionId, time() + 3600, '/');
+        $this->setCookie($this->cookieName, $this->sessionId, time() + 3600, '/');
     }
 
     private function loadSessionFile() {
@@ -136,12 +136,20 @@ class Session {
             unlink($this->sessionFile);
         }
 
-        setcookie($this->cookieName, '', time() - 3600, '/');
+        $this->setCookie($this->cookieName, '', time() - 3600, '/');
         $this->sessionData = [];
         $this->isLoaded = false;
     }
 
     public function getSessionId() {
         return $this->sessionId;
+    }
+
+    /**
+     * @return void
+     */
+    public function setCookie(string $name, string $value = "", int $expires_or_options = 0, string $path = "", string $domain = "", bool $secure = false, bool $httponly = false): bool
+    {
+        return setcookie($name, $value, $expires_or_options, $path);
     }
 }
