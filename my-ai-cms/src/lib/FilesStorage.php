@@ -230,9 +230,6 @@ class FilesStorage {
                     unset($activeItems[$basename]);
                     break;
             }
-//            if(count($matchingFiles)>0){
-//            error_log($basename." ".$extension." ".json_encode($matchingFiles));die();
-//            }
         }
         $result = [];
         foreach($activeItems as $key => $item){
