@@ -10,7 +10,6 @@ require_once "Settings.php";
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My AI CMS</title>
     <link rel="stylesheet" href="lib/css/style.css">
-    <link href="lib/icons/bootstrap-icons.css" rel="stylesheet"/>
 </head>
 <body>
 <?php
