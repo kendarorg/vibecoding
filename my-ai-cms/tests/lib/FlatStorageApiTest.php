@@ -2,7 +2,7 @@
 
 use PHPUnit\Framework\TestCase;
 
-require_once '../../src/lib/FlatStorageApi.php';
+require_once  __DIR__ . '/../../src/lib/FlatStorageApi.php';
 
 /**
  * Test version of FlatStorageApi that allows mocking the request body
