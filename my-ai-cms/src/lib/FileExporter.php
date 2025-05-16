@@ -1,5 +1,8 @@
 <?php
 
+require_once "Utils.php";
+require_once "Markdown.php";
+
 class FileExporter {
     private $filesStorage;
     private $flatStorage;
@@ -48,6 +51,7 @@ class FileExporter {
                     'content' => $content
                 ];
             }
+            $mkd = Markdown::new();
 
             // Create the directory structure and save files
             foreach ($markdownFiles as $uuid => $fileData) {
@@ -57,14 +61,26 @@ class FileExporter {
                     $result[]=$item["id"];
                 }
                 $filePath = join("/",$result);
+
+                error_log($filePath);
                 $dirPath = $tempDir . '/' .dirname($filePath);
                 if(!file_exists($dirPath)){
                     mkdir($dirPath,077, true);
                 }
 
-                $filePath = $tempDir . '/' . $filePath . '.md';
-                file_put_contents(Utils::sanitizeFileName($filePath),
-                    $content = $this->processMarkdownContent($fileData['content'],count($arrayPath)-1));
+                $mdPath = $tempDir . '/' . $filePath . '.md';
+                $htmlPath = $tempDir . '/' . $filePath . '.html';
+                error_log($mdPath);
+                $content = $this->processMarkdownContent($fileData['content'],count($arrayPath)-1);
+                file_put_contents(Utils::sanitizeFileName($mdPath),
+                    $content);
+
+                $mkd->setContent($content);
+                error_log($htmlPath);
+                $content = "<html><head><title>".htmlentities($item['title'])."</title></head><body>".$mkd->toHtml()."</body></html>";
+                file_put_contents(Utils::sanitizeFileName($htmlPath),
+                    $content);
+                error_log("==============================");
             }
 
             foreach ($imageFiles as  $fileData) {
@@ -108,7 +124,7 @@ class FileExporter {
         // Replace API links with local image paths
         //$pattern = '/\[([^\]]+)\]\([^)]*api\/files\.php\?action=get&id=([^.]+)\.([^)]+)\)/';
         $pattern = '#([/a-zA-Z_\\-]*)/api/files\.php\?action=get&id=([^.]+)\.([^)]+)\)#';
-        $replacement = $depthString.'img/$2.$3';
+        $replacement = $depthString.'img/$2.$3)';
         $result = preg_replace($pattern, $replacement, $content);
         return $result;
     }
