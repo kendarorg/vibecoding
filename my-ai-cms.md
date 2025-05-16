@@ -11038,5 +11038,287 @@ These tests cover various scenarios:
 - Testing invalid request methods
 
 The tests follow the same pattern as the existing ones, providing good coverage for the FilesStorageApi functionality.
-### REQ 058
-### RES 058
+-------------------
+
+Looking at the `FlatStorageApi.php` file, I'll implement tests for the `FlatStorageApi` class focusing on its methods that handle API requests. The tests should validate the request handling logic and interactions with the storage.
+
+```php
+public function testListItems(): void {
+    // Mock $_GET and $_SERVER
+    $_GET = ['action' => 'list'];
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+
+    $response = $this->api->processRequest();
+
+    $this->assertTrue($response['success']);
+    $this->assertArrayHasKey('items', $response);
+    $this->assertArrayHasKey('parent', $response);
+    $this->assertEquals('00000000-0000-0000-0000-000000000000', $response['parent']);
+}
+
+public function testListItemsWithParent(): void {
+    // Mock $_GET and $_SERVER
+    $_GET = [
+        'action' => 'list',
+        'parent' => '12345678-1234-1234-1234-123456789012'
+    ];
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+
+    $response = $this->api->processRequest();
+
+    $this->assertTrue($response['success']);
+    $this->assertEquals('12345678-1234-1234-1234-123456789012', $response['parent']);
+}
+
+public function testGetContent(): void {
+    // Mock $_GET and $_SERVER
+    $_GET = [
+        'action' => 'content',
+        'id' => 'item-1'
+    ];
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+
+    $response = $this->api->processRequest();
+
+    $this->assertTrue($response['success']);
+    $this->assertArrayHasKey('content', $response);
+}
+
+public function testGetContentMissingId(): void {
+    // Mock $_GET and $_SERVER
+    $_GET = ['action' => 'content'];
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+
+    $response = $this->api->processRequest();
+
+    $this->assertFalse($response['success']);
+    $this->assertStringContainsString('Missing item ID', $response['message']);
+}
+
+public function testInvalidGetAction(): void {
+    // Mock $_GET and $_SERVER
+    $_GET = ['action' => 'invalid'];
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+
+    $response = $this->api->processRequest();
+
+    $this->assertFalse($response['success']);
+    $this->assertStringContainsString('Invalid action', $response['message']);
+}
+
+public function testCreateItem(): void {
+    // Mock $_GET, $_SERVER and input data
+    $_GET = ['action' => 'create'];
+    $_SERVER['REQUEST_METHOD'] = 'POST';
+
+    $inputData = [
+        'id' => 'new-item-1',
+        'parent' => '00000000-0000-0000-0000-000000000000',
+        'title' => 'New Test Item',
+        'content' => 'Test content'
+    ];
+
+    // Setup input stream
+    $this->api->setMockRequestBody(json_encode($inputData));
+
+    $response = $this->api->processRequest();
+
+    $this->assertTrue($response['success']);
+    $this->assertEquals('new-item-1', $response['id']);
+}
+
+public function testCreateItemMissingId(): void {
+    // Mock $_GET, $_SERVER and input data
+    $_GET = ['action' => 'create'];
+    $_SERVER['REQUEST_METHOD'] = 'POST';
+
+    $inputData = [
+        'parent' => '00000000-0000-0000-0000-000000000000',
+        'title' => 'New Test Item',
+        'content' => 'Test content'
+    ];
+
+    // Setup input stream
+    $this->api->setMockRequestBody(json_encode($inputData));
+
+    $response = $this->api->processRequest();
+
+    $this->assertFalse($response['success']);
+    $this->assertStringContainsString('Missing item ID', $response['message']);
+}
+
+public function testInvalidPostAction(): void {
+    // Mock $_GET, $_SERVER and input data
+    $_GET = ['action' => 'invalid'];
+    $_SERVER['REQUEST_METHOD'] = 'POST';
+
+    $response = $this->api->processRequest();
+
+    $this->assertFalse($response['success']);
+    $this->assertStringContainsString('Invalid action', $response['message']);
+}
+
+public function testUpdateItem(): void {
+    // Mock $_GET, $_SERVER and input data
+    $_GET = ['action' => 'update'];
+    $_SERVER['REQUEST_METHOD'] = 'PUT';
+
+    $inputData = [
+        'id' => 'item-1',
+        'parent' => '00000000-0000-0000-0000-000000000000',
+        'title' => 'Updated Title',
+        'content' => 'Updated content'
+    ];
+
+    // Setup input stream
+    $this->api->setMockRequestBody(json_encode($inputData));
+
+    $response = $this->api->processRequest();
+
+    $this->assertTrue($response['success']);
+    $this->assertEquals('item-1', $response['id']);
+}
+
+public function testUpdateItemMissingId(): void {
+    // Mock $_GET, $_SERVER and input data
+    $_GET = ['action' => 'update'];
+    $_SERVER['REQUEST_METHOD'] = 'PUT';
+
+    $inputData = [
+        'parent' => '00000000-0000-0000-0000-000000000000',
+        'title' => 'Updated Title'
+    ];
+
+    // Setup input stream
+    $this->api->setMockRequestBody(json_encode($inputData));
+
+    $response = $this->api->processRequest();
+
+    $this->assertFalse($response['success']);
+    $this->assertStringContainsString('Missing item ID', $response['message']);
+}
+
+public function testInvalidPutAction(): void {
+    // Mock $_GET, $_SERVER and input data
+    $_GET = ['action' => 'invalid'];
+    $_SERVER['REQUEST_METHOD'] = 'PUT';
+
+    $response = $this->api->processRequest();
+
+    $this->assertFalse($response['success']);
+    $this->assertStringContainsString('Invalid action', $response['message']);
+}
+
+public function testDeleteItem(): void {
+    // Mock $_GET and $_SERVER
+    $_GET = [
+        'action' => 'delete',
+        'id' => 'item-1',
+        'parent' => '00000000-0000-0000-0000-000000000000'
+    ];
+    $_SERVER['REQUEST_METHOD'] = 'DELETE';
+
+    $response = $this->api->processRequest();
+
+    $this->assertTrue($response['success']);
+    $this->assertStringContainsString('deleted successfully', $response['message']);
+}
+
+public function testDeleteItemMissingParameters(): void {
+    // Mock $_GET and $_SERVER with missing parent
+    $_GET = [
+        'action' => 'delete',
+        'id' => 'item-1'
+    ];
+    $_SERVER['REQUEST_METHOD'] = 'DELETE';
+
+    $response = $this->api->processRequest();
+
+    $this->assertFalse($response['success']);
+    $this->assertStringContainsString('Missing required parameters', $response['message']);
+}
+
+public function testInvalidDeleteAction(): void {
+    // Mock $_GET and $_SERVER
+    $_GET = ['action' => 'invalid'];
+    $_SERVER['REQUEST_METHOD'] = 'DELETE';
+
+    $response = $this->api->processRequest();
+
+    $this->assertFalse($response['success']);
+    $this->assertStringContainsString('Invalid action', $response['message']);
+}
+
+public function testMethodOverrideGetToDelete(): void {
+    // Test method override from GET to DELETE
+    $_GET = [
+        'action' => 'delete',
+        'id' => 'item-2',
+        'parent' => '00000000-0000-0000-0000-000000000000'
+    ];
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+
+    $response = $this->api->processRequest();
+
+    $this->assertTrue($response['success']);
+    $this->assertStringContainsString('deleted successfully', $response['message']);
+}
+
+public function testMethodOverridePostToPut(): void {
+    // Test method override from POST to PUT
+    $_GET = ['action' => 'update'];
+    $_SERVER['REQUEST_METHOD'] = 'POST';
+
+    $inputData = [
+        'id' => 'item-3',
+        'title' => 'Updated via POST override'
+    ];
+
+    // Setup input stream
+    $this->api->setMockRequestBody(json_encode($inputData));
+
+    $response = $this->api->processRequest();
+
+    $this->assertTrue($response['success']);
+    $this->assertEquals('item-3', $response['id']);
+}
+
+public function testInvalidRequestMethod(): void {
+    // Mock $_GET and $_SERVER with unsupported method
+    $_GET = ['action' => 'list'];
+    $_SERVER['REQUEST_METHOD'] = 'OPTIONS';
+
+    $response = $this->api->processRequest();
+
+    $this->assertFalse($response['success']);
+    $this->assertStringContainsString('Unsupported HTTP method', $response['message']);
+}
+
+public function testInvalidJsonData(): void {
+    // Mock $_GET, $_SERVER and input data
+    $_GET = ['action' => 'create'];
+    $_SERVER['REQUEST_METHOD'] = 'POST';
+
+    // Setup invalid JSON input stream
+    $this->api->setMockRequestBody('{invalid-json}');
+
+    $response = $this->api->processRequest();
+
+    $this->assertFalse($response['success']);
+    $this->assertStringContainsString('Invalid JSON data', $response['message']);
+}
+```
+
+These tests cover the major functionality of the `FlatStorageApi` class including:
+- Listing items with and without parent IDs
+- Getting content 
+- Creating items
+- Updating items
+- Deleting items
+- Testing method overrides
+- Testing error cases (missing IDs, invalid actions, invalid JSON)
+- Testing with invalid request methods
+
+The tests follow the pattern seen in the previous examples while focusing on the specific API functionality provided by the `FlatStorageApi` class.
+### REQ 063
+### RES 063
