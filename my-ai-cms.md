@@ -11665,8 +11665,10 @@ This test suite covers all the main functionalities of the Session class:
 
 To run these tests, you'll need PHPUnit installed. For complete testing, you might want to add more advanced tests to check expiration functionality, which would require a time mocking library or custom time manipulation functions.
 
-### REQ 066
-### RES 066
+### FIX 066
+
+Localized fontawesome
+
 ### REQ 067
 ### RES 067
 ### REQ 068
