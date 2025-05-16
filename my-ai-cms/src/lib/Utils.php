@@ -21,4 +21,13 @@ class Utils {
 
         error_log('[ERROR] '.date('Y-m-d H:i:s')." ".$message);
     }
+
+    public static function sanitizeFileName($filename) {
+        if(DIRECTORY_SEPARATOR=="/"){
+            $filename = str_replace("\\", "/", $filename);
+        }else{
+            $filename = str_replace("/", "\\", $filename);
+        }
+        return $filename;
+    }
 }

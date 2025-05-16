@@ -126,6 +126,26 @@ class FlatStorage {
         }
     }
 
+    public function getAllFiles()
+    {
+        $result = [];
+        if ($handle = opendir($this->dataDir)) {
+
+            while (false !== ($entry = readdir($handle))) {
+
+                if ($entry != "." && $entry != "..") {
+                    $result[]=[
+                        'id' => $entry,
+                        'title' => $this->getLastName($entry),
+                        'parent' => $this->getLastParent($entry),
+                    ];
+                }
+            }
+
+            closedir($handle);
+        }
+        return $result;
+    }
     /**
      * List all children of a specific parent
      */

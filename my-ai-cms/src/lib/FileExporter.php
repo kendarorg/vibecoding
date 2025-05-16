@@ -24,57 +24,69 @@ class FileExporter {
         // Create temporary directory
         $tempDir = sys_get_temp_dir() . '/export_' . uniqid();
         mkdir($tempDir, 0777, true);
-        mkdir($tempDir . '/img', 0777, true);
+        try {
+            mkdir($tempDir . '/img', 0777, true);
 
-        // Get all files from flat storage
-        $allFiles = $this->flatStorage->getAllFiles();
+            // Get all files from flat storage
+            $allFiles = $this->flatStorage->getAllFiles();
 
-        // Process all markdown files
-        $markdownFiles = [];
-        $imageFiles = [];
+            // Process all markdown files
+            $markdownFiles = [];
+            $imageFiles = [];
 
-        foreach ($allFiles as $file) {
-            $uuid = $file['id'];
-            $extension = $file['extension'];
+            $imageFiles = $this->filesStorage->listFiles();
 
-            // Get the content
-            $content = $this->filesStorage->getContent($uuid . '.' . $extension);
+            foreach ($allFiles as $file) {
+                $uuid = $file['id'];
 
-            if ($extension === 'md') {
+                // Get the content
+                $content = $this->flatStorage->getContent($uuid );
+
                 // Process markdown content to update links
-                $content = $this->processMarkdownContent($content);
                 $markdownFiles[$uuid] = [
                     'title' => $file['title'],
-                    'content' => $content,
-                    'extension' => $extension
-                ];
-            } else {
-                // Treat as image or other binary file
-                $imageFiles[$uuid] = [
-                    'title' => $file['title'],
-                    'content' => $content,
-                    'extension' => $extension
+                    'content' => $content
                 ];
             }
-        }
 
-        // Create the directory structure and save files
-        foreach ($markdownFiles as $uuid => $fileData) {
-            $filePath = $tempDir . '/' . $this->sanitizeFilename($fileData['title']) . '.md';
-            file_put_contents($filePath, $fileData['content']);
-        }
+            // Create the directory structure and save files
+            foreach ($markdownFiles as $uuid => $fileData) {
+                $result = [];
+                $arrayPath = $this->flatStorage->getFullPath($uuid);
+                foreach($arrayPath as $item){
+                    $result[]=$item["id"];
+                }
+                $filePath = join("/",$result);
+                $dirPath = $tempDir . '/' .dirname($filePath);
+                if(!file_exists($dirPath)){
+                    mkdir($dirPath,077, true);
+                }
 
-        foreach ($imageFiles as $uuid => $fileData) {
-            $filePath = $tempDir . '/img/' . $uuid . '.' . $fileData['extension'];
-            file_put_contents($filePath, $fileData['content']);
-        }
+                $filePath = $tempDir . '/' . $filePath . '.md';
+                file_put_contents(Utils::sanitizeFileName($filePath),
+                    $content = $this->processMarkdownContent($fileData['content'],count($arrayPath)-1));
+            }
 
-        // Create ZIP archive
-        $zipPath = sys_get_temp_dir() . '/export_' . uniqid() . '.zip';
-        $this->createZipArchive($tempDir, $zipPath);
+            foreach ($imageFiles as  $fileData) {
+                $uuid=$fileData['id'];
+                $filePath = $tempDir . '/img/' . $uuid . '.' . $fileData['extension'];
+                $content = $this->filesStorage->getContent($uuid);
+                if($content) {
+                    file_put_contents(Utils::sanitizeFileName($filePath), $content);
+                }
+            }
+
+            // Create ZIP archive
+            $zipPath = Utils::sanitizeFileName(sys_get_temp_dir() . '/export_.zip');
+            $this->createZipArchive($tempDir, $zipPath);
+        }catch (Exception $e){
+
+        } finally {
+            $this->removeDirectory($tempDir);
+        }
 
         // Clean up temporary directory
-        $this->removeDirectory($tempDir);
+
 
         return $zipPath;
     }
@@ -85,12 +97,20 @@ class FileExporter {
      * @param string $content The markdown content
      * @return string The processed content
      */
-    private function processMarkdownContent($content) {
+    private function processMarkdownContent($content,$depth) {
+        $depthArray = [];
+        while($depth>0){
+            $depthArray[]="../";
+            $depth--;
+        }
+        $depthString = join("",$depthArray);
+        //return $content;
         // Replace API links with local image paths
-        $pattern = '/\[([^\]]+)\]\([^)]*api\/files\.php\?action=get&id=([^.]+)\.([^)]+)\)/';
-        $replacement = '[$1](img/$2.$3)';
-
-        return preg_replace($pattern, $replacement, $content);
+        //$pattern = '/\[([^\]]+)\]\([^)]*api\/files\.php\?action=get&id=([^.]+)\.([^)]+)\)/';
+        $pattern = '#([/a-zA-Z_\\-]*)/api/files\.php\?action=get&id=([^.]+)\.([^)]+)\)#';
+        $replacement = $depthString.'img/$2.$3';
+        $result = preg_replace($pattern, $replacement, $content);
+        return $result;
     }
 
     /**
