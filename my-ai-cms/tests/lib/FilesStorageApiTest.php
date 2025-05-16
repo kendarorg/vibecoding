@@ -175,27 +175,6 @@ class FilesStorageApiTest extends PHPUnit\Framework\TestCase {
 
         $_POST['title'] = 'Test Upload Title';
 
-        // Mock file_get_contents to return test content
-        $testContent = 'Test upload content';
-
-        // Create a mock for the API that overrides necessary methods
-       /* $apiMock = $this->getMockBuilder(FilesStorageApi::class)
-            ->setConstructorArgs([$this->fakeStorage])
-            ->onlyMethods(['getRequestBody'])
-            ->getMock();
-
-        // Setup the mock to return our test content
-        $apiMock->expects($this->once())
-            ->method('getRequestBody')
-            ->willReturn(json_encode([
-                'title' => 'Test Upload Title',
-                'content' => base64_encode($testContent)
-            ]));
-
-        // Process the request
-        $response = $apiMock->handlePostRequest('upload');*/
-
-
         $response = $this->api->processRequest();
 
         // Assertions
