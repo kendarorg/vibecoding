@@ -184,10 +184,9 @@ class FilesStorage {
             $this->logChecksum('DE', $basename, $filemd5);
 
             unlink($filePath);
-            return true;
         }
 
-        return false;
+        return true;
     }
 
     public function listFiles() {

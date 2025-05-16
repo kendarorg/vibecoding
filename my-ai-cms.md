@@ -11670,6 +11670,15 @@ To run these tests, you'll need PHPUnit installed. For complete testing, you mig
 Localized fontawesome
 
 ### REQ 067
+
+Write a php class containing a function that
+* Takes all files inside storage/content/data
+* Build a tree structure based on the storage/content/structure/index.log
+* Modify the links to [mypath]api/files.php?action=get&id=uuid.ext into img/uuid.ext
+* Send back to client a zip file containing 
+	* All the pages
+	* All the images, inside the img dir
+
 ### RES 067
 ### REQ 068
 ### RES 068
