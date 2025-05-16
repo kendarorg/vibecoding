@@ -2,6 +2,8 @@
 
 require_once "Utils.php";
 require_once "Markdown.php";
+require_once "export.php";
+
 
 class FileExporter {
     private $filesStorage;
@@ -53,6 +55,8 @@ class FileExporter {
             }
             $mkd = Markdown::new();
 
+            file_put_contents($tempDir."/script.js",buildJavascript());
+            file_put_contents($tempDir."/style.css",buildStyle());
             // Create the directory structure and save files
             foreach ($markdownFiles as $uuid => $fileData) {
                 $result = [];
@@ -73,7 +77,12 @@ class FileExporter {
                     $content);
 
                 $mkd->setContent($content);
-                $content = "<html><head><title>".htmlentities($item['title'])."</title></head><body>".$mkd->toHtml()."</body></html>";
+                $scriptsPath = $this->buildDepth(count($arrayPath)-1);
+                $content = "<html><head><title>".htmlentities($item['title'])."</title>".
+                    "<link rel=\"stylesheet\" href=\"".$scriptsPath."/style.css\" type=\"text/css\" />".
+                    "</head><body>".$mkd->toHtml().
+                    "<script src=\"".$scriptsPath."/script.js\" />".
+                    "</body></html>";
                 file_put_contents(Utils::sanitizeFileName($htmlPath),
                     $content);
             }
@@ -109,12 +118,7 @@ class FileExporter {
      * @return string The processed content
      */
     private function processMarkdownContent($content,$depth) {
-        $depthArray = [];
-        while($depth>0){
-            $depthArray[]="../";
-            $depth--;
-        }
-        $depthString = join("",$depthArray);
+        $depthString = $this->buildDepth($depth);
         //return $content;
         // Replace API links with local image paths
         //$pattern = '/\[([^\]]+)\]\([^)]*api\/files\.php\?action=get&id=([^.]+)\.([^)]+)\)/';
@@ -218,5 +222,20 @@ class FileExporter {
             unlink($zipPath);
             exit;
         }
+    }
+
+    /**
+     * @param mixed $depth
+     * @return string
+     */
+    public function buildDepth(mixed $depth): string
+    {
+        $depthArray = [];
+        while ($depth > 0) {
+            $depthArray[] = "../";
+            $depth--;
+        }
+        $depthString = join("", $depthArray);
+        return $depthString;
     }
 }
