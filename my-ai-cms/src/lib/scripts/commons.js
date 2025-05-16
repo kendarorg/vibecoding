@@ -208,3 +208,16 @@ function floatingPrompt(message,cbk,defaultValue='') {
             cbk(false)
         });
 }
+
+function forceStyleSheet(styleSheet) {
+    if(document.createStyleSheet) {
+        document.createStyleSheet('http://server/stylesheet.css');
+    }
+    else {
+        var styles = "@import url(' http://server/stylesheet.css ');";
+        var newSS=document.createElement('link');
+        newSS.rel='stylesheet';
+        newSS.href='data:text/css,'+escape(styles);
+        document.getElementsByTagName("head")[0].appendChild(newSS);
+    }
+}
