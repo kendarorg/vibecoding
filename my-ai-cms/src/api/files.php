@@ -21,7 +21,9 @@ $api = new FilesStorageApi($storage);
 
 // Process the request and get the response
 $response = $api->processRequest();
-
+if(!$response) {
+    exit;
+}
 // Return the response as JSON
 echo json_encode($response);
 exit;

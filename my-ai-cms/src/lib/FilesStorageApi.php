@@ -9,12 +9,16 @@ class FilesStorageApi {
         $this->storage = $storage;
     }
 
+    public function addHeader($header) {
+        header($header);
+    }
+
     /**
      * Process API requests and return appropriate responses
      *
      * @return array Response data as an associative array
      */
-    public function processRequest(): array {
+    public function processRequest(): ?array {
         // Get request method and action
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
         $action = $_GET['action'] ?? null;
@@ -51,7 +55,7 @@ class FilesStorageApi {
         }
     }
 
-    public function handleGetRequest(?string $action): array {
+    public function handleGetRequest(?string $action): ?array {
         switch ($action) {
             case 'list':
                 $extension = $_GET['extension'] ?? null;
@@ -100,7 +104,7 @@ class FilesStorageApi {
                 $content = $this->storage->getContent($id);
 
                 if ($content === null) {
-                    header('HTTP/1.0 404 Not Found');
+                    $this->addHeader('HTTP/1.0 404 Not Found');
                     exit('File not found');
                 }
 
@@ -125,11 +129,11 @@ class FilesStorageApi {
                 $contentType = $mimeTypes[$extension] ?? 'application/octet-stream';
 
                 // Output file directly instead of returning JSON
-                header('Content-Type: ' . $contentType);
-                header('Content-Length: ' . strlen($content));
-                header('Content-Disposition: inline; filename="' . basename($id) . '"');
+                $this->addHeader('Content-Type: ' . $contentType);
+                $this->addHeader('Content-Length: ' . strlen($content));
+                $this->addHeader('Content-Disposition: inline; filename="' . basename($id) . '"');
                 echo $content;
-                exit;
+                return null;
 
             default:
                 throw new InvalidArgumentException('Invalid action specified');
@@ -182,7 +186,7 @@ class FilesStorageApi {
                 'id' => $fileId
             ];
         }else if ($action === 'upload') {
-// Validate request
+            // Validate request
             if (empty($_FILES['file'])) {
                 $response['message'] = 'No file uploaded';
                 $response['success'] = false;

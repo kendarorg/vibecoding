@@ -8,6 +8,11 @@ class FlatStorageApi {
         $this->storage = $storage;
     }
 
+
+    public function addHeader($header) {
+        header($header);
+    }
+
     /**
      * Process API requests and return appropriate responses
      *
