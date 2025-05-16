@@ -11894,6 +11894,186 @@ $exporter->downloadZip($zipPath, 'exported_files.zip');
 ```
 
 ### REQ 068
+
+Create a sample top tree menu with multiple levels
+
 ### RES 068
+
+Here's a clean, responsive multi-level tree menu using HTML, CSS, and JavaScript:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Level Tree Menu</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        .tree-menu {
+            width: 300px;
+            margin: 20px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .tree-menu ul {
+            list-style: none;
+        }
+
+        .tree-menu li {
+            position: relative;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .tree-menu li:first-child {
+            border-top: none;
+        }
+
+        .tree-menu a {
+            display: block;
+            padding: 10px 15px;
+            text-decoration: none;
+            color: #333;
+        }
+
+        .tree-menu a:hover {
+            background-color: #e9e9e9;
+        }
+
+        .tree-menu ul ul {
+            display: none;
+            background-color: #fff;
+        }
+
+        .tree-menu ul ul a {
+            padding-left: 30px;
+        }
+
+        .tree-menu ul ul ul a {
+            padding-left: 45px;
+        }
+
+        .tree-menu ul ul ul ul a {
+            padding-left: 60px;
+        }
+
+        .has-submenu > a::after {
+            content: "+";
+            position: absolute;
+            right: 15px;
+            transition: transform 0.3s;
+        }
+
+        .has-submenu.open > a::after {
+            content: "-";
+        }
+
+        .active > a {
+            background-color: #4CAF50;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <nav class="tree-menu">
+        <ul>
+            <li class="has-submenu"><a href="#">Documents</a>
+                <ul>
+                    <li><a href="#">Reports</a></li>
+                    <li class="has-submenu"><a href="#">Financial</a>
+                        <ul>
+                            <li><a href="#">Q1 Results</a></li>
+                            <li><a href="#">Q2 Results</a></li>
+                            <li><a href="#">Annual Report</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="#">Presentations</a></li>
+                </ul>
+            </li>
+            <li class="has-submenu"><a href="#">Projects</a>
+                <ul>
+                    <li class="has-submenu"><a href="#">Web Development</a>
+                        <ul>
+                            <li><a href="#">Frontend</a></li>
+                            <li><a href="#">Backend</a></li>
+                            <li class="has-submenu"><a href="#">Frameworks</a>
+                                <ul>
+                                    <li><a href="#">React</a></li>
+                                    <li><a href="#">Vue</a></li>
+                                    <li><a href="#">Angular</a></li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                    <li><a href="#">Mobile Apps</a></li>
+                    <li><a href="#">Desktop Software</a></li>
+                </ul>
+            </li>
+            <li><a href="#">Settings</a></li>
+            <li><a href="#">Help</a></li>
+        </ul>
+    </nav>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add click event to all items with submenus
+            const menuItems = document.querySelectorAll('.has-submenu > a');
+            
+            menuItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Toggle the "open" class on the parent li
+                    const parent = this.parentElement;
+                    parent.classList.toggle('open');
+                    
+                    // Toggle submenu visibility
+                    const submenu = parent.querySelector('ul');
+                    if (submenu.style.display === 'block') {
+                        submenu.style.display = 'none';
+                    } else {
+                        submenu.style.display = 'block';
+                    }
+                });
+            });
+            
+            // Add click event to all menu items without submenus
+            const leafItems = document.querySelectorAll('.tree-menu li:not(.has-submenu) > a');
+            
+            leafItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    // Remove 'active' class from all items
+                    document.querySelectorAll('.tree-menu li').forEach(li => {
+                        li.classList.remove('active');
+                    });
+                    
+                    // Add 'active' class to the clicked item
+                    this.parentElement.classList.add('active');
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+```
+
+This multi-level tree menu has these features:
+
+1. Clean hierarchical structure with unlimited nesting support
+2. Expandable/collapsible sections with +/- indicators
+3. Visual feedback on hover and active state
+4. Proper indentation for nested items
+5. Simple JavaScript for toggle functionality
+6. Responsive design that works on mobile devices
+
+You can easily customize the colors, spacing, and other styles to match your design requirements.
 ### REQ 069
 ### RES 069
