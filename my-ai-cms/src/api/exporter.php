@@ -25,5 +25,9 @@ $storageFlat = new FlatStorage($dataDir, $structureDir);
 
 
 $exporter = new FileExporter($storageFiles, $storageFlat);
-$zipPath = $exporter->exportToZip();
+$type = 'all'; // Default to 'all' if not specified
+if (isset($_GET['type'])) {
+    $type = $_GET['type'];
+}
+$zipPath = $exporter->exportToZip($type);
 $exporter->downloadZip($zipPath, 'exported_files.zip');

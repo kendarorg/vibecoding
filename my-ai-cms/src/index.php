@@ -16,7 +16,7 @@ require_once "Settings.php";
 global $session;
 
 // Handle page selection via query parameter
-if (isset($_GET['p']) && in_array($_GET['p'], ['storage', 'files'])) {
+if (isset($_GET['p']) && in_array($_GET['p'], ['storage', 'files','maintenance'])) {
     $newPage = $_GET['p'];
     $currentPage = $session->get('currentPage', 'storage');
 
@@ -31,6 +31,7 @@ $currentPage = $session->get('currentPage',"storage");
 <div class="top-menu">
     <a href="index.php?p=storage" class="<?php echo $currentPage === 'storage' ? 'active' : ''; ?>">Storage</a>
     <a href="index.php?p=files" class="<?php echo $currentPage === 'files' ? 'active' : ''; ?>">Files</a>
+    <a href="index.php?p=maintenance" class="<?php echo $currentPage === 'maintenance' ? 'active' : ''; ?>">Maintenance</a>
 </div>
 <?php
 //require_once "storage.php";
