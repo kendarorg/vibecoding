@@ -1022,7 +1022,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     return `\n${hashes} ${content}\n\n`;
                 };
 
-                const markdown = turndownService.turndown(modifiedHtml);
+                const markdown = removeLinksFromImages(turndownService.turndown(modifiedHtml));
 
                 // Insert the markdown at cursor position
                 const editor = cm.getDoc();
@@ -1037,6 +1037,23 @@ document.addEventListener('DOMContentLoaded', function () {
     function generateImageFilename(extension) {
         const timestamp = new Date().getTime();
         return `pasted-image-${timestamp}.${extension}`;
+    }
+
+    /**
+     * Removes links wrapping around images in Markdown content
+     * @param {string} markdownContent - The markdown content to process
+     * @return {string} - The markdown with links removed from images
+     */
+    function removeLinksFromImages(result) {
+        if (!result) return result;
+
+        const linkedImagePattern =/\[[\s]*(!\[[^\]]+\]\([^\)]+\))[\s]*([^\]]*)\]\(([^\)]+)\)/gmi;
+        const emptyLink =/\[\]\(([^\)]+)\)/gmi;
+        const linkOnTitle =/\[[\s]*([#]+)[\s]*([^\]]+)\]\(([^\)]+)\)/gmi;
+        result= result.replaceAll(linkedImagePattern, '$1\n$2\n[link]($3)\n');
+        result= result.replaceAll(emptyLink, '[$1]($1)\n');
+        result= result.replaceAll(linkOnTitle, '\n$1 $2\n[link]($3)\n');
+        return result;
     }
 
 });
