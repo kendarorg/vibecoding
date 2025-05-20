@@ -33,96 +33,12 @@ class FileExporter
         $tempDir = sys_get_temp_dir() . '/export_' . uniqid();
         mkdir($tempDir, 0777, true);
         try {
-            mkdir($tempDir . '/img', 0777, true);
-
-            // Get all files from flat storage
-            $allFiles = $this->flatStorage->getAllFiles();
-
-            if ($type === 'all' || $type === 'browsable') {
-                Utils::info("Generating index.html");
-                // Generate index.html with a tree menu
-                $this->generateIndexHtml($tempDir, $allFiles);
+            if($type==='backup'){
+                $this->backup($tempDir);
+            }else{
+                $this->export($tempDir, $type);
             }
 
-            if ($type === 'images' || $type === 'all' || $type === 'browsable') {
-                Utils::info("Generating images");
-                // Process all markdown files
-                $imageFiles = $this->filesStorage->listFiles();
-
-
-                foreach ($imageFiles as $fileData) {
-                    $uuid = $fileData['id'];
-                    $filePath = $tempDir . '/img/' . $uuid . '.' . $fileData['extension'];
-                    $content = $this->filesStorage->getContent($uuid);
-                    if ($content) {
-                        file_put_contents(Utils::sanitizeFileName($filePath), $content);
-                    }
-                }
-            }
-
-
-            $markdownFiles = [];
-            foreach ($allFiles as $file) {
-                $uuid = $file['id'];
-
-                // Get the content
-                $content = $this->flatStorage->getContent($uuid);
-
-                // Process markdown content to update links
-                $markdownFiles[$uuid] = [
-                    'title' => $file['title'],
-                    'content' => $content
-                ];
-            }
-
-            $mkd = Markdown::new();
-
-
-            if ($type === 'all' || $type === 'browsable') {
-                Utils::info("Generating scripts");
-                file_put_contents($tempDir . "/script.js", buildJavascript());
-                file_put_contents($tempDir . "/style.css", buildStyle());
-            }
-            if ($type === 'all' || $type === 'browsable' || $type === 'md') {
-                Utils::info("Generating ".$type);
-                // Create the directory structure and save files
-                foreach ($markdownFiles as $uuid => $fileData) {
-                    $result = [];
-                    $arrayPath = $this->flatStorage->getFullPath($uuid);
-                    foreach ($arrayPath as $item) {
-                        $result[] = $item["id"];
-                    }
-
-                    $filePath = join("/", $result);
-                    $dirPath = $tempDir . '/' . dirname($filePath);
-                    if (!file_exists($dirPath)) {
-                        mkdir($dirPath, 077, true);
-                    }
-
-                    $mdPath = $tempDir . '/' . $filePath . '.md';
-                    $htmlPath = $tempDir . '/' . $filePath . '.html';
-
-                    $content = $this->processMarkdownContent($fileData['content'], count($arrayPath) - 1);
-                    if ($type === 'all' || $type === 'md') {
-                        Utils::info("Generating ".$item['title']." markdown");
-                        file_put_contents(Utils::sanitizeFileName($mdPath),
-                            $content);
-                    }
-
-                    if ($type === 'all' || $type === 'browsable') {
-                        Utils::info("Generating ".$item['title']." html");
-                        $mkd->setContent($content);
-                        $scriptsPath = $this->buildDepth(count($arrayPath) - 1);
-                        $content = "<html><head><title>" . htmlentities($item['title']) . "</title>" .
-                            "<link rel=\"stylesheet\" href=\"" . $scriptsPath . "/style.css\" type=\"text/css\" />" .
-                            "</head><body>" . $mkd->toHtml() .
-                            "<script src=\"" . $scriptsPath . "/script.js\" />" .
-                            "</body></html>";
-                        file_put_contents(Utils::sanitizeFileName($htmlPath),
-                            $content);
-                    }
-                }
-            }
 
             // Create ZIP archive
             $zipPath = Utils::sanitizeFileName(sys_get_temp_dir() . '/export_.zip');
@@ -404,5 +320,148 @@ HTML;
 
         $html .= '</ul>';
         return $html;
+    }
+
+    /**
+     * @param string $tempDir
+     * @param string $type
+     * @return void
+     */
+    public function export(string $tempDir, string $type): void
+    {
+        mkdir($tempDir . '/img', 0777, true);
+
+        // Get all files from flat storage
+        $allFiles = $this->flatStorage->getAllFiles();
+
+        if ($type === 'all' || $type === 'browsable') {
+            Utils::info("Generating index.html");
+            // Generate index.html with a tree menu
+            $this->generateIndexHtml($tempDir, $allFiles);
+        }
+
+        if ($type === 'images' || $type === 'all' || $type === 'browsable') {
+            Utils::info("Generating images");
+            // Process all markdown files
+            $imageFiles = $this->filesStorage->listFiles();
+
+
+            foreach ($imageFiles as $fileData) {
+                $uuid = $fileData['id'];
+                $filePath = $tempDir . '/img/' . $uuid . '.' . $fileData['extension'];
+                $content = $this->filesStorage->getContent($uuid);
+                if ($content) {
+                    file_put_contents(Utils::sanitizeFileName($filePath), $content);
+                }
+            }
+        }
+
+
+        $markdownFiles = [];
+        foreach ($allFiles as $file) {
+            $uuid = $file['id'];
+
+            // Get the content
+            $content = $this->flatStorage->getContent($uuid);
+
+            // Process markdown content to update links
+            $markdownFiles[$uuid] = [
+                'title' => $file['title'],
+                'content' => $content
+            ];
+        }
+
+        $mkd = Markdown::new();
+
+
+        if ($type === 'all' || $type === 'browsable') {
+            Utils::info("Generating scripts");
+            file_put_contents($tempDir . "/script.js", buildJavascript());
+            file_put_contents($tempDir . "/style.css", buildStyle());
+        }
+        if ($type === 'all' || $type === 'browsable' || $type === 'md') {
+            Utils::info("Generating " . $type);
+            // Create the directory structure and save files
+            foreach ($markdownFiles as $uuid => $fileData) {
+                $result = [];
+                $arrayPath = $this->flatStorage->getFullPath($uuid);
+                foreach ($arrayPath as $item) {
+                    $result[] = $item["id"];
+                }
+
+                $filePath = join("/", $result);
+                $dirPath = $tempDir . '/' . dirname($filePath);
+                if (!file_exists($dirPath)) {
+                    mkdir($dirPath, 077, true);
+                }
+
+                $mdPath = $tempDir . '/' . $filePath . '.md';
+                $htmlPath = $tempDir . '/' . $filePath . '.html';
+
+                $content = $this->processMarkdownContent($fileData['content'], count($arrayPath) - 1);
+                if ($type === 'all' || $type === 'md') {
+                    Utils::info("Generating " . $item['title'] . " markdown");
+                    file_put_contents(Utils::sanitizeFileName($mdPath),
+                        $content);
+                }
+
+                if ($type === 'all' || $type === 'browsable') {
+                    Utils::info("Generating " . $item['title'] . " html");
+                    $mkd->setContent($content);
+                    $scriptsPath = $this->buildDepth(count($arrayPath) - 1);
+                    $content = "<html><head><title>" . htmlentities($item['title']) . "</title>" .
+                        "<link rel=\"stylesheet\" href=\"" . $scriptsPath . "/style.css\" type=\"text/css\" />" .
+                        "</head><body>" . $mkd->toHtml() .
+                        "<script src=\"" . $scriptsPath . "/script.js\" />" .
+                        "</body></html>";
+                    file_put_contents(Utils::sanitizeFileName($htmlPath),
+                        $content);
+                }
+            }
+        }
+    }
+
+    /**
+     * Create a backup of all storage files without processing
+     *
+     * @param string $tempDir The temporary directory to store the backup
+     * @return void
+     */
+    public function backup(string $tempDir): void
+    {
+        Utils::info("Starting backup process");
+
+        mkdir($tempDir . '/files/data', 0777, true);
+        mkdir($tempDir . '/files/structure', 0777, true);
+        mkdir($tempDir . '/content/data', 0777, true);
+        mkdir($tempDir . '/content/structure', 0777, true);
+
+        // Backup files storage
+        $files = $this->filesStorage->listFiles();
+        $filesStructureNames =[];
+        $filesStructureChecksum =[];
+        foreach($files as $file){
+            $filesStructureNames[]="CR,".$file['id'].",".$file['title'];
+            $content = $this->filesStorage->getContent($file['id']);
+            $checksum = md5($content);
+            $filesStructureChecksum[]="CR,".$file['id'].",".$checksum;
+            file_put_contents($tempDir . '/files/data/'. $file['id'] . '.' . $file['extension'], $content);
+        }
+        file_put_contents($tempDir . '/files/structure/checksums.log', join("\n", $filesStructureChecksum));
+        file_put_contents($tempDir . '/files/structure/names.log', join("\n", $filesStructureNames));
+
+
+        // Backup flat storage
+        $files = $this->flatStorage->getAllFiles();
+        $filesStructureIndex =[];
+        $filesStructureNames =[];
+        foreach($files as $file){
+            $filesStructureIndex[]="CR,".$file['id'].",".$file['parent'];
+            $filesStructureNames[]="CR,".$file['id'].",".$file['title'];
+            $content = $this->flatStorage->getContent($file['id']);
+            file_put_contents($tempDir . '/content/data/'. $file['id'], $content);
+        }
+        file_put_contents($tempDir . '/content/structure/index.log', join("\n", $filesStructureIndex));
+        file_put_contents($tempDir . '/content/structure/names.log', join("\n", $filesStructureNames));
     }
 }

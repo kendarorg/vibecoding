@@ -8,6 +8,7 @@
                 <option value="md">Markdown Only</option>
                 <option value="images">Images Only</option>
                 <option value="browsable">Browsable Html</option>
+                <option value="backup">Backup</option>
             </select>
         </div>
         <button type="submit" class="btn">Export</button>
