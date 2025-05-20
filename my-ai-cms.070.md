@@ -1767,5 +1767,93 @@ this.registerPlugin('code', new CodeBlockPlugin());
 
 These plugins provide header blocks with title and subtitle fields, and code blocks with language selection and theme options.
 
+
+### REQ 072
+Create a backup function that backups the storage as is (session excluded) using to access the source files only the flat and files storages
+
+### RES 072
+/**
+ * Create a backup of all storage files without processing
+ *
+ * @param string $tempDir The temporary directory to store the backup
+ * @return void
+ */
+public function backup(string $tempDir): void
+{
+    Utils::info("Starting backup process");
+
+    // Backup files storage
+    $filesDataDir = $this->filesStorage->getDataDirectory();
+    $filesStructureDir = $this->filesStorage->getStructureDirectory();
+
+    // Backup flat storage
+    $flatDataDir = $this->flatStorage->getDataDirectory();
+    $flatStructureDir = $this->flatStorage->getStructureDirectory();
+
+    // Create backup directory structure
+    mkdir($tempDir . '/files/data', 0777, true);
+    mkdir($tempDir . '/files/structure', 0777, true);
+    mkdir($tempDir . '/content/data', 0777, true);
+    mkdir($tempDir . '/content/structure', 0777, true);
+
+    // Copy files storage
+    Utils::info("Backing up files storage");
+    $this->copyDirectory($filesDataDir, $tempDir . '/files/data');
+    $this->copyDirectory($filesStructureDir, $tempDir . '/files/structure');
+
+    // Copy flat storage
+    Utils::info("Backing up flat storage");
+    $this->copyDirectory($flatDataDir, $tempDir . '/content/data');
+    $this->copyDirectory($flatStructureDir, $tempDir . '/content/structure');
+
+    Utils::info("Backup completed");
+}
+
+/**
+ * Copy a directory and its contents recursively
+ *
+ * @param string $source Source directory
+ * @param string $destination Destination directory
+ * @return void
+ */
+private function copyDirectory(string $source, string $destination): void
+{
+    if (!is_dir($source)) {
+        return;
+    }
+
+    $files = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($source, RecursiveDirectoryIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::SELF_FIRST
+    );
+
+    foreach ($files as $file) {
+        $targetPath = Utils::sanitizeFileName($destination . '/' . $files->getSubPathName());
+
+        if ($file->isDir()) {
+            if (!file_exists($targetPath)) {
+                mkdir($targetPath, 0777, true);
+            }
+        } else {
+            $dirPath = dirname($targetPath);
+            if (!file_exists($dirPath)) {
+                mkdir($dirPath, 0777, true);
+            }
+            copy($file->getRealPath(), $targetPath);
+        }
+    }
+}
+
+### FIX 072
+
+Completely failed
+
+### REQ 072
+### REQ 072
+### REQ 072
+### REQ 072
+### REQ 072
+### REQ 072
+### REQ 072
 ### REQ 072
 ### REQ 072
