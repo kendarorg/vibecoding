@@ -47,6 +47,7 @@ class FlatStorage {
 
         // Handle content update if provided
         if ($itemContent !== null) {
+
             file_put_contents($itemPath, $itemContent);
         } elseif (!$itemExists) {
             // Create empty file if it doesn't exist and no content was provided
