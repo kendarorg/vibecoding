@@ -2,120 +2,139 @@
 function buildStyle(){
     ob_start();
     ?>
-    * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: Arial, sans-serif;
-    }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
 
-    .tree-menu {
-    width: 300px;
-    margin: 20px;
-    background-color: #f5f5f5;
-    border-radius: 5px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    }
+        #sidebar {
+            width: 300px;
+            height: 100%;
+            overflow: auto;
+            background-color: #f5f5f5;
+            padding: 10px;
+            box-sizing: border-box;
+            border-right: 1px solid #ddd;
+        }
 
-    .tree-menu ul {
-    list-style: none;
-    }
+        #content {
+            flex: 1;
+            height: 100%;
+            overflow: auto;
+            padding: 10px;
+            box-sizing: border-box;
+        }
 
-    .tree-menu li {
-    position: relative;
-    border-top: 1px solid #e0e0e0;
-    }
+        .tree-menu ul {
+            list-style-type: none;
+            padding-left: 20px;
+        }
 
-    .tree-menu li:first-child {
-    border-top: none;
-    }
+        .tree-menu {
+            padding-left: 0;
+        }
 
-    .tree-menu a {
-    display: block;
-    padding: 10px 15px;
-    text-decoration: none;
-    color: #333;
-    }
+        .tree-menu li {
+            margin: 5px 0;
+        }
 
-    .tree-menu a:hover {
-    background-color: #e9e9e9;
-    }
+        .folder {
+            cursor: pointer;
+            user-select: none;
+            font-weight: bold;
+        }
 
-    .tree-menu ul ul {
-    display: none;
-    background-color: #fff;
-    }
+        .folder::before {
+            content: "▶";
+            display: inline-block;
+            margin-right: 5px;
+            font-size: 10px;
+            transition: transform 0.2s;
+        }
 
-    .tree-menu ul ul a {
-    padding-left: 30px;
-    }
+        .folder.open::before {
+            transform: rotate(90deg);
+        }
 
-    .tree-menu ul ul ul a {
-    padding-left: 45px;
-    }
+        .folder-content {
+            display: none;
+        }
 
-    .tree-menu ul ul ul ul a {
-    padding-left: 60px;
-    }
+        .folder.open + .folder-content {
+            display: block;
+        }
 
-    .has-submenu > a::after {
-    content: "+";
-    position: absolute;
-    right: 15px;
-    transition: transform 0.3s;
-    }
+        .file {
+            cursor: pointer;
+            padding: 2px 0;
+        }
 
-    .has-submenu.open > a::after {
-    content: "-";
-    }
+        .file:hover {
+            text-decoration: underline;
+            color: #007bff;
+        }
 
-    .active > a {
-    background-color: #4CAF50;
-    color: white;
-    }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
 <?php
     return ob_get_clean();
 }
 function buildJavascript(){
     ob_start();
         ?>
-            document.addEventListener('DOMContentLoaded', function() {
-                // Add click event to all items with submenus
-                const menuItems = document.querySelectorAll('.has-submenu > a');
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle folder clicks
+            document.querySelectorAll('.folder').forEach(folder => {
+                folder.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    this.classList.toggle('open');
+                    let path = this.getAttribute('data-path');
+                    document.getElementById('content-frame').src = path;
 
-                menuItems.forEach(item => {
-                    item.addEventListener('click', function(e) {
-                        e.preventDefault();
-
-                        // Toggle the "open" class on the parent li
-                        const parent = this.parentElement;
-                        parent.classList.toggle('open');
-
-                        // Toggle submenu visibility
-                        const submenu = parent.querySelector('ul');
-                        if (submenu.style.display === 'block') {
-                            submenu.style.display = 'none';
-                        } else {
-                            submenu.style.display = 'block';
-                        }
+                    // Highlight selected file
+                    document.querySelectorAll('.file.selected').forEach(selected => {
+                    selected.classList.remove('selected');
                     });
-                });
-
-                // Add click event to all menu items without submenus
-                const leafItems = document.querySelectorAll('.tree-menu li:not(.has-submenu) > a');
-
-                leafItems.forEach(item => {
-                    item.addEventListener('click', function(e) {
-                        // Remove 'active' class from all items
-                        document.querySelectorAll('.tree-menu li').forEach(li => {
-                            li.classList.remove('active');
-                        });
-
-                        // Add 'active' class to the clicked item
-                        this.parentElement.classList.add('active');
-                    });
+                    this.classList.add('selected');
                 });
             });
+
+            // Handle file clicks
+            document.querySelectorAll('.file').forEach(file => {
+                file.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    let path = this.getAttribute('data-path');
+                    document.getElementById('content-frame').src = path;
+
+                    // Highlight selected file
+                    document.querySelectorAll('.file.selected').forEach(selected => {
+                        selected.classList.remove('selected');
+                    });
+                    this.classList.add('selected');
+                });
+            });
+
+            // Expand all folders function
+            window.expandAll = function() {
+                document.querySelectorAll('.folder').forEach(folder => {
+                    folder.classList.add('open');
+                });
+            };
+
+            // Collapse all folders function
+            window.collapseAll = function() {
+                document.querySelectorAll('.folder').forEach(folder => {
+                    folder.classList.remove('open');
+                });
+            };
+        });
 <?php
     return ob_get_clean();
 }

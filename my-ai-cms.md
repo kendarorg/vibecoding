@@ -1,5 +1,6 @@
 ### REQ 001
 
+```
 <step>
 Create a php class called FlatStorage that
 * Uses two files as "indexes"
@@ -34,6 +35,7 @@ Expose these methods
 * getContent(ITEM_UUID)
 	* Return the content of the file "data/ITEM_UUID"
 </step>
+```
 
 ### RES 001
 
@@ -12077,4 +12079,279 @@ This multi-level tree menu has these features:
 You can easily customize the colors, spacing, and other styles to match your design requirements.
 
 ### REQ 069
+
+inside the FileExporter after getAllFiles call 
+* generate an index.html page
+* It will contains the static treemenu to navigate all pages
+* clicking on an item will expand/collapse it
+* Will open in the right side the page loading it directly from file system
+* Should work with plain JavaScript
+
 ### RES 069
+
+I'll implement an index.html generator in the FileExporter class that creates a static tree menu navigation system. This will allow users to navigate through all the exported pages with expand/collapse functionality and load content in the right panel.
+
+Here's the implementation to add after the `getAllFiles` call:
+
+```php
+// After getting all files from flat storage
+$allFiles = $this->flatStorage->getAllFiles();
+
+// Generate index.html with a tree menu
+$this->generateIndexHtml($tempDir, $allFiles);
+
+// Process all markdown files
+```
+
+Now let's add the method to generate the index.html file:
+
+```php
+/**
+ * Generate index.html with a tree menu for navigation
+ *
+ * @param string $tempDir Temporary directory where files are being exported
+ * @param array $allFiles Array of all files to include in the menu
+ */
+private function generateIndexHtml($tempDir, $allFiles) {
+    // Build hierarchical structure
+    $tree = [];
+    foreach ($allFiles as $file) {
+        $uuid = $file['id'];
+        $path = $this->flatStorage->getFullPath($uuid);
+        $currentLevel = &$tree;
+        
+        // Build tree structure
+        $filePath = [];
+        foreach ($path as $index => $item) {
+            $filePath[] = $item['id'];
+            
+            if ($index < count($path) - 1) {
+                // It's a folder
+                if (!isset($currentLevel[$item['id']])) {
+                    $currentLevel[$item['id']] = [
+                        'title' => $item['title'],
+                        'type' => 'folder',
+                        'children' => []
+                    ];
+                }
+                $currentLevel = &$currentLevel[$item['id']]['children'];
+            } else {
+                // It's a file
+                $currentLevel[$item['id']] = [
+                    'title' => $item['title'],
+                    'type' => 'file',
+                    'path' => implode('/', $filePath) . '.html',
+                    'id' => $uuid
+                ];
+            }
+        }
+    }
+    
+    // Generate HTML
+    $html = $this->generateIndexHtmlContent($tree);
+    file_put_contents($tempDir . '/index.html', $html);
+}
+
+/**
+ * Generate HTML content for index.html
+ *
+ * @param array $tree Hierarchical tree structure of files
+ * @return string HTML content
+ */
+private function generateIndexHtmlContent($tree) {
+    $html = <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Explorer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        #sidebar {
+            width: 300px;
+            height: 100%;
+            overflow: auto;
+            background-color: #f5f5f5;
+            padding: 10px;
+            box-sizing: border-box;
+            border-right: 1px solid #ddd;
+        }
+        
+        #content {
+            flex: 1;
+            height: 100%;
+            overflow: auto;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        
+        .tree-menu ul {
+            list-style-type: none;
+            padding-left: 20px;
+        }
+        
+        .tree-menu {
+            padding-left: 0;
+        }
+        
+        .tree-menu li {
+            margin: 5px 0;
+        }
+        
+        .folder {
+            cursor: pointer;
+            user-select: none;
+            font-weight: bold;
+        }
+        
+        .folder::before {
+            content: "▶";
+            display: inline-block;
+            margin-right: 5px;
+            font-size: 10px;
+            transition: transform 0.2s;
+        }
+        
+        .folder.open::before {
+            transform: rotate(90deg);
+        }
+        
+        .folder-content {
+            display: none;
+        }
+        
+        .folder.open + .folder-content {
+            display: block;
+        }
+        
+        .file {
+            cursor: pointer;
+            padding: 2px 0;
+        }
+        
+        .file:hover {
+            text-decoration: underline;
+            color: #007bff;
+        }
+        
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <div class="tree-menu">
+HTML;
+
+    $html .= $this->renderTreeMenu($tree);
+
+    $html .= <<<HTML
+        </div>
+    </div>
+    <div id="content">
+        <iframe id="content-frame" src="about:blank"></iframe>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle folder clicks
+            document.querySelectorAll('.folder').forEach(folder => {
+                folder.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    this.classList.toggle('open');
+                });
+            });
+            
+            // Handle file clicks
+            document.querySelectorAll('.file').forEach(file => {
+                file.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    let path = this.getAttribute('data-path');
+                    document.getElementById('content-frame').src = path;
+                    
+                    // Highlight selected file
+                    document.querySelectorAll('.file.selected').forEach(selected => {
+                        selected.classList.remove('selected');
+                    });
+                    this.classList.add('selected');
+                });
+            });
+            
+            // Expand all folders function
+            window.expandAll = function() {
+                document.querySelectorAll('.folder').forEach(folder => {
+                    folder.classList.add('open');
+                });
+            };
+            
+            // Collapse all folders function
+            window.collapseAll = function() {
+                document.querySelectorAll('.folder').forEach(folder => {
+                    folder.classList.remove('open');
+                });
+            };
+        });
+    </script>
+</body>
+</html>
+HTML;
+
+    return $html;
+}
+
+/**
+ * Render tree menu HTML
+ *
+ * @param array $items Items to render
+ * @return string HTML content
+ */
+private function renderTreeMenu($items) {
+    $html = '<ul>';
+    
+    foreach ($items as $key => $item) {
+        if ($item['type'] === 'folder') {
+            $html .= '<li>';
+            $html .= '<div class="folder">' . htmlspecialchars($item['title']) . '</div>';
+            $html .= '<div class="folder-content">';
+            $html .= $this->renderTreeMenu($item['children']);
+            $html .= '</div>';
+            $html .= '</li>';
+        } else {
+            $html .= '<li>';
+            $html .= '<div class="file" data-path="' . htmlspecialchars($item['path']) . '">' . 
+                    htmlspecialchars($item['title']) . '</div>';
+            $html .= '</li>';
+        }
+    }
+    
+    $html .= '</ul>';
+    return $html;
+}
+```
+
+This implementation:
+
+1. Builds a tree structure from all files
+2. Generates an index.html file with:
+   - A left sidebar containing the tree menu
+   - A right content area with an iframe to display the selected page
+   - JavaScript for handling expand/collapse functionality
+   - CSS for styling the tree menu and layout
+
+The tree menu allows users to:
+- Click on folders to expand/collapse them
+- Click on files to load them in the right panel
+- Navigate through the entire document structure
+
+All functionality works with plain JavaScript without any external dependencies, loading content directly from the file system.
