@@ -5,7 +5,8 @@ require_once "Markdown.php";
 require_once "export.php";
 
 
-class FileExporter {
+class FileExporter
+{
     private $filesStorage;
     private $flatStorage;
 
@@ -15,17 +16,19 @@ class FileExporter {
      * @param FilesStorage $filesStorage The files storage instance
      * @param FlatStorage $flatStorage The flat storage instance
      */
-    public function __construct($filesStorage, $flatStorage) {
+    public function __construct($filesStorage, $flatStorage)
+    {
         $this->filesStorage = $filesStorage;
         $this->flatStorage = $flatStorage;
     }
 
     /**
      * Export all files to a ZIP archive
-     *
+     * @param string $type Type of content to export (e.g., 'all', 'md', 'image')
      * @return string Path to the created ZIP file
      */
-    public function exportToZip() {
+    public function exportToZip($type)
+    {
         // Create temporary directory
         $tempDir = sys_get_temp_dir() . '/export_' . uniqid();
         mkdir($tempDir, 0777, true);
@@ -35,22 +38,35 @@ class FileExporter {
             // Get all files from flat storage
             $allFiles = $this->flatStorage->getAllFiles();
 
+            if ($type === 'all' || $type === 'browsable') {
+                Utils::info("Generating index.html");
+                // Generate index.html with a tree menu
+                $this->generateIndexHtml($tempDir, $allFiles);
+            }
 
-            // Generate index.html with a tree menu
-            $this->generateIndexHtml($tempDir, $allFiles);
+            if ($type === 'images' || $type === 'all' || $type === 'browsable') {
+                Utils::info("Generating images");
+                // Process all markdown files
+                $imageFiles = $this->filesStorage->listFiles();
 
-            // Process all markdown files
+
+                foreach ($imageFiles as $fileData) {
+                    $uuid = $fileData['id'];
+                    $filePath = $tempDir . '/img/' . $uuid . '.' . $fileData['extension'];
+                    $content = $this->filesStorage->getContent($uuid);
+                    if ($content) {
+                        file_put_contents(Utils::sanitizeFileName($filePath), $content);
+                    }
+                }
+            }
+
+
             $markdownFiles = [];
-            $imageFiles = [];
-
-            $imageFiles = $this->filesStorage->listFiles();
-
-
             foreach ($allFiles as $file) {
                 $uuid = $file['id'];
 
                 // Get the content
-                $content = $this->flatStorage->getContent($uuid );
+                $content = $this->flatStorage->getContent($uuid);
 
                 // Process markdown content to update links
                 $markdownFiles[$uuid] = [
@@ -58,53 +74,60 @@ class FileExporter {
                     'content' => $content
                 ];
             }
+
             $mkd = Markdown::new();
 
-            file_put_contents($tempDir."/script.js",buildJavascript());
-            file_put_contents($tempDir."/style.css",buildStyle());
-            // Create the directory structure and save files
-            foreach ($markdownFiles as $uuid => $fileData) {
-                $result = [];
-                $arrayPath = $this->flatStorage->getFullPath($uuid);
-                foreach($arrayPath as $item){
-                    $result[]=$item["id"];
-                }
-                $filePath = join("/",$result);
-                $dirPath = $tempDir . '/' .dirname($filePath);
-                if(!file_exists($dirPath)){
-                    mkdir($dirPath,077, true);
-                }
 
-                $mdPath = $tempDir . '/' . $filePath . '.md';
-                $htmlPath = $tempDir . '/' . $filePath . '.html';
-                $content = $this->processMarkdownContent($fileData['content'],count($arrayPath)-1);
-                file_put_contents(Utils::sanitizeFileName($mdPath),
-                    $content);
-
-                $mkd->setContent($content);
-                $scriptsPath = $this->buildDepth(count($arrayPath)-1);
-                $content = "<html><head><title>".htmlentities($item['title'])."</title>".
-                    "<link rel=\"stylesheet\" href=\"".$scriptsPath."/style.css\" type=\"text/css\" />".
-                    "</head><body>".$mkd->toHtml().
-                    "<script src=\"".$scriptsPath."/script.js\" />".
-                    "</body></html>";
-                file_put_contents(Utils::sanitizeFileName($htmlPath),
-                    $content);
+            if ($type === 'all' || $type === 'browsable') {
+                Utils::info("Generating scripts");
+                file_put_contents($tempDir . "/script.js", buildJavascript());
+                file_put_contents($tempDir . "/style.css", buildStyle());
             }
+            if ($type === 'all' || $type === 'browsable' || $type === 'md') {
+                Utils::info("Generating ".$type);
+                // Create the directory structure and save files
+                foreach ($markdownFiles as $uuid => $fileData) {
+                    $result = [];
+                    $arrayPath = $this->flatStorage->getFullPath($uuid);
+                    foreach ($arrayPath as $item) {
+                        $result[] = $item["id"];
+                    }
 
-            foreach ($imageFiles as  $fileData) {
-                $uuid=$fileData['id'];
-                $filePath = $tempDir . '/img/' . $uuid . '.' . $fileData['extension'];
-                $content = $this->filesStorage->getContent($uuid);
-                if($content) {
-                    file_put_contents(Utils::sanitizeFileName($filePath), $content);
+                    $filePath = join("/", $result);
+                    $dirPath = $tempDir . '/' . dirname($filePath);
+                    if (!file_exists($dirPath)) {
+                        mkdir($dirPath, 077, true);
+                    }
+
+                    $mdPath = $tempDir . '/' . $filePath . '.md';
+                    $htmlPath = $tempDir . '/' . $filePath . '.html';
+
+                    $content = $this->processMarkdownContent($fileData['content'], count($arrayPath) - 1);
+                    if ($type === 'all' || $type === 'md') {
+                        Utils::info("Generating ".$item['title']." markdown");
+                        file_put_contents(Utils::sanitizeFileName($mdPath),
+                            $content);
+                    }
+
+                    if ($type === 'all' || $type === 'browsable') {
+                        Utils::info("Generating ".$item['title']." html");
+                        $mkd->setContent($content);
+                        $scriptsPath = $this->buildDepth(count($arrayPath) - 1);
+                        $content = "<html><head><title>" . htmlentities($item['title']) . "</title>" .
+                            "<link rel=\"stylesheet\" href=\"" . $scriptsPath . "/style.css\" type=\"text/css\" />" .
+                            "</head><body>" . $mkd->toHtml() .
+                            "<script src=\"" . $scriptsPath . "/script.js\" />" .
+                            "</body></html>";
+                        file_put_contents(Utils::sanitizeFileName($htmlPath),
+                            $content);
+                    }
                 }
             }
 
             // Create ZIP archive
             $zipPath = Utils::sanitizeFileName(sys_get_temp_dir() . '/export_.zip');
             $this->createZipArchive($tempDir, $zipPath);
-        }catch (Exception $e){
+        } catch (Exception $e) {
 
         } finally {
             $this->removeDirectory($tempDir);
@@ -122,13 +145,14 @@ class FileExporter {
      * @param string $content The markdown content
      * @return string The processed content
      */
-    private function processMarkdownContent($content,$depth) {
+    private function processMarkdownContent($content, $depth)
+    {
         $depthString = $this->buildDepth($depth);
         //return $content;
         // Replace API links with local image paths
         //$pattern = '/\[([^\]]+)\]\([^)]*api\/files\.php\?action=get&id=([^.]+)\.([^)]+)\)/';
         $pattern = '#([/a-zA-Z_\\-]*)/api/files\.php\?action=get&id=([^.]+)\.([^)]+)\)#';
-        $replacement = $depthString.'img/$2.$3)';
+        $replacement = $depthString . 'img/$2.$3)';
         $result = preg_replace($pattern, $replacement, $content);
         return $result;
     }
@@ -140,7 +164,8 @@ class FileExporter {
      * @param string $outputPath The output ZIP file path
      * @return bool Success status
      */
-    private function createZipArchive($sourceDir, $outputPath) {
+    private function createZipArchive($sourceDir, $outputPath)
+    {
         $zip = new ZipArchive();
 
         if ($zip->open($outputPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true) {
@@ -170,7 +195,8 @@ class FileExporter {
      *
      * @param string $dir Directory path to remove
      */
-    private function removeDirectory($dir) {
+    private function removeDirectory($dir)
+    {
         if (!file_exists($dir)) {
             return;
         }
@@ -196,7 +222,8 @@ class FileExporter {
      * @param string $filename The filename to sanitize
      * @return string Sanitized filename
      */
-    private function sanitizeFilename($filename) {
+    private function sanitizeFilename($filename)
+    {
         // Replace spaces with underscores
         $filename = str_replace(' ', '_', $filename);
 
@@ -212,7 +239,8 @@ class FileExporter {
      * @param string $zipPath Path to the ZIP file
      * @param string $filename Filename to use for download
      */
-    public function downloadZip($zipPath, $filename = 'export.zip') {
+    public function downloadZip($zipPath, $filename = 'export.zip')
+    {
         if (file_exists($zipPath)) {
             header('Content-Description: File Transfer');
             header('Content-Type: application/zip');
@@ -250,7 +278,8 @@ class FileExporter {
      * @param string $tempDir Temporary directory where files are being exported
      * @param array $allFiles Array of all files to include in the menu
      */
-    private function generateIndexHtml($tempDir, $allFiles) {
+    private function generateIndexHtml($tempDir, $allFiles)
+    {
         // Build hierarchical structure
         $tree = [];
         $paths = [];
@@ -258,15 +287,15 @@ class FileExporter {
             $uuid = $file['id'];
             $path = $this->flatStorage->getFullPath($uuid);
             $paths[] = [
-                'path'=>$path,
-                'id'=>$uuid,
-                'file'=>$file];
+                'path' => $path,
+                'id' => $uuid,
+                'file' => $file];
         }
-        uasort($paths, function($a, $b) {
+        uasort($paths, function ($a, $b) {
             return count($b['path']) - count($a['path']);
         });
 
-        foreach ($paths as $idx=> $pc) {
+        foreach ($paths as $idx => $pc) {
             $uuid = $pc['id'];
             $currentLevel = &$tree;
             $path = $pc['path'];
@@ -313,7 +342,8 @@ class FileExporter {
      * @param array $tree Hierarchical tree structure of files
      * @return string HTML content
      */
-    private function generateIndexHtmlContent($tree) {
+    private function generateIndexHtmlContent($tree)
+    {
         $html = <<<HTML
 <!DOCTYPE html>
 <html lang="en">
@@ -352,11 +382,12 @@ HTML;
      * @param array $items Items to render
      * @return string HTML content
      */
-    private function renderTreeMenu($items) {
+    private function renderTreeMenu($items)
+    {
         $html = '<ul>';
 
         foreach ($items as $key => $item) {
-            if (array_key_exists('children',$item) && count($item['children'])>0) {
+            if (array_key_exists('children', $item) && count($item['children']) > 0) {
                 $html .= '<li>';
                 $html .= '<div class="folder" data-path="' . htmlspecialchars($item['path']) . '">' . htmlspecialchars($item['title']) . '</div>';
                 $html .= '<div class="folder-content">';
