@@ -167,7 +167,7 @@ class FilesStorage {
             }
         }
 
-        return $itemId;
+        return $basename;
     }
 
     public function deleteFile($itemId) {
