@@ -100,8 +100,8 @@ $users = $storage->getAllUsers();
             </div>
 
             <div class="form-buttons">
-                <button type="submit" class="btn btn-primary">Save User</button>
-                <button type="button" class="btn" onclick="clearForm()">Clear</button>
+                <button type="submit" class="btn my-button btn-primary">Save User</button>
+                <button type="button" class="btn my-button" onclick="clearForm()">Clear</button>
             </div>
         </form>
     </div>
@@ -122,14 +122,14 @@ $users = $storage->getAllUsers();
                     <td><?php echo htmlspecialchars($userData['userId']); ?></td>
                     <td><?php echo htmlspecialchars($userData['role']); ?></td>
                     <td>
-                        <button class="btn btn-small"
+                        <button class="btn btn-small my-button"
                                 onclick="editUser('<?php echo $userData['uuid']; ?>','<?php echo htmlspecialchars($username); ?>',
                                         '<?php echo htmlspecialchars($userData['role']); ?>')">Edit</button>
 
                         <form method="post" action="users.php" style="display:inline">
                             <input type="hidden" name="action" value="delete">
                             <input type="hidden" name="user_id" value="<?php echo $userData['uuid']; ?>">
-                            <button type="submit" class="btn btn-small btn-danger"
+                            <button type="submit" class="my-button-danger  btn btn-small btn-danger"
                                     onclick="return confirm('Are you sure you want to delete this user?')">Delete</button>
                         </form>
                     </td>

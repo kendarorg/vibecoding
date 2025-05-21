@@ -18,6 +18,7 @@ class Session {
         $this->initialize();
     }
 
+
     private function initialize() {
         // Check if session cookie exists
         if (isset($_COOKIE[$this->cookieName])) {
@@ -136,7 +137,10 @@ class Session {
             unlink($this->sessionFile);
         }
 
-        $this->setCookie($this->cookieName, '', time() - 3600, '/');
+        $this->setCookie($this->cookieName, '', 0, '/');
+        unset($_COOKIE[$this->cookieName]);
+        session_unset();
+        session_destroy();
         $this->sessionData = [];
         $this->isLoaded = false;
     }

@@ -17,6 +17,6 @@ $session->checkLoggedIn();
             </select>
         </div>
         <br>
-       <button type="submit" class="btn">Export</button>
+       <button type="submit" class="btn my-button">Export</button>
     </form>
 </div>
