@@ -152,4 +152,16 @@ class Session {
     {
         return setcookie($name, $value, $expires_or_options, $path);
     }
+
+    public function checkLoggedIn(){
+        if (!$this->has('user')) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'error' => 'Authentication required']);
+            exit;
+        }
+    }
+
+    public function thisLoggedIn(){
+        return $this->has('user');
+    }
 }

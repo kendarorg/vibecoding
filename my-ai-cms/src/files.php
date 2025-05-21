@@ -1,8 +1,16 @@
+<?php
+
+require_once("Settings.php");
+global  $session;
+$session->checkLoggedIn();
+?>
 <link rel="stylesheet" href="lib/css/files.css">
 <div class="main-container">
     <div class="file-actions">
         <div class="extension-filter">
-            <input type="text" id="extensionFilter" class="filter-input" placeholder="Filter by extension (e.g., txt,md,json)">
+            <div class="form-row">
+            <input type="text" id="extensionFilter" class="filter-input" placeholder="Filter by extension (e.g., txt,md,json)"/>
+            </div>
             <button id="applyFilter">Filter</button>
         </div>
 

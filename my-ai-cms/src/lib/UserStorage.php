@@ -4,17 +4,27 @@ require_once "Utils.php";
 
 class UserStorage {
     private $usersLogFile;
+    private $structureDir;
+    private $dataDir;
 
-    public function __construct(string $dataDir = 'storage') {
-        $this->usersLogFile = $dataDir . '/users.log';
+    public function __construct(string $dataDir = 'data',string $indexDir = 'structure') {
+        $this->dataDir = $dataDir;
+        $this->structureDir = $indexDir;
+        $this->usersLogFile = $this->structureDir . '/users.log';
+
+
+        // Ensure directories exist
+        if (!file_exists($this->dataDir)) {
+            mkdir($this->dataDir, 0755, true);
+        }
+        if (!file_exists($this->structureDir)) {
+            mkdir($this->structureDir, 0755, true);
+        }
 
         // Ensure the log file exists
         if (!file_exists($this->usersLogFile)) {
-            $dir = dirname($this->usersLogFile);
-            if (!is_dir($dir)) {
-                mkdir($dir, 0755, true);
-            }
             file_put_contents($this->usersLogFile, '');
+            $this->createUser("admin", "admin123", "admin");
         }
     }
 
@@ -40,6 +50,7 @@ class UserStorage {
 
         // Log the creation
         $this->appendToLog('CR', $uuid, $userId, $hashedPassword, $role);
+        file_put_contents($this->dataDir."/$uuid.json", "{}");
 
         return $uuid;
     }
@@ -52,7 +63,7 @@ class UserStorage {
      * @param string|null $role New role (null to keep current)
      * @return bool Success status
      */
-    public function updateUser(string $uuid, ?string $password = null, ?string $role = null): bool {
+    public function updateUser(string $uuid, ?string $username = null, ?string $password = null, ?string $role = null): bool {
         $user = $this->getUserByUuid($uuid);
         if (!$user) {
             return false;
@@ -61,9 +72,10 @@ class UserStorage {
         // Keep existing values if not provided
         $hashedPassword = $password ? password_hash($password, PASSWORD_DEFAULT) : $user['password'];
         $newRole = $role ?: $user['role'];
+        $newUsername = $username ?: $user['userId'];
 
         // Log the update
-        $this->appendToLog('UP', $uuid, $user['userId'], $hashedPassword, $newRole);
+        $this->appendToLog('UP', $uuid, $newUsername, $hashedPassword, $newRole);
 
         return true;
     }
@@ -78,6 +90,9 @@ class UserStorage {
         $user = $this->getUserByUuid($uuid);
         if (!$user) {
             return false;
+        }
+        if(file_exists($this->dataDir."/$uuid.json")) {
+            unlink($this->dataDir."/$uuid.json");
         }
 
         // Log the deletion
@@ -135,6 +150,7 @@ class UserStorage {
 
         foreach ($users as $user) {
             if ($user['uuid'] === $uuid) {
+                $user['data']= json_decode(file_get_contents($this->dataDir."/$uuid.json"), true);
                 return $user;
             }
         }
@@ -153,6 +169,8 @@ class UserStorage {
 
         foreach ($users as $user) {
             if ($user['userId'] === $userId) {
+                $uuid = $user['uuid'];
+                $user['data']= json_decode(file_get_contents($this->dataDir."/$uuid.json"), true);
                 return $user;
             }
         }

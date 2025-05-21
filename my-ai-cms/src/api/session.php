@@ -3,7 +3,9 @@ require_once "../Settings.php";
 require_once "../lib/Session.php";
 
 // Initialize session
+
 global $session;
+$session->checkLoggedIn();
 
 $requestUri = $_SERVER['REQUEST_URI'];
 $index = strpos($requestUri,"/api/session.php");

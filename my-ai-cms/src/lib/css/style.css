@@ -151,3 +151,29 @@ body {
     from { opacity: 0; transform: translateY(-20px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+button {
+    padding: 8px 12px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.form-row {
+    max-width: 300px;
+    margin-bottom: 10px;
+    padding-left: 4px;
+}
+.form-row label {
+    display: block;
+    margin-bottom: 5px;
+}
+.form-row input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
