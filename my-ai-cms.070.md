@@ -2175,8 +2175,631 @@ return [
 
 This implementation provides basic user authentication and management with different user roles (admin and regular user).
 
-### FIX 073
+### REQ 074
 
+@project
+Create UserStorage, UserStorageApi and api/users 
+* The storage will be on the file storage/users.log
+* Adding a user will add CR,uuid,userid,pwd,role
+* Removing a user will add DE,uuid,userid,null,null
+* Modifying a user will add UP,uuid,userid,pwd,role
+* Should allow basic CRUD operations plus search by role,userid,uuid
+* Should allow showing the history of operation by userid or uuid
+
+### RES 074
+
+I'll create a user management system with the requested components. Here's the implementation:
+
+## 1. UserStorage Class
+
+This class handles the core data operations for users.
+
+```php
+<?php
+
+require_once "Utils.php";
+
+class UserStorage {
+    private $usersLogFile;
+
+    public function __construct(string $dataDir = 'storage') {
+        $this->usersLogFile = $dataDir . '/users.log';
+
+        // Ensure the log file exists
+        if (!file_exists($this->usersLogFile)) {
+            $dir = dirname($this->usersLogFile);
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            file_put_contents($this->usersLogFile, '');
+        }
+    }
+
+    /**
+     * Create a new user
+     * 
+     * @param string $userId User ID
+     * @param string $password Raw password that will be hashed
+     * @param string $role User role
+     * @return string UUID of the created user
+     */
+    public function createUser(string $userId, string $password, string $role = 'user'): string {
+        // Check if user already exists
+        if ($this->getUserByUserId($userId)) {
+            throw new Exception("User ID already exists");
+        }
+
+        // Generate UUID
+        $uuid = Utils::generateUuid();
+        
+        // Hash the password
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+        
+        // Log the creation
+        $this->appendToLog('CR', $uuid, $userId, $hashedPassword, $role);
+        
+        return $uuid;
+    }
+
+    /**
+     * Update user information
+     * 
+     * @param string $uuid User UUID
+     * @param string|null $password New password (null to keep current)
+     * @param string|null $role New role (null to keep current)
+     * @return bool Success status
+     */
+    public function updateUser(string $uuid, ?string $password = null, ?string $role = null): bool {
+        $user = $this->getUserByUuid($uuid);
+        if (!$user) {
+            return false;
+        }
+
+        // Keep existing values if not provided
+        $hashedPassword = $password ? password_hash($password, PASSWORD_DEFAULT) : $user['password'];
+        $newRole = $role ?: $user['role'];
+        
+        // Log the update
+        $this->appendToLog('UP', $uuid, $user['userId'], $hashedPassword, $newRole);
+        
+        return true;
+    }
+
+    /**
+     * Delete a user
+     * 
+     * @param string $uuid User UUID
+     * @return bool Success status
+     */
+    public function deleteUser(string $uuid): bool {
+        $user = $this->getUserByUuid($uuid);
+        if (!$user) {
+            return false;
+        }
+        
+        // Log the deletion
+        $this->appendToLog('DE', $uuid, $user['userId'], 'null', 'null');
+        
+        return true;
+    }
+
+    /**
+     * Get all active users
+     * 
+     * @return array List of active users
+     */
+    public function getAllUsers(): array {
+        if (!file_exists($this->usersLogFile)) {
+            return [];
+        }
+
+        $lines = file($this->usersLogFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $activeUsers = [];
+
+        foreach ($lines as $line) {
+            $parts = explode(',', $line, 5);
+            if (count($parts) < 5) continue;
+
+            list($action, $uuid, $userId, $password, $role) = $parts;
+
+            switch ($action) {
+                case 'CR':
+                case 'UP':
+                    $activeUsers[$uuid] = [
+                        'uuid' => $uuid,
+                        'userId' => $userId,
+                        'password' => $password,
+                        'role' => $role
+                    ];
+                    break;
+                case 'DE':
+                    unset($activeUsers[$uuid]);
+                    break;
+            }
+        }
+
+        return array_values($activeUsers);
+    }
+
+    /**
+     * Get a user by UUID
+     * 
+     * @param string $uuid User UUID
+     * @return array|null User data or null if not found
+     */
+    public function getUserByUuid(string $uuid): ?array {
+        $users = $this->getAllUsers();
+        
+        foreach ($users as $user) {
+            if ($user['uuid'] === $uuid) {
+                return $user;
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Get a user by user ID
+     * 
+     * @param string $userId User ID
+     * @return array|null User data or null if not found
+     */
+    public function getUserByUserId(string $userId): ?array {
+        $users = $this->getAllUsers();
+        
+        foreach ($users as $user) {
+            if ($user['userId'] === $userId) {
+                return $user;
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Get users by role
+     * 
+     * @param string $role Role to search for
+     * @return array List of users with the specified role
+     */
+    public function getUsersByRole(string $role): array {
+        $users = $this->getAllUsers();
+        
+        return array_filter($users, function($user) use ($role) {
+            return $user['role'] === $role;
+        });
+    }
+
+    /**
+     * Get history of operations for a user
+     * 
+     * @param string $identifier UUID or user ID
+     * @param bool $isUuid Whether the identifier is a UUID
+     * @return array Operation history
+     */
+    public function getUserHistory(string $identifier, bool $isUuid = true): array {
+        if (!file_exists($this->usersLogFile)) {
+            return [];
+        }
+
+        $lines = file($this->usersLogFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $history = [];
+
+        foreach ($lines as $line) {
+            $parts = explode(',', $line, 5);
+            if (count($parts) < 5) continue;
+
+            list($action, $uuid, $userId, $password, $role) = $parts;
+            
+            if (($isUuid && $uuid === $identifier) || (!$isUuid && $userId === $identifier)) {
+                $history[] = [
+                    'action' => $action,
+                    'uuid' => $uuid,
+                    'userId' => $userId,
+                    'role' => $role,
+                    'hasPassword' => $password !== 'null'
+                ];
+            }
+        }
+
+        return $history;
+    }
+
+    /**
+     * Verify user credentials
+     * 
+     * @param string $userId User ID
+     * @param string $password Raw password to verify
+     * @return bool Whether credentials are valid
+     */
+    public function verifyCredentials(string $userId, string $password): bool {
+        $user = $this->getUserByUserId($userId);
+        
+        if (!$user) {
+            return false;
+        }
+        
+        return password_verify($password, $user['password']);
+    }
+
+    /**
+     * Append an action to the log file
+     * 
+     * @param string $action Action type (CR, UP, DE)
+     * @param string $uuid User UUID
+     * @param string $userId User ID
+     * @param string $password Hashed password
+     * @param string $role User role
+     */
+    private function appendToLog(string $action, string $uuid, string $userId, string $password, string $role): void {
+        $logLine = $action . ',' . $uuid . ',' . $userId . ',' . $password . ',' . $role . PHP_EOL;
+        file_put_contents($this->usersLogFile, $logLine, FILE_APPEND);
+    }
+}
+```
+
+## 2. UserStorageApi Class
+
+This class acts as an API wrapper for the UserStorage class.
+
+```php
+<?php
+
+require_once "lib/UserStorage.php";
+require_once "lib/Session.php";
+
+class UserStorageApi {
+    private $userStorage;
+    private $session;
+
+    public function __construct($dataDir = 'storage') {
+        $this->userStorage = new UserStorage($dataDir);
+        global $session;
+        $this->session = $session;
+    }
+
+    /**
+     * Get all users (requires admin role)
+     * 
+     * @return array Response with users or error
+     */
+    public function getAllUsers(): array {
+        if (!$this->checkAdminPermission()) {
+            return ['success' => false, 'error' => 'Permission denied'];
+        }
+
+        $users = $this->userStorage->getAllUsers();
+        
+        // Remove password hashes from response
+        foreach ($users as &$user) {
+            unset($user['password']);
+        }
+        
+        return ['success' => true, 'data' => $users];
+    }
+
+    /**
+     * Get user by UUID
+     * 
+     * @param string $uuid User UUID
+     * @return array Response with user or error
+     */
+    public function getUserByUuid(string $uuid): array {
+        if (!$this->checkAdminPermission() && !$this->isOwnUser($uuid)) {
+            return ['success' => false, 'error' => 'Permission denied'];
+        }
+
+        $user = $this->userStorage->getUserByUuid($uuid);
+        
+        if (!$user) {
+            return ['success' => false, 'error' => 'User not found'];
+        }
+        
+        // Remove password hash from response
+        unset($user['password']);
+        
+        return ['success' => true, 'data' => $user];
+    }
+
+    /**
+     * Get users by role (requires admin role)
+     * 
+     * @param string $role Role to filter by
+     * @return array Response with users or error
+     */
+    public function getUsersByRole(string $role): array {
+        if (!$this->checkAdminPermission()) {
+            return ['success' => false, 'error' => 'Permission denied'];
+        }
+
+        $users = $this->userStorage->getUsersByRole($role);
+        
+        // Remove password hashes from response
+        foreach ($users as &$user) {
+            unset($user['password']);
+        }
+        
+        return ['success' => true, 'data' => $users];
+    }
+
+    /**
+     * Create a new user (requires admin role)
+     * 
+     * @param string $userId User ID
+     * @param string $password Password
+     * @param string $role User role
+     * @return array Response with UUID or error
+     */
+    public function createUser(string $userId, string $password, string $role = 'user'): array {
+        if (!$this->checkAdminPermission()) {
+            return ['success' => false, 'error' => 'Permission denied'];
+        }
+
+        try {
+            $uuid = $this->userStorage->createUser($userId, $password, $role);
+            return ['success' => true, 'data' => ['uuid' => $uuid]];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Update a user
+     * 
+     * @param string $uuid User UUID
+     * @param string|null $password New password (null to keep current)
+     * @param string|null $role New role (null to keep current)
+     * @return array Response with success status or error
+     */
+    public function updateUser(string $uuid, ?string $password = null, ?string $role = null): array {
+        $currentUser = $this->userStorage->getUserByUuid($uuid);
+        
+        if (!$currentUser) {
+            return ['success' => false, 'error' => 'User not found'];
+        }
+        
+        // Regular users can only update their own password, not role
+        if (!$this->checkAdminPermission()) {
+            if (!$this->isOwnUser($uuid)) {
+                return ['success' => false, 'error' => 'Permission denied'];
+            }
+            
+            // Non-admins can't change roles
+            if ($role !== null) {
+                return ['success' => false, 'error' => 'Cannot change role without admin permissions'];
+            }
+        }
+
+        $result = $this->userStorage->updateUser($uuid, $password, $role);
+        
+        if ($result) {
+            return ['success' => true];
+        } else {
+            return ['success' => false, 'error' => 'Failed to update user'];
+        }
+    }
+
+    /**
+     * Delete a user (requires admin role)
+     * 
+     * @param string $uuid User UUID
+     * @return array Response with success status or error
+     */
+    public function deleteUser(string $uuid): array {
+        if (!$this->checkAdminPermission()) {
+            return ['success' => false, 'error' => 'Permission denied'];
+        }
+
+        $result = $this->userStorage->deleteUser($uuid);
+        
+        if ($result) {
+            return ['success' => true];
+        } else {
+            return ['success' => false, 'error' => 'User not found or could not be deleted'];
+        }
+    }
+
+    /**
+     * Get user history (requires admin role or own user)
+     * 
+     * @param string $identifier UUID or user ID
+     * @param bool $isUuid Whether the identifier is a UUID
+     * @return array Response with history or error
+     */
+    public function getUserHistory(string $identifier, bool $isUuid = true): array {
+        // If it's a user ID, find the corresponding UUID first
+        if (!$isUuid) {
+            $user = $this->userStorage->getUserByUserId($identifier);
+            if ($user && !$this->checkAdminPermission() && !$this->isOwnUser($user['uuid'])) {
+                return ['success' => false, 'error' => 'Permission denied'];
+            }
+        } else {
+            if (!$this->checkAdminPermission() && !$this->isOwnUser($identifier)) {
+                return ['success' => false, 'error' => 'Permission denied'];
+            }
+        }
+
+        $history = $this->userStorage->getUserHistory($identifier, $isUuid);
+        
+        return ['success' => true, 'data' => $history];
+    }
+
+    /**
+     * Check if the current user has admin role
+     * 
+     * @return bool Whether the user is an admin
+     */
+    private function checkAdminPermission(): bool {
+        $currentUser = $this->session->get('user');
+        return isset($currentUser['role']) && $currentUser['role'] === 'admin';
+    }
+
+    /**
+     * Check if the UUID belongs to the current user
+     * 
+     * @param string $uuid User UUID to check
+     * @return bool Whether it's the current user
+     */
+    private function isOwnUser(string $uuid): bool {
+        $currentUser = $this->session->get('user');
+        return isset($currentUser['uuid']) && $currentUser['uuid'] === $uuid;
+    }
+}
+```
+
+## 3. API Endpoint Handler (api/users.php)
+
+This script handles user-related API requests.
+
+```php
+<?php
+require_once "../src/Settings.php";
+require_once "../src/lib/UserStorageApi.php";
+
+// Create API instance
+$userApi = new UserStorageApi(Settings::$root);
+
+// Set content type to JSON
+header('Content-Type: application/json');
+
+// Handle request based on method and parameters
+$method = $_SERVER['REQUEST_METHOD'];
+$action = isset($_GET['action']) ? $_GET['action'] : null;
+
+try {
+    $response = [];
+    
+    // Check if user is logged in for most operations
+    if ($method !== 'OPTIONS' && !isset($_GET['login'])) {
+        if (!$session->has('user')) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'error' => 'Authentication required']);
+            exit;
+        }
+    }
+    
+    switch ($method) {
+        case 'GET':
+            if ($action === 'all') {
+                $response = $userApi->getAllUsers();
+            } elseif ($action === 'byUuid' && isset($_GET['uuid'])) {
+                $response = $userApi->getUserByUuid($_GET['uuid']);
+            } elseif ($action === 'byRole' && isset($_GET['role'])) {
+                $response = $userApi->getUsersByRole($_GET['role']);
+            } elseif ($action === 'history') {
+                $identifier = isset($_GET['uuid']) ? $_GET['uuid'] : (isset($_GET['userId']) ? $_GET['userId'] : null);
+                $isUuid = isset($_GET['uuid']);
+                
+                if ($identifier) {
+                    $response = $userApi->getUserHistory($identifier, $isUuid);
+                } else {
+                    http_response_code(400);
+                    $response = ['success' => false, 'error' => 'Missing identifier (uuid or userId)'];
+                }
+            } elseif ($action === 'login' && isset($_GET['login'])) {
+                // Get JSON input
+                $json = file_get_contents('php://input');
+                $data = json_decode($json, true);
+                
+                if (!isset($data['userId']) || !isset($data['password'])) {
+                    http_response_code(400);
+                    $response = ['success' => false, 'error' => 'Missing userId or password'];
+                    break;
+                }
+                
+                $userStorage = new UserStorage(Settings::$root);
+                $isValid = $userStorage->verifyCredentials($data['userId'], $data['password']);
+                
+                if ($isValid) {
+                    $user = $userStorage->getUserByUserId($data['userId']);
+                    // Store user in session but remove password
+                    unset($user['password']);
+                    $session->set('user', $user);
+                    $response = ['success' => true, 'data' => $user];
+                } else {
+                    http_response_code(401);
+                    $response = ['success' => false, 'error' => 'Invalid credentials'];
+                }
+            } else {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Invalid action or missing parameters'];
+            }
+            break;
+            
+        case 'POST':
+            // Get JSON input
+            $json = file_get_contents('php://input');
+            $data = json_decode($json, true);
+            
+            if ($action === 'create') {
+                if (!isset($data['userId']) || !isset($data['password'])) {
+                    http_response_code(400);
+                    $response = ['success' => false, 'error' => 'Missing required fields'];
+                    break;
+                }
+                
+                $role = isset($data['role']) ? $data['role'] : 'user';
+                $response = $userApi->createUser($data['userId'], $data['password'], $role);
+            } else {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Invalid action'];
+            }
+            break;
+            
+        case 'PUT':
+            // Get JSON input
+            $json = file_get_contents('php://input');
+            $data = json_decode($json, true);
+            
+            if ($action === 'update' && isset($_GET['uuid'])) {
+                $password = isset($data['password']) ? $data['password'] : null;
+                $role = isset($data['role']) ? $data['role'] : null;
+                
+                $response = $userApi->updateUser($_GET['uuid'], $password, $role);
+            } else {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Invalid action or missing UUID'];
+            }
+            break;
+            
+        case 'DELETE':
+            if ($action === 'delete' && isset($_GET['uuid'])) {
+                $response = $userApi->deleteUser($_GET['uuid']);
+            } else {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Invalid action or missing UUID'];
+            }
+            break;
+            
+        default:
+            http_response_code(405);
+            $response = ['success' => false, 'error' => 'Method not allowed'];
+    }
+    
+    if (isset($response['success']) && $response['success'] === false) {
+        http_response_code(400);
+    }
+    
+    echo json_encode($response);
+    
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Server error: ' . $e->getMessage()]);
+}
+```
+
+This implementation provides:
+
+1. A `UserStorage` class that handles file-based user storage with the requested log format
+2. A `UserStorageApi` class that adds permission checks and simplifies API interactions
+3. An API endpoint at `api/users.php` that handles basic CRUD operations
+4. Support for searching users by role, UUID, or user ID
+5. User history retrieval
+6. Permission controls (admin users can do everything, regular users can only manage their own information)
+7. Password hashing for security
+
+The implementation follows the same approach as the existing `FilesStorage` class but with user-specific functionality.
 
 
 ### REQ 072
