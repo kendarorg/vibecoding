@@ -1,10 +1,13 @@
 <?php
 
+require_once("Settings.php");
 require_once 'lib/FlatStorage.php';
 $dataDir = Settings::$root.'/content/data';
 $structureDir = Settings::$root.'/content/structure';
 $storage = new FlatStorage($dataDir, $structureDir);
-global $session;
+
+global  $session;
+$session->checkLoggedIn();
 
 // Get the list of opened UUIDs from the session
 $openedIds = $session->get('opened', []);

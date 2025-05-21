@@ -7,9 +7,8 @@ class UserStorageApi {
     private $userStorage;
     private $session;
 
-    public function __construct($dataDir = 'storage') {
-        $this->userStorage = new UserStorage($dataDir);
-        global $session;
+    public function __construct($userStorage,$session) {
+        $this->userStorage = $userStorage;
         $this->session = $session;
     }
 
@@ -198,5 +197,142 @@ class UserStorageApi {
     private function isOwnUser(string $uuid): bool {
         $currentUser = $this->session->get('user');
         return isset($currentUser['uuid']) && $currentUser['uuid'] === $uuid;
+    }
+
+    public function processRequest(){
+        // Handle request based on method and parameters
+        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+        $action = $_GET['action'] ?? null;
+
+        $ma = $method.$action;
+
+        // Handle method overrides
+        switch($ma){
+            case("GETdelete"):
+                $method = 'DELETE';
+                break;
+            case("POSTupdate"):
+                $method = 'PUT';
+                break;
+        }
+
+        try {
+            $response = [];
+
+            switch ($method) {
+                case 'GET':
+                    $this->session->checkLoggedIn();
+                    if ($action === 'all') {
+                        $response = $this->getAllUsers();
+                    } elseif ($action === 'byUuid' && isset($_GET['uuid'])) {
+                        $response = $this->getUserByUuid($_GET['uuid']);
+                    } elseif ($action === 'byRole' && isset($_GET['role'])) {
+                        $response = $this->getUsersByRole($_GET['role']);
+                    } elseif ($action === 'history') {
+                        $identifier = isset($_GET['uuid']) ? $_GET['uuid'] : (isset($_GET['userId']) ? $_GET['userId'] : null);
+                        $isUuid = isset($_GET['uuid']);
+
+                        if ($identifier) {
+                            $response = $this->getUserHistory($identifier, $isUuid);
+                        } else {
+                            http_response_code(400);
+                            $response = ['success' => false, 'error' => 'Missing identifier (uuid or userId)'];
+                        }
+                    } else {
+                        http_response_code(400);
+                        $response = ['success' => false, 'error' => 'Invalid action or missing parameters'];
+                    }
+                    break;
+
+                case 'POST':
+                    // Get JSON input
+                    $json = file_get_contents('php://input');
+                    $data = json_decode($json, true);
+
+                    if ($action === 'create') {
+                        $this->session->checkLoggedIn();
+                        if (!isset($data['userId']) || !isset($data['password'])) {
+                            http_response_code(400);
+                            $response = ['success' => false, 'error' => 'Missing required fields'];
+                            break;
+                        }
+
+                        $role = isset($data['role']) ? $data['role'] : 'user';
+                        $response = $this->createUser($data['userId'], $data['password'], $role);
+                    } else if ($action === 'login' && isset($_GET['login'])) {
+                        // Get JSON input
+                        $json = file_get_contents('php://input');
+                        $data = json_decode($json, true);
+
+                        if (!isset($data['userId']) || !isset($data['password'])) {
+                            http_response_code(400);
+                            $response = ['success' => false, 'error' => 'Missing userId or password'];
+                            break;
+                        }
+
+                        $isValid = $this->userStorage->verifyCredentials($data['userId'], $data['password']);
+
+                        if ($isValid) {
+                            $user = $this->userStorage->getUserByUserId($data['userId']);
+                            // Store user in session but remove password
+                            unset($user['password']);
+                            $this->session->set('user', $user);
+                            $this->session->set('userid', $user['uuid']);
+                            $response = ['success' => true, 'data' => $user];
+                        } else {
+                            http_response_code(401);
+                            $response = ['success' => false, 'error' => 'Invalid credentials'];
+                        }
+                    } else {
+                        $this->session->checkLoggedIn();
+                        http_response_code(400);
+                        $response = ['success' => false, 'error' => 'Invalid action'];
+                    }
+                    break;
+
+                case 'PUT':
+                    $this->session->checkLoggedIn();
+                    // Get JSON input
+                    $json = file_get_contents('php://input');
+                    $data = json_decode($json, true);
+
+                    if ($action === 'update' && isset($_GET['uuid'])) {
+                        $password = isset($data['password']) ? $data['password'] : null;
+                        $role = isset($data['role']) ? $data['role'] : null;
+
+                        $response = $this->updateUser($_GET['uuid'], $password, $role);
+                    } else {
+                        http_response_code(400);
+                        $response = ['success' => false, 'error' => 'Invalid action or missing UUID'];
+                    }
+                    break;
+
+                case 'DELETE':
+                    $this->session->checkLoggedIn();
+                    if ($action === 'delete' && isset($_GET['uuid'])) {
+                        $response = $this->deleteUser($_GET['uuid']);
+                    } else {
+                        http_response_code(400);
+                        $response = ['success' => false, 'error' => 'Invalid action or missing UUID'];
+                    }
+                    break;
+
+                default:
+                    $this->session->checkLoggedIn();
+                    http_response_code(405);
+                    $response = ['success' => false, 'error' => 'Method not allowed'];
+            }
+
+            if (isset($response['success']) && $response['success'] === false) {
+                http_response_code(400);
+            }
+
+            echo json_encode($response);
+
+        } catch (Exception $e) {
+            $this->session->checkLoggedIn();
+            http_response_code(500);
+            echo json_encode(['success' => false, 'error' => 'Server error: ' . $e->getMessage()]);
+        }
     }
 }

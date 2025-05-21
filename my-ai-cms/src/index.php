@@ -14,9 +14,14 @@ require_once "Settings.php";
 <body>
 <?php
 global $session;
+$currentPage = "login";
 
+if($session->thisLoggedIn()){
+
+$currentUser = $session->get('user');
+$isAdmin = $currentUser['role'] === 'admin';
 // Handle page selection via query parameter
-if (isset($_GET['p']) && in_array($_GET['p'], ['storage', 'files','maintenance'])) {
+if (isset($_GET['p']) && in_array($_GET['p'], ['storage', 'files','maintenance','users'])) {
     $newPage = $_GET['p'];
     $currentPage = $session->get('currentPage', 'storage');
 
@@ -26,14 +31,19 @@ if (isset($_GET['p']) && in_array($_GET['p'], ['storage', 'files','maintenance']
     }
 }
 
-$currentPage = $session->get('currentPage',"storage");
+$currentPage = $session->get('currentPage', 'storage');
+
 ?>
 <div class="top-menu">
     <a href="index.php?p=storage" class="<?php echo $currentPage === 'storage' ? 'active' : ''; ?>">Storage</a>
     <a href="index.php?p=files" class="<?php echo $currentPage === 'files' ? 'active' : ''; ?>">Files</a>
     <a href="index.php?p=maintenance" class="<?php echo $currentPage === 'maintenance' ? 'active' : ''; ?>">Maintenance</a>
+    <?php if($isAdmin){ ?>
+        <a href="index.php?p=users" class="<?php echo $currentPage === 'users' ? 'active' : ''; ?>">Users</a>
+    <?php } ?>
 </div>
 <?php
+}
 //require_once "storage.php";
 require_once $currentPage.".php";
 

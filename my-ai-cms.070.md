@@ -2801,11 +2801,16 @@ This implementation provides:
 
 The implementation follows the same approach as the existing `FilesStorage` class but with user-specific functionality.
 
+### FIX 074
 
-### REQ 072
-### REQ 072
-### REQ 072
-### REQ 072
-### REQ 072
-### REQ 072
-### REQ 072
+* Refactoring 
+
+### REQ 075
+### REQ 075
+### FIX 075
+### REQ 076
+### REQ 076
+### FIX 076
+### REQ 077
+### REQ 077
+### FIX 077

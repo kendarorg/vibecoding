@@ -1,11 +1,18 @@
 <?php
 // login.php
 require_once "lib/Utils.php";
+require_once "lib/UserStorage.php";
 require_once "Settings.php";
 
-// Check if already logged in
-if (isset($_SESSION['user_id'])) {
-    header('Location: users.php');
+$dataDir = Settings::$root.'/users/data';
+$structureDir = Settings::$root.'/users/structure';
+$storage = new UserStorage($dataDir, $structureDir);
+
+global  $session;
+
+$currentUser = $session->get('user');
+if($currentUser){
+    header('Location: index.php');
     exit;
 }
 
@@ -20,36 +27,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($username) || empty($password)) {
         $error = 'Please enter both username and password';
     } else {
-        // Load users from config file
-        $usersFile = 'config/users.php';
-        if (file_exists($usersFile)) {
-            $users = include $usersFile;
-
-            if (isset($users[$username]) && password_verify($password, $users[$username]['password'])) {
-                $_SESSION['user_id'] = $username;
-                $_SESSION['user_role'] = $users[$username]['role'];
-
-                // Redirect to homepage
+        $user = $storage->getUserByUserId(trim($username));
+        if($user){
+            if(password_verify($password, $user['password'])){
+                $session->set('user', $user);
+                $session->set('userid', $user['uuid']);
                 header('Location: index.php');
                 exit;
-            } else {
-                $error = 'Invalid username or password';
             }
-        } else {
-            $error = 'User configuration not found';
+        }else{
+            $error = 'Unauthorized';
         }
     }
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-    <link rel="stylesheet" href="assets/css/style.css">
-</head>
-<body>
     <div class="login-container">
         <h2>Login</h2>
 
@@ -71,5 +62,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button type="submit" class="btn btn-primary">Login</button>
         </form>
     </div>
-</body>
-</html>
