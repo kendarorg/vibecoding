@@ -2,15 +2,18 @@
 
 require_once("Settings.php");
 require_once 'lib/FlatStorage.php';
-$dataDir = Settings::$root.'/content/data';
-$structureDir = Settings::$root.'/content/structure';
-$storage = new FlatStorage($dataDir, $structureDir);
 
 global  $session;
 $session->checkLoggedIn();
 
 // Get the list of opened UUIDs from the session
 $openedIds = $session->get('opened', []);
+$uuid = $session->get('userid');
+
+
+$dataDir = Settings::$root.'/'.$uuid.'/content/data';
+$structureDir = Settings::$root.'/'.$uuid.'/content/structure';
+$storage = new FlatStorage($dataDir, $structureDir);
 
 $pageUuid = $_GET['current'] ?? null;
 if ($pageUuid && $storage->exists($pageUuid)) {
@@ -53,7 +56,6 @@ function buildTree($parentUuid, $storage, $openedIds) {
             $html .= '<span class="tree-toggle">' . $toggleSymbol . '</span>';
             $html .= '<span class="tree-title">' . htmlspecialchars($child['title']) . '</span>';
             $html .= '</div>';
-
 
             // If this node has children, recursively build its subtree
             if ($hasChildren) {

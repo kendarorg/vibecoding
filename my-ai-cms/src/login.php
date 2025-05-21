@@ -41,24 +41,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-    <div class="login-container">
-        <h2>Login</h2>
+    <div class="login-container form-row">
+        <h3>My AI CMS Login</h3>
 
         <?php if (!empty($error)): ?>
             <div class="error-message"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
-        <form method="post" action="login.php">
-            <div class="form-group">
+        <form method="post" class="form-row" action="login.php">
+            <div class="form-row">
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username" required>
             </div>
 
-            <div class="form-group">
+            <div class="form-row">
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" required>
             </div>
 
-            <button type="submit" class="btn btn-primary">Login</button>
+            <button type="submit" class="my-button btn btn-primary">Login</button>
         </form>
     </div>

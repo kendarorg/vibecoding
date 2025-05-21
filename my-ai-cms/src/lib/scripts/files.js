@@ -97,6 +97,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Actions cell
             const actionsCell = document.createElement('td');
             actionsCell.className = 'file-actions';
+            const actionsCell1 = document.createElement('td');
+            actionsCell1.className = 'file-actions';
+//
 
             // Download button
             const downloadBtn = document.createElement('button');
@@ -107,6 +110,18 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             actionsCell.appendChild(downloadBtn);
+
+            // Download button
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'my-button-danger ';
+            deleteButton.textContent = 'Delete';
+            deleteButton.addEventListener('click', function() {
+                currentFileId = file.id;
+                currentFileTitle = file.title;
+                deleteCurrentFile();
+            });
+
+            actionsCell1.appendChild(deleteButton);
             //
             // // Add context menu to row
             // row.addEventListener('contextmenu', function(e) {
@@ -116,6 +131,7 @@ document.addEventListener('DOMContentLoaded', function() {
             row.appendChild(titleCell);
             row.appendChild(previewCell);
             row.appendChild(actionsCell);
+            row.appendChild(actionsCell1);
             filesContainer.appendChild(row);
         });
     }

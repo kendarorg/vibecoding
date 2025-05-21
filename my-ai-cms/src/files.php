@@ -34,13 +34,13 @@ $session->checkLoggedIn();
             <tr>
                 <th>Title</th>
                 <th>Preview</th>
-                <th>Actions</th>
+                <th colspan="2">Actions</th>
             </tr>
             </thead>
             <tbody id="files-container">
             <!-- Files will be populated here -->
             <tr>
-                <td colspan="3" class="loading">Loading files...</td>
+                <td colspan="4" class="loading">Loading files...</td>
             </tr>
             </tbody>
         </table>

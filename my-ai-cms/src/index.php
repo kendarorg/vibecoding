@@ -18,20 +18,29 @@ $currentPage = "login";
 
 if($session->thisLoggedIn()){
 
-$currentUser = $session->get('user');
-$isAdmin = $currentUser['role'] === 'admin';
-// Handle page selection via query parameter
-if (isset($_GET['p']) && in_array($_GET['p'], ['storage', 'files','maintenance','users'])) {
-    $newPage = $_GET['p'];
+    $currentUser = $session->get('user');
+    $isAdmin = $currentUser['role'] === 'admin';
+    // Handle page selection via query parameter
+    if (isset($_GET['p']) && in_array($_GET['p'], ['storage', 'files','maintenance','users','logout'])) {
+        $newPage = $_GET['p'];
+
+        if($newPage === 'logout') {
+            $session->destroy();
+            header("Location: index.php");
+            exit;
+        }
+
+
+        $currentPage = $session->get('currentPage', 'storage');
+        // Only update the session if the page has changed
+        if ($newPage !== $currentPage) {
+            $session->set('currentPage', $newPage);
+        }
+    }
     $currentPage = $session->get('currentPage', 'storage');
 
-    // Only update the session if the page has changed
-    if ($newPage !== $currentPage) {
-        $session->set('currentPage', $newPage);
-    }
-}
 
-$currentPage = $session->get('currentPage', 'storage');
+
 
 ?>
 <div class="top-menu">
@@ -41,6 +50,7 @@ $currentPage = $session->get('currentPage', 'storage');
     <?php if($isAdmin){ ?>
         <a href="index.php?p=users" class="<?php echo $currentPage === 'users' ? 'active' : ''; ?>">Users</a>
     <?php } ?>
+    <a href="index.php?p=logout" >Logout</a>
 </div>
 <?php
 }
