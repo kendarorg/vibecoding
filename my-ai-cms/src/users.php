@@ -58,6 +58,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }else if ($action === 'delete') {
         $userId = getOrDefault($_POST['user_id'] );
         $storage->deleteUser($userId);
+    }else if ($action === 'impersonate') {
+        $userId = getOrDefault($_POST['user_id'] );
+        $user = $storage->getUserByUuid($userId);
+        $session->set('user', $user);
+        $session->set('userid', $user['uuid']);
     }
 }
 
@@ -113,7 +118,7 @@ $users = $storage->getAllUsers();
             <tr>
                 <th>Username</th>
                 <th>Role</th>
-                <th>Actions</th>
+                <th colspan="3">Actions</th>
             </tr>
             </thead>
             <tbody>
@@ -126,11 +131,21 @@ $users = $storage->getAllUsers();
                                 onclick="editUser('<?php echo $userData['uuid']; ?>','<?php echo htmlspecialchars($username); ?>',
                                         '<?php echo htmlspecialchars($userData['role']); ?>')">Edit</button>
 
-                        <form method="post" action="users.php" style="display:inline">
+                    </td>
+                    <td>
+                        <form method="post" action="index.php?p=users" style="display:inline">
                             <input type="hidden" name="action" value="delete">
                             <input type="hidden" name="user_id" value="<?php echo $userData['uuid']; ?>">
                             <button type="submit" class="my-button-danger  btn btn-small btn-danger"
                                     onclick="return confirm('Are you sure you want to delete this user?')">Delete</button>
+                        </form>
+                    </td>
+                    <td>
+                        <form method="post" action="index.php?p=users" style="display:inline">
+                            <input type="hidden" name="action" value="impersonate">
+                            <input type="hidden" name="user_id" value="<?php echo $userData['uuid']; ?>">
+                            <button type="submit" class="my-button-danger  btn btn-small btn-danger"
+                                    onclick="return confirm('Are you sure you want to impersonate this user?')">Impersonate</button>
                         </form>
                     </td>
                 </tr>
