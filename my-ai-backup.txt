@@ -118,6 +118,10 @@ Do the following modifications
     * Choose if it should do a "dry-run" or a real backup/restore
   * Start the backup/restore
   * Use the protocol specified in sync-lib
+  
+### Fix 002
+
+Fixed poms properties
       
   
     
