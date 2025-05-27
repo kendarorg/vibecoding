@@ -1,0 +1,100 @@
+### Prompt 001
+
+Should create a java system to backup and synchronize files from a client to server
+* The client and server will communicate via TCP protocol
+* Multiple clients can connect at once, but only one client can access a single backup target location
+* The maximum packet size will be in server settings
+* The packet fields will be the following
+	* Integer: length of the packet including itself
+	* Integer: The connection id (used to parallelize the communication. Starts from 0 for the connection )
+  * UUID: The session id (defined in the connection phase, is unique for the whole session)
+  * Integer: packet id used when sending data in multiple blocks
+  * char[2]: containing the type of message
+  * byte[]: containing the zipped content of the message. Can be anything needed
+* The handshake and termination of the process will be on the same connection
+* The client, will create multiple TCP connections to optimize network usage during transfers
+* The server will not store previous versions of the files
+* If the connection is interrupted the partially uploaded files will be removed
+* The functionalities will be
+  * Backup/Restore without deleting old files
+  * Backup/Restore deleting the files not present on source
+  * Backup/Restore without deleting old files with "date separated strucuture" on backup
+    * Doing backup will get the date of the file and create a directory strucure based on dates
+    * Doing backup Inside the single date the original directory strucuture will be kept
+    * Doing restore will place the files directly in the target directory discarding the dates
+* The project will be composed by three modules
+  * sync-lib: With the protocol definition and common parts
+  * sync-client: The client, runnable from command line
+  * sync-server: The server, runnable from command line
+* The server will have a settings.json containing
+  * The listening port of the server
+  * The maximum packet size
+  * The maximum parallel TCP connections for a single session
+  * The list of uniqueid, user, password (and weather they are admin or not)
+  * The target folders with 
+    * "virtual" name
+    * Real path
+    * Type of backup
+    * Id of the users allowed to backup to/restore from
+* The protocol flows will be
+  * Backup
+    * Client Connect with login, password, and "virtual" target
+    * Server Accept or refuse the connection checking the settings for the folder and permissions
+    * Client send the list of files, the maximum packet size and the maximum parallel TCP connections allowed
+      * This can be splitted in multiple packets if exceeding the maximum packet size
+    * Server 
+      * check what files will need and eventually remove the files non existing on client
+      * send back the list of files that are missing
+      * This can be splitted in multiple packets if exceeding the maximum packet size
+    * Client create the parallel connections and  
+    * For each file
+      * Client send the descriptor of the file (name,path,size,modification time, creation time)
+      * Server create (eventually) the directory according to the backup type and Acknowledge
+      * Client send the file content (eventually in multiple blocks), reading a max of "maximum packet size". This will result in a packet smaller than maximum packet size because of the zipping of content
+      * Server 
+        * Append the data to the target file ( or create it if this is the packet 0)
+        * Set the modification and creation time to "1970-01-01 00:00:00" to force rewriting
+      * Client send the End of file packet
+      * Server set the real modification time and creation time from the client and acknowledge
+    * Client, When all ack are received for all files, send the "End of sync" packet
+    * Server receives the message and disconnect
+  * Restore  
+    * Client Connect with login, password, and "virtual" target
+    * Server Accept or refuse the connection checking the settings for the folder and permissions
+    * Client send the list of files, the maximum packet size and the maximum parallel TCP connections allowed
+      * This can be splitted in multiple packets if exceeding the maximum packet size
+    * Server 
+      * check what files need to update and what need to remove on client 
+      * send back the list of files that are missing or must be removed on client
+      * This can be splitted in multiple packets if exceeding the maximum packet size
+    * Client 
+      * create the parallel connections
+      * delete the files to remove
+    * For each file
+      * Client
+        * create the directory for the file
+        * send the descriptor of the file (name,path,size,modification time, creation time) it needs to download
+      * Server send the file content (eventually in multiple blocks), reading a max of "maximum packet size". This will result in a packet smaller than maximum packet size because of the zipping of content
+      * Client 
+        * Append the data to the target file ( or create it if this is the packet 0)
+        * Set the modification and creation time to "1970-01-01 00:00:00" to force rewriting
+      * Server send the End of file packet
+      * Client set the real modification time and creation time from the client and acknowledge
+    * Client, When all ack are received for all files, send the "End of sync" packet
+    * Server receives the message and disconnect
+* The serve will expose an authenticate REST API
+  * Upon login a token will be generate valid for 30 minutes
+  * All the REST APIs will require the token inside the X-Auth-Token header
+  * The API will allow CRUD operations on
+    * Backup folders
+    * Users
+    * Max threads
+    * Max packet size
+  * The user will have the roles
+    * admin: all access to all backups and all apis
+    * usermanager: access only to user manager apis, and associating users with backups
+    * user: access only to api to modify its password and login
+      
+  
+    
+  
