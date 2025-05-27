@@ -8,6 +8,8 @@ import org.kendar.sync.lib.utils.FileUtils;
 import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -441,6 +443,9 @@ public class SyncClientApp {
         if (args.getSourceFolder() == null) {
             System.err.println("Source folder is required (--source)");
             valid = false;
+        }else if(!Files.exists(Path.of(args.getSourceFolder()))) {
+            System.err.println("Source folder does not exists (--source)");
+            valid = false;
         }
 
         if (args.getTargetFolder() == null) {
@@ -492,7 +497,7 @@ public class SyncClientApp {
     /**
      * Class to hold command line arguments.
      */
-    private static class CommandLineArgs {
+    public static class CommandLineArgs {
         private String sourceFolder;
         private String targetFolder;
         private boolean backup = true;

@@ -53,7 +53,7 @@ public class Packet {
         
         // Calculate the length of the packet
         // 4 (length) + 4 (connectionId) + 16 (UUID) + 4 (packetId) + 2 (messageType) + content.length
-        this.length = 4 + 4 + 16 + 4 + 2 + this.content.length;
+        this.length = 4 + 4 + 32 + 4 + 2 + this.content.length;
     }
 
     /**

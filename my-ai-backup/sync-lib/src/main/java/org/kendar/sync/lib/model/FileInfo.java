@@ -54,8 +54,8 @@ public class FileInfo {
      */
     public static FileInfo fromFile(File file, String baseDir) throws IOException {
         Path filePath = file.toPath();
-        Path basePath = Paths.get(baseDir);
-        Path relativePath = basePath.relativize(filePath);
+        Path basePath = Paths.get(baseDir).toAbsolutePath();
+        Path relativePath = basePath.relativize(filePath.toAbsolutePath());
         
         BasicFileAttributes attrs = Files.readAttributes(filePath, BasicFileAttributes.class);
         

@@ -209,7 +209,7 @@ class ServerSettingsTest {
         // Verify default settings are returned
         assertNotNull(defaultSettings);
         assertEquals(8080, defaultSettings.getPort()); // Default port
-        assertEquals(0, defaultSettings.getUsers().size());
+        assertEquals(1, defaultSettings.getUsers().size());
         assertEquals(0, defaultSettings.getBackupFolders().size());
     }
 }

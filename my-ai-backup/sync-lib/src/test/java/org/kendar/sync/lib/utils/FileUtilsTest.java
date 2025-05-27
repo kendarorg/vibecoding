@@ -81,15 +81,11 @@ class FileUtilsTest {
                 foundFile2 = true;
                 assertEquals(TEST_CONTENT_2.length(), file.getSize());
                 assertFalse(file.isDirectory());
-            } else if (file.getRelativePath().equals("subdir")) {
-                foundSubDir = true;
-                assertTrue(file.isDirectory());
             }
         }
 
         assertTrue(foundFile1, "testFile1.txt not found");
         assertTrue(foundFile2, "testFile2.txt not found");
-        assertTrue(foundSubDir, "subdir not found");
     }
 
     @Test
@@ -98,12 +94,11 @@ class FileUtilsTest {
         List<FileInfo> files = FileUtils.listFiles(sourceDir, sourceDir.getAbsolutePath());
 
         // Verify the list contains the expected files
-        assertEquals(4, files.size());
+        assertEquals(3, files.size());
 
         // Verify file details
         boolean foundFile1 = false;
         boolean foundFile2 = false;
-        boolean foundSubDir = false;
         boolean foundSubFile = false;
 
         for (FileInfo file : files) {
@@ -115,9 +110,6 @@ class FileUtilsTest {
                 foundFile2 = true;
                 assertEquals(TEST_CONTENT_2.length(), file.getSize());
                 assertFalse(file.isDirectory());
-            } else if (file.getRelativePath().equals("subdir")) {
-                foundSubDir = true;
-                assertTrue(file.isDirectory());
             } else if (file.getRelativePath().equals("subdir/testSubFile.txt")) {
                 foundSubFile = true;
                 assertEquals(TEST_CONTENT_3.length(), file.getSize());
@@ -127,7 +119,6 @@ class FileUtilsTest {
 
         assertTrue(foundFile1, "testFile1.txt not found");
         assertTrue(foundFile2, "testFile2.txt not found");
-        assertTrue(foundSubDir, "subdir not found");
         assertTrue(foundSubFile, "subdir/testSubFile.txt not found");
     }
 
@@ -151,13 +142,11 @@ class FileUtilsTest {
             sourceFiles, targetFiles, BackupType.PRESERVE);
 
         // Verify differences
-        List<FileInfo> toAdd = diffPreserve.get("toAdd");
-        List<FileInfo> toUpdate = diffPreserve.get("toUpdate");
-        List<FileInfo> toDelete = diffPreserve.get("toDelete");
+        List<FileInfo> toAdd = diffPreserve.get("transfer");
+        List<FileInfo> toDelete = diffPreserve.get("delete");
 
         // In PRESERVE mode, files should be added and updated, but not deleted
         assertEquals(3, toAdd.size()); // testFile2.txt, subdir, subdir/testSubFile.txt
-        assertEquals(1, toUpdate.size()); // testFile1.txt
         assertEquals(0, toDelete.size()); // Nothing should be deleted in PRESERVE mode
 
         // Calculate differences with MIRROR backup type
@@ -165,13 +154,11 @@ class FileUtilsTest {
             sourceFiles, targetFiles, BackupType.MIRROR);
 
         // Verify differences
-        toAdd = diffMirror.get("toAdd");
-        toUpdate = diffMirror.get("toUpdate");
-        toDelete = diffMirror.get("toDelete");
+        toAdd = diffMirror.get("transfer");
+        toDelete = diffMirror.get("delete");
 
         // In MIRROR mode, files should be added, updated, and deleted
         assertEquals(3, toAdd.size()); // testFile2.txt, subdir, subdir/testSubFile.txt
-        assertEquals(1, toUpdate.size()); // testFile1.txt
         assertEquals(1, toDelete.size()); // targetOnly.txt should be deleted
     }
 

@@ -61,10 +61,11 @@ public class FileUtils {
 
         for (File file : fileList) {
             FileInfo fileInfo = FileInfo.fromFile(file, baseDir);
-            files.add(fileInfo);
 
             if (file.isDirectory()) {
                 listFilesRecursive(file, baseDir, files);
+            }else{
+                files.add(fileInfo);
             }
         }
     }

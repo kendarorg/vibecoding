@@ -124,13 +124,15 @@ Do the following modifications
 
 Fixed poms properties
 
-### QUOTA 84%
-
-```Junie Quota for Pro is 84%```
+```Quota for Pro is 84%```
 
 ### Prompt 003 (twice because of network issues)
 
 Generate the unit testes for the projects. If a real storage is needed use as a root the 'target/tests/UniqueId' directory for each test
+
+```Quota for Pro is 77%```
   
-    
+### Fix 003
+
+Mostly fixing unit tests and a weird behaviour on file listing
   
