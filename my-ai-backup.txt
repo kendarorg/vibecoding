@@ -94,6 +94,30 @@ Should create a java system to backup and synchronize files from a client to ser
     * admin: all access to all backups and all apis
     * usermanager: access only to user manager apis, and associating users with backups
     * user: access only to api to modify its password and login
+	
+	
+### Prompt 002
+
+Do the following modifications
+* On sync-lib
+  * Add the possibility for a "dry-run" if not present
+* On sync-server
+  * Create the main class. It should start
+    * If no settings file is given create a default one with one administrator user
+    * The TCP server and listen to request to backup/restore and transfer files in an async way
+    * The web server for configuration
+  * Allow the possibility for a "dry-run" to test the operation
+  * Use the protocol specified in sync-lib
+* On sync-client
+  * Create the main class
+  * Add the parser for the command line that should allow (with parameters)
+    * Choose the target and source folder
+    * Choose if should backup or restore
+    * Set the backup server address and port
+    * Set the login and password for the 
+    * Choose if it should do a "dry-run" or a real backup/restore
+  * Start the backup/restore
+  * Use the protocol specified in sync-lib
       
   
     

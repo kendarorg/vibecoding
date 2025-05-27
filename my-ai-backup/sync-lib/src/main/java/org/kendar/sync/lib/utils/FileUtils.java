@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
  */
 public class FileUtils {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy/MM/dd");
-    
+
     /**
      * Lists all files in a directory recursively.
      *
@@ -40,7 +40,7 @@ public class FileUtils {
         listFilesRecursive(directory, baseDir, files);
         return files;
     }
-    
+
     /**
      * Lists all files in a directory recursively.
      *
@@ -53,22 +53,22 @@ public class FileUtils {
         if (!directory.exists() || !directory.isDirectory()) {
             return;
         }
-        
+
         File[] fileList = directory.listFiles();
         if (fileList == null) {
             return;
         }
-        
+
         for (File file : fileList) {
             FileInfo fileInfo = FileInfo.fromFile(file, baseDir);
             files.add(fileInfo);
-            
+
             if (file.isDirectory()) {
                 listFilesRecursive(file, baseDir, files);
             }
         }
     }
-    
+
     /**
      * Calculates the files that need to be transferred and deleted.
      *
@@ -80,48 +80,48 @@ public class FileUtils {
     public static Map<String, List<FileInfo>> calculateFileDifferences(
             List<FileInfo> sourceFiles, List<FileInfo> targetFiles, BackupType backupType) {
         Map<String, List<FileInfo>> result = new HashMap<>();
-        
+
         // Create maps for faster lookup
         Map<String, FileInfo> sourceMap = sourceFiles.stream()
                 .collect(Collectors.toMap(FileInfo::getRelativePath, f -> f));
-        
+
         Map<String, FileInfo> targetMap = targetFiles.stream()
                 .collect(Collectors.toMap(FileInfo::getRelativePath, f -> f));
-        
+
         // Files to transfer: files that don't exist in the target or have different timestamps
         List<FileInfo> filesToTransfer = sourceFiles.stream()
                 .filter(sourceFile -> {
                     if (sourceFile.isDirectory()) {
                         return false; // Skip directories
                     }
-                    
+
                     FileInfo targetFile = targetMap.get(sourceFile.getRelativePath());
                     if (targetFile == null) {
                         return true; // File doesn't exist in target
                     }
-                    
+
                     // Check if the file has changed
                     return !sourceFile.getModificationTime().equals(targetFile.getModificationTime())
                             || sourceFile.getSize() != targetFile.getSize();
                 })
                 .collect(Collectors.toList());
-        
+
         result.put("transfer", filesToTransfer);
-        
+
         // Files to delete: files that exist in the target but not in the source
         if (backupType == BackupType.MIRROR) {
             List<FileInfo> filesToDelete = targetFiles.stream()
                     .filter(targetFile -> !targetFile.isDirectory() && !sourceMap.containsKey(targetFile.getRelativePath()))
                     .collect(Collectors.toList());
-            
+
             result.put("delete", filesToDelete);
         } else {
             result.put("delete", new ArrayList<>());
         }
-        
+
         return result;
     }
-    
+
     /**
      * Gets the target path for a file based on the backup type.
      *
@@ -134,14 +134,14 @@ public class FileUtils {
         if (backupType != BackupType.DATE_SEPARATED) {
             return targetDir;
         }
-        
+
         // For DATE_SEPARATED, create a directory structure based on the file's modification date
         LocalDate date = LocalDate.ofInstant(file.getModificationTime(), ZoneId.systemDefault());
         String dateDir = date.format(DATE_FORMATTER);
-        
+
         return Paths.get(targetDir, dateDir).toString();
     }
-    
+
     /**
      * Creates a directory if it doesn't exist.
      *
@@ -155,7 +155,7 @@ public class FileUtils {
             }
         }
     }
-    
+
     /**
      * Sets the file times.
      *
@@ -169,7 +169,7 @@ public class FileUtils {
         Files.setAttribute(path, "creationTime", FileTime.from(creationTime));
         Files.setAttribute(path, "lastModifiedTime", FileTime.from(modificationTime));
     }
-    
+
     /**
      * Sets the file times to epoch (1970-01-01 00:00:00).
      *
@@ -180,7 +180,7 @@ public class FileUtils {
         Instant epoch = Instant.EPOCH;
         setFileTimes(file, epoch, epoch);
     }
-    
+
     /**
      * Deletes a file or directory.
      *
@@ -196,12 +196,12 @@ public class FileUtils {
                 }
             }
         }
-        
+
         if (!file.delete()) {
             throw new IOException("Failed to delete: " + file);
         }
     }
-    
+
     /**
      * Copies a file.
      *
@@ -212,9 +212,32 @@ public class FileUtils {
     public static void copyFile(File source, File target) throws IOException {
         createDirectoryIfNotExists(target.getParentFile());
         Files.copy(source.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        
+
         // Copy file attributes
         BasicFileAttributes attrs = Files.readAttributes(source.toPath(), BasicFileAttributes.class);
         setFileTimes(target, attrs.creationTime().toInstant(), attrs.lastModifiedTime().toInstant());
+    }
+
+    /**
+     * Reads a file into a byte array.
+     *
+     * @param file The file to read
+     * @return The file contents as a byte array
+     * @throws IOException If an I/O error occurs
+     */
+    public static byte[] readFile(File file) throws IOException {
+        return Files.readAllBytes(file.toPath());
+    }
+
+    /**
+     * Writes a byte array to a file.
+     *
+     * @param file The file to write to
+     * @param data The data to write
+     * @throws IOException If an I/O error occurs
+     */
+    public static void writeFile(File file, byte[] data) throws IOException {
+        createDirectoryIfNotExists(file.getParentFile());
+        Files.write(file.toPath(), data);
     }
 }
