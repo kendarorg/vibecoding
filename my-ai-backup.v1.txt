@@ -135,4 +135,8 @@ Generate the unit testes for the projects. If a real storage is needed use as a 
 ### Fix 003
 
 Mostly fixing unit tests and a weird behaviour on file listing
+
+### Prompt 004 
+
+Fix the failing unit tests for the module sync-client, use a fake socket, no real socket allowed in unit tests
   
