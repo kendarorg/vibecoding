@@ -170,5 +170,17 @@ Fix all the tests by hand AI went in loopholes
 * Create one class for each backup type to be used in Server.java with implementation and unit test
 	
 ```Quota for Pro is 52%```
+Mostly done but without 
+
+### Now with Copilot-Claude
+
+* List all the directories child of directory "source" that match the pattern [0-9]{4}-[0-9]{2}-[0-9]{2}
+* List all the files inside a directory recursively
+
+### Fix 007
+
+By hand build the implementation of the main syncs
+
+
 
   

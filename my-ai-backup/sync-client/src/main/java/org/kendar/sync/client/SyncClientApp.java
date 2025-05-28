@@ -158,13 +158,13 @@ public class SyncClientApp {
         FileListResponseMessage fileListResponse = (FileListResponseMessage) response;
         var mapToTransfer = fileListResponse.getFilesToTransfer()
                 .stream().collect(Collectors.toMap(fileInfo -> {
-                    return fileInfo.getRelativePath();
+                    return fileInfo.getRelativePath().replaceAll("\\\\","/");
                 }, fileInfo -> fileInfo));
 
         // Process files to transfer
         for (FileInfo file : files) {
             // Send file descriptor
-            if(!mapToTransfer.containsKey(file.getRelativePath())) {
+            if(!mapToTransfer.containsKey(file.getRelativePath().replaceAll("\\\\","/"))) {
                 continue;
             }
             FileDescriptorMessage fileDescriptorMessage = new FileDescriptorMessage(file);
@@ -231,8 +231,22 @@ public class SyncClientApp {
     private static void performRestore(TcpConnection connection, CommandLineArgs args) throws IOException {
         System.out.println("[CLIENT] Starting restore from " + args.getTargetFolder() + " to " + args.getSourceFolder());
 
+        // Get list of files to backup
+        List<FileInfo> files = new ArrayList<>();
+        File sourceDir = new File(args.getSourceFolder());
+
+        if (!sourceDir.exists() || !sourceDir.isDirectory()) {
+            System.err.println("[CLIENT] Source folder does not exist or is not a directory");
+            return;
+        }
+
+        // Recursively scan the source directory
+        scanDirectory(sourceDir, sourceDir.getAbsolutePath(), files);
+
+        System.out.println("[CLIENT] Found " + files.size() + " files to backup");
+
         // Send file list message
-        FileListMessage fileListMessage = new FileListMessage(new ArrayList<>(), args.isBackup(), 1, 1);
+        FileListMessage fileListMessage = new FileListMessage(files, args.isBackup(), 1, 1);
         connection.sendMessage(fileListMessage);
 
         // Wait for file list response
@@ -244,8 +258,12 @@ public class SyncClientApp {
 
         FileListResponseMessage fileListResponse = (FileListResponseMessage) response;
 
+        var mapToTransfer = fileListResponse.getFilesToTransfer().stream()
+                .collect(Collectors.toMap(fileInfo -> {
+                    return fileInfo.getRelativePath().replaceAll("\\\\","/");
+                }, fileInfo -> fileInfo));
         // Process files to transfer
-        for (FileInfo file : fileListResponse.getFilesToTransfer()) {
+        while (!mapToTransfer.isEmpty()) {
             // Wait for file descriptor
             Message message = connection.receiveMessage();
             if (message.getMessageType() != MessageType.FILE_DESCRIPTOR) {
@@ -255,6 +273,14 @@ public class SyncClientApp {
 
             FileDescriptorMessage fileDescriptorMessage = (FileDescriptorMessage) message;
             FileInfo fileInfo = fileDescriptorMessage.getFileInfo();
+            if(!mapToTransfer.containsKey(fileInfo.getRelativePath().replaceAll("\\\\","/"))) {
+                System.out.println("[CLIENT] Skipping file not in transfer list: " + fileInfo.getRelativePath());
+                // Send file descriptor ack
+                FileDescriptorAckMessage fileDescriptorAck = FileDescriptorAckMessage.ready(fileInfo.getRelativePath());
+                connection.sendMessage(fileDescriptorAck);
+                continue;
+            }
+            mapToTransfer.remove(fileInfo.getRelativePath().replaceAll("\\\\","/"));
 
             System.out.println("[CLIENT] Receiving file: " + fileInfo.getRelativePath());
 

@@ -127,7 +127,7 @@ public class Server {
                     sessionId,
                     user,
                     folder,
-                    connectMessage.getBackupType(),
+                    folder.getBackupType(),
                     connectMessage.isDryRun() || dryRun
             );
             sessions.put(sessionId, session);

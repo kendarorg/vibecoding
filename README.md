@@ -26,6 +26,10 @@ Backup client and server with Junie, spring-boot, binary tcp protocol and web-ui
 * The pom were not that perfect but the fix was really quick
 * Wierdly the "dry-run" was set as a global for the server, but this will be addressed
 * ..And correctly no unit test was added since that was not in the specifications!
+* The unit tests were a mess to correct, and 20% of credit went into that
+* Then i required for an integration test, but it made a test about copying files without any server
+* At that point i refactored the application to extract server and client and discovered that the implementation of the listing of file was missing
+* I requested to fill it, but it was not respecting the requirements... and decided to implement it with Copilot and Claude
 
 
 ### my-ai-cms according to Claude

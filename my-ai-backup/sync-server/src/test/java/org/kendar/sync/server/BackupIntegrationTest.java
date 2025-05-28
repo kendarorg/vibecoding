@@ -15,10 +15,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -59,11 +57,15 @@ public class BackupIntegrationTest {
         targetDir.mkdir();
 
         // Create test files in the source directory with random content
-        createdFiles = createRandomFiles(sourceDir, 5, 3);
+
         
         System.out.println("Created test files in " + sourceDir.getAbsolutePath());
 
         serverPort = 8085;
+
+    }
+
+    private void startServer(BackupType backupType) throws InterruptedException {
         serverConfig = new ServerConfig();
         var serverSettings = new ServerSettings();
         serverSettings.setPort(serverPort);
@@ -74,7 +76,7 @@ public class BackupIntegrationTest {
         serverSettings.getUsers().add(newUser);
 
         ServerSettings.BackupFolder backupFolder = new ServerSettings.BackupFolder();
-        backupFolder.setBackupType(BackupType.MIRROR);
+        backupFolder.setBackupType(backupType);
         backupFolder.setAllowedUsers(List.of(newUser.getId()));
         backupFolder.setRealPath(targetDir.getAbsolutePath());
         backupFolder.setVirtualName("testBackup");
@@ -96,26 +98,129 @@ public class BackupIntegrationTest {
     void tearDown() throws Exception {
         // Clean up test directories if needed
         server.stop();
+
+    }
+
+    public void cleanupDirs() throws IOException
+    {
+        deleteDirectoryContents(sourceDir.toPath());
+        deleteDirectoryContents(targetDir.toPath());
+    }
+
+    /**
+     * Deletes all files and subdirectories in the specified directory.
+     * The directory itself is not deleted.
+     *
+     * @param directory The directory to clean
+     * @return true if all files were deleted successfully, false otherwise
+     * @throws IOException If an I/O error occurs
+     */
+    private boolean deleteDirectoryContents(Path directory) throws IOException {
+        if (!Files.exists(directory) || !Files.isDirectory(directory)) {
+            return false;
+        }
+
+        boolean success = true;
+
+        // Use Files.walk to traverse the directory tree in depth-first order
+        try (var paths = Files.walk(directory)) {
+            // Skip the root directory itself
+            var filesToDelete = paths
+                    .filter(path -> !path.equals(directory))
+                    .sorted((a, b) -> -a.compareTo(b)) // Reverse order to delete children before parents
+                    .toList();
+
+            for (Path path : filesToDelete) {
+                try {
+                    Files.delete(path);
+                } catch (IOException e) {
+                    success = false;
+                    System.err.println("Failed to delete: " + path + " - " + e.getMessage());
+                }
+            }
+        }
+
+        return success;
     }
 
     @Test
-    void testBackupAndRestore() throws Exception {
+    void testBackupAndRestorePreserve() throws Exception {
+
+        startServer(BackupType.PRESERVE);
+        createdFiles = createRandomFiles(sourceDir, 5, 3);
+
         // Perform backup
+        System.out.println("Performing backup...");
         commandLineArgs.setBackup(true);
         SyncClientApp.doSync(commandLineArgs);
 
         // Verify backup
-        verifyBackup();
+        System.out.println("Verifying backup...");
+        assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
 
         // Remove a file from the source directory
-        removedFile = removeRandomFile();
+        removedFile = removeRandomFile(sourceDir.toPath());
 
         // Perform restore
+        System.out.println("Performing restore...");
         commandLineArgs.setBackup(false);
         SyncClientApp.doSync(commandLineArgs);
 
         // Verify restore
+        System.out.println("Verifying restore...");
         verifyRestore();
+        cleanupDirs();
+    }
+
+
+    @Test
+    void testBackupAndRestoreMirror() throws Exception {
+
+        startServer(BackupType.MIRROR);
+        createdFiles = createRandomFiles(sourceDir, 5, 3);
+
+        // Perform backup
+        System.out.println("Performing backup...");
+        commandLineArgs.setBackup(true);
+        SyncClientApp.doSync(commandLineArgs);
+
+        // Verify backup
+        System.out.println("Verifying backup...");
+        assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
+
+        // Remove a file from the source directory
+        removedFile = removeRandomFile(sourceDir.toPath());
+
+        // Perform backup with deleted file
+        SyncClientApp.doSync(commandLineArgs);
+
+        // Verify backup
+        System.out.println("Verifying backup with deleted...");
+        assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
+
+        // Remove a file from the source directory
+        removedFile = removeRandomFile(targetDir.toPath());
+
+        // Perform backup with deleted file
+        SyncClientApp.doSync(commandLineArgs);
+
+        // Verify backup
+        System.out.println("Verifying backup with deleted target...");
+        assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
+
+        // Delete a file from the target directory
+        // Remove a file from the source directory
+        removedFile = removeRandomFile(targetDir.toPath());
+
+        // Perform restore
+        System.out.println("Performing restore...");
+        commandLineArgs.setBackup(false);
+        SyncClientApp.doSync(commandLineArgs);
+
+        // Verify restore
+        System.out.println("Verifying restore...");
+        assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
+        cleanupDirs();
     }
 
     /**
@@ -206,23 +311,34 @@ public class BackupIntegrationTest {
     }
 
     /**
+     * Generates a random integer between the specified minimum and maximum values (inclusive).
+     *
+     * @param min The minimum value
+     * @param max The maximum value
+     * @return A random integer between min and max (inclusive)
+     */
+    private int getRandomNumber(int min, int max) {
+        Random random = new Random();
+        return random.nextInt(max - min + 1) + min;
+    }
+    /**
      * Removes a random file from the source directory.
      *
      * @return The removed file
      * @throws IOException If an I/O error occurs
      */
-    private File removeRandomFile() throws IOException {
-        // Find a non-directory file to remove
-        List<File> nonDirectoryFiles = createdFiles.stream()
-                .filter(file -> !file.isDirectory())
-                .toList();
-        
-        if (nonDirectoryFiles.isEmpty()) {
-            throw new IllegalStateException("No non-directory files to remove");
-        }
+    private File removeRandomFile(Path fromDir) throws IOException {
+
+        var allFiles = Files.walk(fromDir)
+                .filter(path -> !Files.isDirectory(path))
+                .collect(Collectors.toList());
+        var rand = getRandomNumber(0, allFiles.size() - 1);
+
+
         
         // Remove a random file
-        File fileToRemove = nonDirectoryFiles.get(0);
+        File fileToRemove = allFiles.get(rand).toFile();
+        createdFiles.remove(fileToRemove);
         Files.delete(fileToRemove.toPath());
         
         System.out.println("Removed file: " + getRelativePath(fileToRemove, sourceDir));
@@ -248,6 +364,53 @@ public class BackupIntegrationTest {
         System.out.println("Restored file: " + removedFilePath);
     }
 
+    public static void assertDirectoriesEqual(Path dir1, Path dir2) throws IOException {
+        if (!areDirectoriesEqual(dir1, dir2)) {
+            fail("Directories are not equal: " + dir1 + " and " + dir2);
+        }
+    }
+
+    public static boolean areDirectoriesEqual(Path dir1, Path dir2) throws IOException {
+        if (!Files.isDirectory(dir1) || !Files.isDirectory(dir2)) {
+            System.err.println("Not a directory: " + dir1+" "+dir2);
+            return false;
+        }
+
+        // Get all files from both directories
+        Set<Path> dir1Files = Files.walk(dir1)
+                .filter(p -> !Files.isDirectory(p))
+                .map(dir1::relativize)
+                .collect(Collectors.toSet());
+
+        Set<Path> dir2Files = Files.walk(dir2)
+                .filter(p -> !Files.isDirectory(p))
+                .map(dir2::relativize)
+                .collect(Collectors.toSet());
+
+        // Check if both directories have the same files
+        if (!dir1Files.equals(dir2Files)) {
+            System.err.println("Not same files: " + dir1+" "+dir2);
+            return false;
+        }
+
+        // Compare the content of each file
+        for (Path relativePath : dir1Files) {
+            Path file1 = dir1.resolve(relativePath);
+            Path file2 = dir2.resolve(relativePath);
+
+            if (Files.size(file1) != Files.size(file2)) {
+                System.err.println("Different size: " + file1+" "+file2);
+                return false;
+            }
+
+            if (!Arrays.equals(Files.readAllBytes(file1), Files.readAllBytes(file2))) {
+                System.err.println("Different content: " + file1+" "+file2);
+                return false;
+            }
+        }
+
+        return true;
+    }
     /**
      * Verifies that files were restored correctly.
      *
