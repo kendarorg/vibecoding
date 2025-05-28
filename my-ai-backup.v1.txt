@@ -143,4 +143,16 @@ Fix the failing unit tests for the module sync-client, use a fake socket, no rea
 ### Fix 004 
 
 Fix all the tests by hand AI went in loopholes
+
+### Prompt 005
+
+* Create the backup integration test on sync-server that
+	* Setup a source directory with random files and nested dirs
+	* Setup a target directory
+	* Start the server
+	* Start the client and start the backup
+	* Verify that everything is backed up
+	* Remove some file from the source
+	* Start the client and do the restore
+
   
