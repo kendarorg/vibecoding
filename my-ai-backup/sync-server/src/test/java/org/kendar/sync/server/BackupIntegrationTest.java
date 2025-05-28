@@ -2,6 +2,7 @@ package org.kendar.sync.server;
 
 import org.junit.jupiter.api.*;
 import org.kendar.sync.client.CommandLineArgs;
+import org.kendar.sync.client.SyncClient;
 import org.kendar.sync.client.SyncClientApp;
 import org.kendar.sync.lib.model.ServerSettings;
 import org.kendar.sync.lib.protocol.BackupType;
@@ -123,7 +124,8 @@ public class BackupIntegrationTest {
         // Perform backup
         System.out.println("================= Performing backup...");
         commandLineArgs.setBackup(true);
-        SyncClientApp.doSync(commandLineArgs);
+        var target = new SyncClient();
+        target.doSync(commandLineArgs);
 
         // Verify backup
         System.out.println("================= Verifying backup...");
@@ -136,7 +138,7 @@ public class BackupIntegrationTest {
         // Perform backup
         System.out.println("================= Performing backup...");
         commandLineArgs.setBackup(true);
-        SyncClientApp.doSync(commandLineArgs);
+        target.doSync(commandLineArgs);
 
         // Verify backup
         System.out.println("================= Verifying backup...");
@@ -151,7 +153,7 @@ public class BackupIntegrationTest {
         // Perform restore
         System.out.println("================= Performing restore...");
         commandLineArgs.setBackup(false);
-        SyncClientApp.doSync(commandLineArgs);
+        target.doSync(commandLineArgs);
         assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath(),BackupType.DATE_SEPARATED);
 
     }
@@ -165,7 +167,8 @@ public class BackupIntegrationTest {
         // Perform backup
         System.out.println("================= Performing backup...");
         commandLineArgs.setBackup(true);
-        SyncClientApp.doSync(commandLineArgs);
+        var target = new SyncClient();
+        target.doSync(commandLineArgs);
 
         // Verify backup
         System.out.println("================= Verifying backup...");
@@ -178,7 +181,7 @@ public class BackupIntegrationTest {
         // Perform backup
         System.out.println("================= Performing backup...");
         commandLineArgs.setBackup(true);
-        SyncClientApp.doSync(commandLineArgs);
+        target.doSync(commandLineArgs);
 
         // Verify backup
         System.out.println("================= Verifying backup...");
@@ -193,7 +196,7 @@ public class BackupIntegrationTest {
         // Perform restore
         System.out.println("================= Performing restore...");
         commandLineArgs.setBackup(false);
-        SyncClientApp.doSync(commandLineArgs);
+        target.doSync(commandLineArgs);
         assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
 
     }
@@ -208,7 +211,8 @@ public class BackupIntegrationTest {
         // Perform backup
         System.out.println("================= Performing backup...");
         commandLineArgs.setBackup(true);
-        SyncClientApp.doSync(commandLineArgs);
+        var target = new SyncClient();
+        target.doSync(commandLineArgs);
 
         // Verify backup
         System.out.println("================= Verifying backup...");
@@ -218,7 +222,7 @@ public class BackupIntegrationTest {
         removedFile = removeRandomFile(sourceDir.toPath());
 
         // Perform backup with deleted file
-        SyncClientApp.doSync(commandLineArgs);
+        target.doSync(commandLineArgs);
 
         // Verify backup
         System.out.println("================= Verifying backup with deleted...");
@@ -228,7 +232,7 @@ public class BackupIntegrationTest {
         removedFile = removeRandomFile(targetDir.toPath());
 
         // Perform backup with deleted file
-        SyncClientApp.doSync(commandLineArgs);
+        target.doSync(commandLineArgs);
 
         // Verify backup
         System.out.println("================= Verifying backup with deleted target...");
@@ -243,7 +247,7 @@ public class BackupIntegrationTest {
         // Perform restore
         System.out.println("================= Performing restore...");
         commandLineArgs.setBackup(false);
-        SyncClientApp.doSync(commandLineArgs);
+        target.doSync(commandLineArgs);
 
         // Verify restore
         System.out.println("================= Verifying restore...");
