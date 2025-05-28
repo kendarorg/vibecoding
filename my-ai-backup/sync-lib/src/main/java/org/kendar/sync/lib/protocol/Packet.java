@@ -117,7 +117,7 @@ public class Packet {
         packet.messageType = String.valueOf(c1) + String.valueOf(c2);
         
         // Read the content
-        packet.content = new byte[packet.length - (4 + 4 + 16 + 4 + 2)];
+        packet.content = new byte[packet.length - (4 + 4 + 32 + 4 + 2)];
         buffer.get(packet.content);
         
         return packet;

@@ -11,11 +11,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -31,7 +29,9 @@ class SyncClientAppBackupTestSimple {
     private File sourceDir;
     private File targetDir;
     private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+    private final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
     private final PrintStream originalOut = System.out;
+    private final PrintStream originalErr = System.err;
     private MockTcpConnection mockConnection;
     private java.lang.reflect.Method performBackupMethod;
     private Object commandLineArgs;
@@ -115,6 +115,7 @@ class SyncClientAppBackupTestSimple {
 
         // Redirect System.out for testing output
         System.setOut(new PrintStream(outContent));
+        System.setErr(new PrintStream(errContent));
 
         // Create a mock TcpConnection
         mockConnection = new MockTcpConnection();
@@ -146,23 +147,25 @@ class SyncClientAppBackupTestSimple {
     @AfterEach
     void tearDown() {
         System.setOut(originalOut);
+        System.setErr(originalErr);
     }
 
     @Test
     void testPerformBackup() throws Exception {
         // Set up mock responses
+        List<FileInfo> filesToTransfer = List.of(
+                new FileInfo("/test/subdir/testFile2.txt", "subdir/testFile2.txt", 0, Instant.now(), Instant.now(), false),
+                new FileInfo("/test/testFile1.txt", "testFile1.txt", 0, Instant.now(), Instant.now(), false));
         FileListResponseMessage fileListResponse = new FileListResponseMessage(
-            new ArrayList<>(), new ArrayList<>(), true, 1, 1);
+                filesToTransfer, new ArrayList<>(), true, 1, 1);
         mockConnection.addMessageToReturn(fileListResponse);
 
         // Add FileDescriptorAck responses for each file
-        mockConnection.addMessageToReturn(FileDescriptorAckMessage.ready(sourceDir.getName()));
-        mockConnection.addMessageToReturn(FileDescriptorAckMessage.ready(sourceDir.getName() + "/subdir"));
         mockConnection.addMessageToReturn(FileDescriptorAckMessage.ready(sourceDir.getName() + "/testFile1.txt"));
-        mockConnection.addMessageToReturn(FileDescriptorAckMessage.ready(sourceDir.getName() + "/subdir/testFile2.txt"));
-
         // Add FileEndAck responses for each file
         mockConnection.addMessageToReturn(FileEndAckMessage.success(sourceDir.getName() + "/testFile1.txt"));
+        mockConnection.addMessageToReturn(FileDescriptorAckMessage.ready(sourceDir.getName() + "/subdir/testFile2.txt"));
+
         mockConnection.addMessageToReturn(FileEndAckMessage.success(sourceDir.getName() + "/subdir/testFile2.txt"));
 
         // Call the performBackup method
@@ -191,9 +194,9 @@ class SyncClientAppBackupTestSimple {
         }
 
         // Verify counts
-        assertEquals(3, fileDescriptorCount); // source dir, subdir, 2 files (but one is skipped)
-        assertEquals(1, fileDataCount); // 1 file (the other is skipped)
-        assertEquals(1, fileEndCount); // 1 file (the other is skipped)
+        assertEquals(2, fileDescriptorCount); // source dir, subdir, 2 files (but one is skipped)
+        assertEquals(2, fileDataCount); // 1 file (the other is skipped)
+        assertEquals(2, fileEndCount); // 1 file (the other is skipped)
 
         // Verify output
         String output = outContent.toString();
@@ -210,13 +213,14 @@ class SyncClientAppBackupTestSimple {
             .invoke(commandLineArgs, true);
 
         // Set up mock responses
+        List<FileInfo> filesToTransfer = List.of(
+                new FileInfo("/test/subdir/testFile2.txt", "subdir/testFile2.txt", 0, Instant.now(), Instant.now(), false),
+                new FileInfo("/test/testFile1.txt", "testFile1.txt", 0, Instant.now(), Instant.now(), false));
         FileListResponseMessage fileListResponse = new FileListResponseMessage(
-            new ArrayList<>(), new ArrayList<>(), true, 1, 1);
+                filesToTransfer, new ArrayList<>(), true, 1, 1);
         mockConnection.addMessageToReturn(fileListResponse);
 
         // Add FileDescriptorAck responses for each file
-        mockConnection.addMessageToReturn(FileDescriptorAckMessage.ready(sourceDir.getName()));
-        mockConnection.addMessageToReturn(FileDescriptorAckMessage.ready(sourceDir.getName() + "/subdir"));
         mockConnection.addMessageToReturn(FileDescriptorAckMessage.ready(sourceDir.getName() + "/testFile1.txt"));
         mockConnection.addMessageToReturn(FileDescriptorAckMessage.ready(sourceDir.getName() + "/subdir/testFile2.txt"));
 

@@ -15,8 +15,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class TcpConnection implements AutoCloseable {
     private final Socket socket;
-    private final InputStream inputStream;
-    private final OutputStream outputStream;
+    private InputStream inputStream;
+    private OutputStream outputStream;
     private final UUID sessionId;
     private final AtomicInteger connectionId;
     private final AtomicInteger packetId;
@@ -74,6 +74,7 @@ public class TcpConnection implements AutoCloseable {
     public Message receiveMessage() throws IOException {
         // Read the packet length
         byte[] lengthBytes = new byte[4];
+        this.inputStream = socket.getInputStream();
         int bytesRead = inputStream.read(lengthBytes);
         if (bytesRead != 4) {
             throw new IOException("Failed to read packet length");

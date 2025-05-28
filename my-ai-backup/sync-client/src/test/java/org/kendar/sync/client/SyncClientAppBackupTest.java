@@ -1,5 +1,6 @@
 package org.kendar.sync.client;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.kendar.sync.lib.model.FileInfo;
@@ -8,12 +9,11 @@ import org.kendar.sync.lib.protocol.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.IOException;
 import java.io.PrintStream;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -31,14 +31,18 @@ class SyncClientAppBackupTest {
     private Path testRoot;
     private File sourceDir;
     private File targetDir;
-    private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+    private ByteArrayOutputStream outContent;
+    private ByteArrayOutputStream errContent;
     private final PrintStream originalOut = System.out;
+    private final PrintStream originalErr = System.err;
     private TcpConnection mockConnection;
     private Method performBackupMethod;
     private Object commandLineArgs;
 
     @BeforeEach
     void setUp() throws Exception {
+        outContent = new ByteArrayOutputStream();
+        errContent = new ByteArrayOutputStream();
         // Create a unique test directory inside target/tests
         String uniqueId = UUID.randomUUID().toString();
         testRoot = Path.of("target", "tests", uniqueId);
@@ -62,6 +66,7 @@ class SyncClientAppBackupTest {
 
         // Redirect System.out for testing output
         System.setOut(new PrintStream(outContent));
+        System.setErr(new PrintStream(errContent));
 
         // Create a mock TcpConnection
         mockConnection = mock(TcpConnection.class);
@@ -88,12 +93,24 @@ class SyncClientAppBackupTest {
             .invoke(commandLineArgs, false);
     }
 
+    @AfterEach
+    public void tearDown() throws Exception {
+        System.setOut(originalOut);
+        System.setOut(originalErr);
+    }
+
     @Test
     void testPerformBackup() throws Exception {
         // Set up mock responses
+        List<FileInfo> filesToTransfer = List.of(
+                new FileInfo("/test/subdir/testFile2.txt", "subdir/testFile2.txt", 0, Instant.now(), Instant.now(), false));
         FileListResponseMessage fileListResponse = new FileListResponseMessage(
-            new ArrayList<>(), new ArrayList<>(), true, 1, 1);
-        when(mockConnection.receiveMessage()).thenReturn(fileListResponse);
+                filesToTransfer, new ArrayList<>(), true, 1, 1);
+        when(mockConnection.receiveMessage())
+                .thenReturn(fileListResponse)
+                .thenReturn(FileDescriptorAckMessage.ready(sourceDir.getName() + "/subdir/testFile2.txt"))
+                .thenReturn(FileEndAckMessage.success("/subdir/testFile2.txt"));
+
 
         // Call the performBackup method
         performBackupMethod.invoke(null, mockConnection, commandLineArgs);
@@ -113,7 +130,7 @@ class SyncClientAppBackupTest {
             public boolean matches(Message message) {
                 if (!(message instanceof FileDescriptorMessage)) return false;
                 FileDescriptorMessage fdm = (FileDescriptorMessage) message;
-                return fdm.getFileInfo().getRelativePath().equals(sourceDir.getName());
+                return fdm.getFileInfo().getRelativePath().equals("subdir/testFile2.txt");
             }
         }));
 
@@ -121,49 +138,9 @@ class SyncClientAppBackupTest {
         verify(mockConnection, times(1)).sendMessage(ArgumentMatchers.argThat(new ArgumentMatcher<Message>() {
             @Override
             public boolean matches(Message message) {
-                if (!(message instanceof FileDescriptorMessage)) return false;
-                FileDescriptorMessage fdm = (FileDescriptorMessage) message;
-                return fdm.getFileInfo().getRelativePath().equals(sourceDir.getName() + "/subdir");
-            }
-        }));
-
-        // 4. FileDescriptorMessage for testFile1.txt
-        verify(mockConnection, times(1)).sendMessage(ArgumentMatchers.argThat(new ArgumentMatcher<Message>() {
-            @Override
-            public boolean matches(Message message) {
-                if (!(message instanceof FileDescriptorMessage)) return false;
-                FileDescriptorMessage fdm = (FileDescriptorMessage) message;
-                return fdm.getFileInfo().getRelativePath().equals(sourceDir.getName() + "/testFile1.txt");
-            }
-        }));
-
-        // 5. FileDescriptorMessage for testFile2.txt
-        verify(mockConnection, times(1)).sendMessage(ArgumentMatchers.argThat(new ArgumentMatcher<Message>() {
-            @Override
-            public boolean matches(Message message) {
-                if (!(message instanceof FileDescriptorMessage)) return false;
-                FileDescriptorMessage fdm = (FileDescriptorMessage) message;
-                return fdm.getFileInfo().getRelativePath().equals(sourceDir.getName() + "/subdir/testFile2.txt");
-            }
-        }));
-
-        // 6. FileDataMessage for testFile1.txt
-        verify(mockConnection, times(1)).sendMessage(ArgumentMatchers.argThat(new ArgumentMatcher<Message>() {
-            @Override
-            public boolean matches(Message message) {
                 if (!(message instanceof FileDataMessage)) return false;
                 FileDataMessage fdm = (FileDataMessage) message;
-                return fdm.getRelativePath().equals(sourceDir.getName() + "/testFile1.txt");
-            }
-        }));
-
-        // 7. FileDataMessage for testFile2.txt
-        verify(mockConnection, times(1)).sendMessage(ArgumentMatchers.argThat(new ArgumentMatcher<Message>() {
-            @Override
-            public boolean matches(Message message) {
-                if (!(message instanceof FileDataMessage)) return false;
-                FileDataMessage fdm = (FileDataMessage) message;
-                return fdm.getRelativePath().equals(sourceDir.getName() + "/subdir/testFile2.txt");
+                return fdm.getRelativePath().equals("subdir/testFile2.txt");
             }
         }));
 
@@ -173,19 +150,10 @@ class SyncClientAppBackupTest {
             public boolean matches(Message message) {
                 if (!(message instanceof FileEndMessage)) return false;
                 FileEndMessage fem = (FileEndMessage) message;
-                return fem.getRelativePath().equals(sourceDir.getName() + "/testFile1.txt");
+                return fem.getRelativePath().equals("subdir/testFile2.txt");
             }
         }));
 
-        // 9. FileEndMessage for testFile2.txt
-        verify(mockConnection, times(1)).sendMessage(ArgumentMatchers.argThat(new ArgumentMatcher<Message>() {
-            @Override
-            public boolean matches(Message message) {
-                if (!(message instanceof FileEndMessage)) return false;
-                FileEndMessage fem = (FileEndMessage) message;
-                return fem.getRelativePath().equals(sourceDir.getName() + "/subdir/testFile2.txt");
-            }
-        }));
 
         // Verify output
         String output = outContent.toString();
@@ -202,9 +170,15 @@ class SyncClientAppBackupTest {
             .invoke(commandLineArgs, true);
 
         // Set up mock responses
+        List<FileInfo> filesToTransfer = List.of(
+                new FileInfo("/test/subdir/testFile2.txt", "subdir/testFile2.txt", 0, Instant.now(), Instant.now(), false),
+                new FileInfo("/test/testFile1.txt", "testFile1.txt", 0, Instant.now(), Instant.now(), false));
         FileListResponseMessage fileListResponse = new FileListResponseMessage(
-            new ArrayList<>(), new ArrayList<>(), true, 1, 1);
-        when(mockConnection.receiveMessage()).thenReturn(fileListResponse);
+            filesToTransfer, new ArrayList<>(), true, 1, 1);
+        when(mockConnection.receiveMessage())
+                .thenReturn(fileListResponse)
+                .thenReturn(FileDescriptorAckMessage.ready(sourceDir.getName() + "/subdir/testFile2.txt"))
+                .thenReturn(FileEndAckMessage.success("/subdir/testFile2.txt"));
 
         // Call the performBackup method
         performBackupMethod.invoke(null, mockConnection, commandLineArgs);
@@ -235,8 +209,11 @@ class SyncClientAppBackupTest {
     @Test
     void testPerformBackupWithErrors() throws Exception {
         // Set up mock responses with errors
+        List<FileInfo> filesToTransfer = List.of(
+                new FileInfo("/test/subdir/testFile2.txt", "subdir/testFile2.txt", 0, Instant.now(), Instant.now(), false),
+                new FileInfo("/test/testFile1.txt", "testFile1.txt", 0, Instant.now(), Instant.now(), false));
         FileListResponseMessage fileListResponse = new FileListResponseMessage(
-            new ArrayList<>(), new ArrayList<>(), true, 1, 1);
+                filesToTransfer, new ArrayList<>(), true, 1, 1);
 
         // First response is FileListResponse
         // Second response is FileDescriptorAck with error
@@ -252,7 +229,7 @@ class SyncClientAppBackupTest {
         performBackupMethod.invoke(null, mockConnection, commandLineArgs);
 
         // Verify output
-        String output = outContent.toString();
+        String output = outContent.toString()+ errContent.toString();
         assertTrue(output.contains("Server not ready to receive file: File already exists"));
         assertTrue(output.contains("File transfer failed: Failed to write file"));
     }

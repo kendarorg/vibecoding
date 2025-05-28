@@ -139,4 +139,8 @@ Mostly fixing unit tests and a weird behaviour on file listing
 ### Prompt 004 
 
 Fix the failing unit tests for the module sync-client, use a fake socket, no real socket allowed in unit tests
+
+### Fix 004 
+
+Fix all the tests by hand AI went in loopholes
   

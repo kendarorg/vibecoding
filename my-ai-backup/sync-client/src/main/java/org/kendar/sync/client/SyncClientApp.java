@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Main class for the sync client application.
@@ -152,10 +153,17 @@ public class SyncClientApp {
         }
 
         FileListResponseMessage fileListResponse = (FileListResponseMessage) response;
+        var mapToTransfer = fileListResponse.getFilesToTransfer()
+                .stream().collect(Collectors.toMap(fileInfo -> {
+                    return fileInfo.getRelativePath();
+                }, fileInfo -> fileInfo));
 
         // Process files to transfer
         for (FileInfo file : files) {
             // Send file descriptor
+            if(!mapToTransfer.containsKey(file.getRelativePath())) {
+                continue;
+            }
             FileDescriptorMessage fileDescriptorMessage = new FileDescriptorMessage(file);
             connection.sendMessage(fileDescriptorMessage);
 
