@@ -14,10 +14,7 @@ import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 /**
@@ -69,13 +66,13 @@ public class SyncClientApp {
 
                 // Send connect message
                 ConnectMessage connectMessage = new ConnectMessage(
-                    commandLineArgs.getUsername(),
-                    commandLineArgs.getPassword(),
-                    commandLineArgs.getTargetFolder(),
-                    DEFAULT_MAX_PACKET_SIZE,
-                    DEFAULT_MAX_CONNECTIONS,
-                    commandLineArgs.getBackupType(),
-                    commandLineArgs.isDryRun()
+                        commandLineArgs.getUsername(),
+                        commandLineArgs.getPassword(),
+                        commandLineArgs.getTargetFolder(),
+                        DEFAULT_MAX_PACKET_SIZE,
+                        DEFAULT_MAX_CONNECTIONS,
+                        commandLineArgs.getBackupType(),
+                        commandLineArgs.isDryRun()
                 );
 
                 connection.sendMessage(connectMessage);
@@ -92,14 +89,15 @@ public class SyncClientApp {
                     System.err.println("[CLIENT] Connection rejected: " + connectResponse.getErrorMessage());
                     return;
                 }
+                var maxConnections = connectResponse.getMaxConnections();
 
                 System.out.println("[CLIENT] Connected to server");
 
                 // Perform backup or restore
                 if (commandLineArgs.isBackup()) {
-                    performBackup(connection, commandLineArgs);
+                    performBackup(connection, commandLineArgs,maxConnections);
                 } else {
-                    performRestore(connection, commandLineArgs);
+                    performRestore(connection, commandLineArgs,maxConnections);
                 }
 
                 // Send sync end message
@@ -128,11 +126,12 @@ public class SyncClientApp {
     /**
      * Performs a backup operation.
      *
-     * @param connection The TCP connection
-     * @param args The command line arguments
+     * @param connection     The TCP connection
+     * @param args           The command line arguments
+     * @param maxConnections
      * @throws IOException If an I/O error occurs
      */
-    private static void performBackup(TcpConnection connection, CommandLineArgs args) throws IOException {
+    private static void performBackup(TcpConnection connection, CommandLineArgs args, int maxConnections) throws IOException {
         System.out.println("[CLIENT] Starting backup from " + args.getSourceFolder() + " to " + args.getTargetFolder());
 
         // Get list of files to backup
@@ -160,6 +159,7 @@ public class SyncClientApp {
             return;
         }
 
+
         FileListResponseMessage fileListResponse = (FileListResponseMessage) response;
         var mapToTransfer = fileListResponse.getFilesToTransfer()
                 .stream().collect(Collectors.toMap(fileInfo -> {
@@ -171,23 +171,34 @@ public class SyncClientApp {
                 .filter(file -> mapToTransfer.containsKey(FileUtils.makeUniformPath(file.getRelativePath())))
                 .collect(Collectors.toList());
 
+
         System.out.println("[CLIENT] Transferring " + filesToTransfer.size() + " files with 10 parallel connections");
 
         // Use a fixed pool of 10 threads for parallel file transfers
-        int numConnections = 10;
-        ExecutorService executorService = Executors.newFixedThreadPool(numConnections);
+        ExecutorService executorService = Executors.newFixedThreadPool(maxConnections);
         CountDownLatch completionLatch = new CountDownLatch(filesToTransfer.size());
-        AtomicInteger connectionIdCounter = new AtomicInteger(1); // Start from 1 as main connection is 0
-
+        ConcurrentLinkedQueue<TcpConnection> connections = new ConcurrentLinkedQueue<>();// Start from 1 as main connection is 0
+        Semaphore semaphore = new Semaphore(maxConnections);
+        for (int i = 0; i < maxConnections; i++) {
+            Socket socket = new Socket(args.getServerAddress(), args.getServerPort());
+            TcpConnection subConnection = new TcpConnection(socket, connection.getSessionId(),
+                    i + 1, DEFAULT_MAX_PACKET_SIZE);
+            connections.add(subConnection);
+        }
 
         // Process files to transfer in parallel
         for (FileInfo file : filesToTransfer) {
             executorService.submit(() -> {
+                TcpConnection currentConnection = null;
                 try {
-                    transferFile(file, args, connection.getSessionId(), connectionIdCounter.getAndIncrement() % numConnections + 1);
-                } catch (IOException e) {
+                    semaphore.acquire();
+                    currentConnection = connections.poll();
+                    transferFile(file, args, connection);
+                } catch (Exception e) {
                     System.err.println("[CLIENT] Error transferring file " + file.getRelativePath() + ": " + e.getMessage());
                 } finally {
+                    connections.add(currentConnection);
+                    semaphore.release();
                     completionLatch.countDown();
                 }
             });
@@ -208,11 +219,12 @@ public class SyncClientApp {
     /**
      * Performs a restore operation.
      *
-     * @param connection The TCP connection
-     * @param args The command line arguments
+     * @param connection     The TCP connection
+     * @param args           The command line arguments
+     * @param maxConnections
      * @throws IOException If an I/O error occurs
      */
-    private static void performRestore(TcpConnection connection, CommandLineArgs args) throws IOException {
+    private static void performRestore(TcpConnection connection, CommandLineArgs args, int maxConnections) throws IOException {
         System.out.println("[CLIENT] Starting restore from " + args.getTargetFolder() + " to " + args.getSourceFolder());
 
         // Get list of files to backup
@@ -257,7 +269,7 @@ public class SyncClientApp {
 
             FileDescriptorMessage fileDescriptorMessage = (FileDescriptorMessage) message;
             FileInfo fileInfo = fileDescriptorMessage.getFileInfo();
-            if(!mapToTransfer.containsKey(FileUtils.makeUniformPath(fileInfo.getRelativePath()))) {
+            if (!mapToTransfer.containsKey(FileUtils.makeUniformPath(fileInfo.getRelativePath()))) {
                 System.out.println("[CLIENT] Skipping file not in transfer list: " + fileInfo.getRelativePath());
                 // Send file descriptor ack
                 FileDescriptorAckMessage fileDescriptorAck = FileDescriptorAckMessage.ready(fileInfo.getRelativePath());
@@ -351,8 +363,8 @@ public class SyncClientApp {
      * Recursively scans a directory and adds all files to the list.
      *
      * @param directory The directory to scan
-     * @param basePath The base path for calculating relative paths
-     * @param files The list to add files to
+     * @param basePath  The base path for calculating relative paths
+     * @param files     The list to add files to
      * @throws IOException If an I/O error occurs
      */
     private static void scanDirectory(File directory, String basePath, List<FileInfo> files) throws IOException {
@@ -469,7 +481,7 @@ public class SyncClientApp {
         if (args.getSourceFolder() == null) {
             System.err.println("[CLIENT] Source folder is required (--source)");
             valid = false;
-        }else if(!Files.exists(Path.of(args.getSourceFolder()))) {
+        } else if (!Files.exists(Path.of(args.getSourceFolder()))) {
             System.err.println("[CLIENT] Source folder does not exists (--source)");
             valid = false;
         }
@@ -523,73 +535,71 @@ public class SyncClientApp {
     /**
      * Transfers a single file using a dedicated connection.
      *
-     * @param file The file to transfer
-     * @param args The command line arguments
-     * @param sessionId The session ID
-     * @param connectionId The connection ID
+     * @param file       The file to transfer
+     * @param args       The command line arguments
+     * @param connection Theconnection
      * @throws IOException If an I/O error occurs
      */
-    private static void transferFile(FileInfo file, CommandLineArgs args, UUID sessionId, int connectionId) throws IOException {
+    private static void transferFile(FileInfo file, CommandLineArgs args, TcpConnection connection) throws IOException {
         String threadName = Thread.currentThread().getName();
+        var connectionId = connection.getConnectionId();
         System.out.println("[CLIENT-" + connectionId + "] Starting transfer of " + file.getRelativePath());
 
         // Create new connection to the server
-        try (Socket socket = new Socket(args.getServerAddress(), args.getServerPort());
-             TcpConnection connection = new TcpConnection(socket, sessionId, connectionId, DEFAULT_MAX_PACKET_SIZE)) {
 
-            // Send file descriptor
-            FileDescriptorMessage fileDescriptorMessage = new FileDescriptorMessage(file);
-            connection.sendMessage(fileDescriptorMessage);
+        // Send file descriptor
+        FileDescriptorMessage fileDescriptorMessage = new FileDescriptorMessage(file);
+        connection.sendMessage(fileDescriptorMessage);
 
-            // Wait for file descriptor ack
-            Message response = connection.receiveMessage();
-            if (response.getMessageType() != MessageType.FILE_DESCRIPTOR_ACK) {
-                System.err.println("[CLIENT-" + connectionId + "] Unexpected response: " + response.getMessageType());
-                return;
-            }
-
-            FileDescriptorAckMessage fileDescriptorAck = (FileDescriptorAckMessage) response;
-            if (!fileDescriptorAck.isReady()) {
-                System.err.println("[CLIENT-" + connectionId + "] Server not ready to receive file: " + fileDescriptorAck.getErrorMessage());
-                return;
-            }
-
-            // If it's a directory, no need to send data
-            if (file.isDirectory()) {
-                System.out.println("[CLIENT-" + connectionId + "] Created directory: " + file.getRelativePath());
-                return;
-            }
-
-            // Send file data
-            if (!args.isDryRun()) {
-                File sourceFile = new File(file.getPath());
-                byte[] fileData = FileUtils.readFile(sourceFile);
-
-                FileDataMessage fileDataMessage = new FileDataMessage(file.getRelativePath(), 0, 1, fileData);
-                connection.sendMessage(fileDataMessage);
-            } else {
-                System.out.println("[CLIENT-" + connectionId + "] Dry run: Would send file data for " + file.getRelativePath());
-            }
-
-            // Send file end
-            FileEndMessage fileEndMessage = new FileEndMessage(file.getRelativePath(), file);
-            connection.sendMessage(fileEndMessage);
-
-            // Wait for file end ack
-            response = connection.receiveMessage();
-            if (response.getMessageType() != MessageType.FILE_END_ACK) {
-                System.err.println("[CLIENT-" + connectionId + "] Unexpected response: " + response.getMessageType());
-                return;
-            }
-
-            FileEndAckMessage fileEndAck = (FileEndAckMessage) response;
-            if (!fileEndAck.isSuccess()) {
-                System.err.println("[CLIENT-" + connectionId + "] File transfer failed: " + fileEndAck.getErrorMessage());
-                return;
-            }
-
-            System.out.println("[CLIENT-" + connectionId + "] Transferred file: " + file.getRelativePath());
+        // Wait for file descriptor ack
+        Message response = connection.receiveMessage();
+        if (response.getMessageType() != MessageType.FILE_DESCRIPTOR_ACK) {
+            System.err.println("[CLIENT-" + connectionId + "] Unexpected response: " + response.getMessageType());
+            return;
         }
+
+        FileDescriptorAckMessage fileDescriptorAck = (FileDescriptorAckMessage) response;
+        if (!fileDescriptorAck.isReady()) {
+            System.err.println("[CLIENT-" + connectionId + "] Server not ready to receive file: " + fileDescriptorAck.getErrorMessage());
+            return;
+        }
+
+        // If it's a directory, no need to send data
+        if (file.isDirectory()) {
+            System.out.println("[CLIENT-" + connectionId + "] Created directory: " + file.getRelativePath());
+            return;
+        }
+
+        // Send file data
+        if (!args.isDryRun()) {
+            File sourceFile = new File(file.getPath());
+            byte[] fileData = FileUtils.readFile(sourceFile);
+
+            FileDataMessage fileDataMessage = new FileDataMessage(file.getRelativePath(), 0, 1, fileData);
+            connection.sendMessage(fileDataMessage);
+        } else {
+            System.out.println("[CLIENT-" + connectionId + "] Dry run: Would send file data for " + file.getRelativePath());
+        }
+
+        // Send file end
+        FileEndMessage fileEndMessage = new FileEndMessage(file.getRelativePath(), file);
+        connection.sendMessage(fileEndMessage);
+
+        // Wait for file end ack
+        response = connection.receiveMessage();
+        if (response.getMessageType() != MessageType.FILE_END_ACK) {
+            System.err.println("[CLIENT-" + connectionId + "] Unexpected response: " + response.getMessageType());
+            return;
+        }
+
+        FileEndAckMessage fileEndAck = (FileEndAckMessage) response;
+        if (!fileEndAck.isSuccess()) {
+            System.err.println("[CLIENT-" + connectionId + "] File transfer failed: " + fileEndAck.getErrorMessage());
+            return;
+        }
+
+        System.out.println("[CLIENT-" + connectionId + "] Transferred file: " + file.getRelativePath());
+
     }
 
 }

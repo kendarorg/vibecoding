@@ -188,6 +188,10 @@ On the SyncClient::performBackup function,  after receiving the FileListResponse
 * Parallelize the sending of the files on the ten connections
 * Before exiting the function wait for the completion of the sending of all files
 
+### Fix 008
+
+* Fix parallelization
+
 
 
 
