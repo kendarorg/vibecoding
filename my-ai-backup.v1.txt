@@ -200,6 +200,13 @@ Modify the Server to allow concurrent files sent by SyncClientApp
 * When receiving a FILE_DESCRIPTOR should store the current file data in session, using the connectionId as index
 * When receiving a FILE_DATA or a FILE_END should retrieve the FileInfo from the session, using the connectionId as index
 
+### FIx 009
+
+* FIxing the tests,
+* The server,
+* Everything
+
+
 
 
 

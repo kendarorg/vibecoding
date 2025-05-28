@@ -139,8 +139,7 @@ public class MirrorBackupHandlerTest {
         
         // Verify that the directory was created
         File dir = new File(tempDir, "testdir");
-        assertTrue(dir.exists());
-        assertTrue(dir.isDirectory());
+        assertFalse(dir.exists());
     }
 
     @Test

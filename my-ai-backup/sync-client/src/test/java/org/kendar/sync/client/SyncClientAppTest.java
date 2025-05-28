@@ -141,9 +141,10 @@ class SyncClientAppTest {
     @Test
     void testValidateArgs() throws Exception {
         // Get the private validateArgs method using reflection
-        Method validateArgs = SyncClientApp.class.getDeclaredMethod("validateArgs", 
+        Method validateArgs = SyncClient.class.getDeclaredMethod("validateArgs",
             Class.forName("org.kendar.sync.client.CommandLineArgs"));
         validateArgs.setAccessible(true);
+        var target = new SyncClient();
         
         // Get the CommandLineArgs class
         Class<?> commandLineArgsClass = Class.forName("org.kendar.sync.client.CommandLineArgs");
@@ -181,14 +182,14 @@ class SyncClientAppTest {
         password.set(args, "password123");
         
         // Validate the args
-        Boolean result = (Boolean) validateArgs.invoke(null, args);
+        Boolean result = (Boolean) validateArgs.invoke(target, args);
         
         // Verify the result
         assertTrue(result);
         
         // Test with invalid source folder
         sourceFolder.set(args, "/nonexistent/folder");
-        result = (Boolean) validateArgs.invoke(null, args);
+        result = (Boolean) validateArgs.invoke(target, args);
         assertFalse(result);
         
         // Reset source folder
@@ -196,7 +197,7 @@ class SyncClientAppTest {
         
         // Test with missing server address
         serverAddress.set(args, null);
-        result = (Boolean) validateArgs.invoke(null, args);
+        result = (Boolean) validateArgs.invoke(target, args);
         assertFalse(result);
     }
     

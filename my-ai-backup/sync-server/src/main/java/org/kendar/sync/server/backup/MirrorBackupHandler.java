@@ -147,15 +147,6 @@ public class MirrorBackupHandler extends BackupHandler {
             return;
         }
 
-        // Create the file or directory
-        File file = new File(session.getFolder().getRealPath(), message.getFileInfo().getRelativePath());
-
-        if (message.getFileInfo().isDirectory()) {
-            file.mkdirs();
-        } else {
-            file.getParentFile().mkdirs();
-        }
-
         connection.sendMessage(FileDescriptorAckMessage.ready(message.getFileInfo().getRelativePath()));
     }
 
@@ -186,9 +177,11 @@ public class MirrorBackupHandler extends BackupHandler {
         // Write the data to the file
         String relativePath = session.isBackup() ? fileInfo.getRelativePath() : message.getRelativePath();
         File file = new File(session.getFolder().getRealPath(), relativePath);
+        file.getParentFile().mkdirs();
         try (FileOutputStream fos = new FileOutputStream(file, !message.isFirstBlock())) {
             fos.write(message.getData());
         }
+
     }
 
     @Override

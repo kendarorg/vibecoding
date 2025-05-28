@@ -2,11 +2,10 @@ package org.kendar.sync.server.server;
 
 import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.model.ServerSettings;
+import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.BackupType;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Represents a client session.
@@ -19,6 +18,8 @@ public class ClientSession {
     private final boolean dryRun;
     private final Map<Integer, FileInfo> currentFileTransfers = new HashMap<>();
     private boolean isBackup = false;
+    private TcpConnection mainConnection;
+    private Set<TcpConnection> connections = new HashSet<>();
 
     public ClientSession(UUID sessionId, ServerSettings.User user, ServerSettings.BackupFolder folder,
                          BackupType backupType, boolean dryRun) {
@@ -94,5 +95,28 @@ public class ClientSession {
      */
     public boolean isBackup() {
         return isBackup;
+    }
+
+    public void setMainConnection(TcpConnection mainConnection) {
+        this.mainConnection = mainConnection;
+    }
+
+    public TcpConnection getMainConnection() {
+        return mainConnection;
+    }
+
+    public void setConnection(TcpConnection connection) {
+        this.connections.add( connection);
+    }
+
+    public void closeConnections() {
+        for (TcpConnection connection : connections) {
+            try {
+                connection.close();
+            } catch (Exception e) {
+                System.err.println("Error closing connection: " + e.getMessage());
+            }
+        }
+        connections.clear();
     }
 }

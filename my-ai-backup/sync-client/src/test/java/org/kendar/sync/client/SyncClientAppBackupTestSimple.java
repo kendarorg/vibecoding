@@ -35,6 +35,7 @@ class SyncClientAppBackupTestSimple {
     private MockTcpConnection mockConnection;
     private java.lang.reflect.Method performBackupMethod;
     private Object commandLineArgs;
+    private SyncClient target;
 
     /**
      * Simple mock implementation of TcpConnection for testing.
@@ -92,6 +93,7 @@ class SyncClientAppBackupTestSimple {
 
     @BeforeEach
     void setUp() throws Exception {
+        target = new FakeSyncClient();
         // Create a unique test directory inside target/tests
         String uniqueId = UUID.randomUUID().toString();
         testRoot = Path.of("target", "tests", uniqueId);
@@ -122,9 +124,10 @@ class SyncClientAppBackupTestSimple {
 
         // Get the private performBackup method using reflection
         // We need to create a custom method that takes our MockTcpConnection instead of TcpConnection
-        performBackupMethod = SyncClientApp.class.getDeclaredMethod("performBackup", 
+        performBackupMethod = SyncClient.class.getDeclaredMethod("performBackup",
             org.kendar.sync.lib.network.TcpConnection.class, 
-            Class.forName("org.kendar.sync.client.CommandLineArgs"));
+            Class.forName("org.kendar.sync.client.CommandLineArgs"),
+                int.class);
         performBackupMethod.setAccessible(true);
 
         // Create CommandLineArgs object using reflection
@@ -169,7 +172,7 @@ class SyncClientAppBackupTestSimple {
         mockConnection.addMessageToReturn(FileEndAckMessage.success(sourceDir.getName() + "/subdir/testFile2.txt"));
 
         // Call the performBackup method
-        performBackupMethod.invoke(null, mockConnection, commandLineArgs);
+        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1);
 
         // Get the sent messages
         List<Message> sentMessages = mockConnection.getSentMessages();
@@ -207,6 +210,7 @@ class SyncClientAppBackupTestSimple {
 
     @Test
     void testPerformBackupDryRun() throws Exception {
+
         // Set dry run mode
         Class<?> commandLineArgsClass = Class.forName("org.kendar.sync.client.CommandLineArgs");
         commandLineArgsClass.getDeclaredMethod("setDryRun", boolean.class)
@@ -229,7 +233,7 @@ class SyncClientAppBackupTestSimple {
         mockConnection.addMessageToReturn(FileEndAckMessage.success(sourceDir.getName() + "/subdir/testFile2.txt"));
 
         // Call the performBackup method
-        performBackupMethod.invoke(null, mockConnection, commandLineArgs);
+        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1);
 
         // Get the sent messages
         List<Message> sentMessages = mockConnection.getSentMessages();
@@ -271,7 +275,7 @@ class SyncClientAppBackupTestSimple {
         mockConnection.addMessageToReturn(FileEndAckMessage.failure(sourceDir.getName() + "/subdir/testFile2.txt", "Failed to write file"));
 
         // Call the performBackup method
-        performBackupMethod.invoke(null, mockConnection, commandLineArgs);
+        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1);
 
         // Get the sent messages
         List<Message> sentMessages = mockConnection.getSentMessages();

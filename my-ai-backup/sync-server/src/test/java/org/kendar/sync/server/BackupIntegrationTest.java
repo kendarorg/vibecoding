@@ -84,7 +84,7 @@ public class BackupIntegrationTest {
         serverConfig = new ServerConfig();
         var serverSettings = new ServerSettings();
         serverSettings.setPort(serverPort);
-        serverSettings.setMaxConnections(1);
+        serverSettings.setMaxConnections(5);
         serverSettings.setMaxPacketSize(1024*1024); // 1 MB
         ServerSettings.User newUser = new ServerSettings.User(UUID.randomUUID().toString(),
                 "user", "password", true);

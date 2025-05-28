@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import java.io.IOException;
+import java.util.UUID;
 
 /**
  * Base class for all messages in the sync protocol.
@@ -43,6 +44,24 @@ import java.io.IOException;
 public abstract class Message {
     private static final ObjectMapper objectMapper = new ObjectMapper()
         .registerModule(new JavaTimeModule());
+    @JsonIgnore
+    private int connectionId;
+    @JsonIgnore
+    private UUID sessionId;
+    @JsonIgnore
+    private int packetId;
+
+    public int getConnectionId() {
+        return connectionId;
+    }
+
+    public UUID getSessionId() {
+        return sessionId;
+    }
+
+    public int getPacketId() {
+        return packetId;
+    }
 
     /**
      * Gets the message type for this message.
@@ -84,5 +103,11 @@ public abstract class Message {
      */
     public static Message deserialize(byte[] data) throws IOException {
         return objectMapper.readValue(data, Message.class);
+    }
+
+    public void initialize(int connectionId, UUID sessionId, int packetId) {
+        this.connectionId = connectionId;
+        this.sessionId = sessionId;
+        this.packetId = packetId;
     }
 }

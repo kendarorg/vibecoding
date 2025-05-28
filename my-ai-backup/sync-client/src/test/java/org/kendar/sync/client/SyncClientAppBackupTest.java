@@ -38,9 +38,11 @@ class SyncClientAppBackupTest {
     private TcpConnection mockConnection;
     private Method performBackupMethod;
     private Object commandLineArgs;
+    private SyncClient target;
 
     @BeforeEach
     void setUp() throws Exception {
+        target = new FakeSyncClient();
         outContent = new ByteArrayOutputStream();
         errContent = new ByteArrayOutputStream();
         // Create a unique test directory inside target/tests
@@ -72,8 +74,8 @@ class SyncClientAppBackupTest {
         mockConnection = mock(TcpConnection.class);
 
         // Get the private performBackup method using reflection
-        performBackupMethod = SyncClientApp.class.getDeclaredMethod("performBackup", TcpConnection.class, 
-            Class.forName("org.kendar.sync.client.CommandLineArgs"));
+        performBackupMethod = SyncClient.class.getDeclaredMethod("performBackup", TcpConnection.class,
+            Class.forName("org.kendar.sync.client.CommandLineArgs"),int.class);
         performBackupMethod.setAccessible(true);
 
         // Create CommandLineArgs object using reflection
@@ -113,7 +115,7 @@ class SyncClientAppBackupTest {
 
 
         // Call the performBackup method
-        performBackupMethod.invoke(null, mockConnection, commandLineArgs);
+        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1);
 
         // Verify that the correct messages were sent
         // 1. FileListMessage
@@ -181,7 +183,7 @@ class SyncClientAppBackupTest {
                 .thenReturn(FileEndAckMessage.success("/subdir/testFile2.txt"));
 
         // Call the performBackup method
-        performBackupMethod.invoke(null, mockConnection, commandLineArgs);
+        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1);
 
         // Verify that the correct messages were sent
         // 1. FileListMessage
@@ -226,7 +228,7 @@ class SyncClientAppBackupTest {
             .thenReturn(FileEndAckMessage.failure(sourceDir.getName() + "/subdir/testFile2.txt", "Failed to write file"));
 
         // Call the performBackup method
-        performBackupMethod.invoke(null, mockConnection, commandLineArgs);
+        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1);
 
         // Verify output
         String output = outContent.toString()+ errContent.toString();

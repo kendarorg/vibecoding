@@ -90,6 +90,28 @@ public class Server {
 
             // Wait for connect message
             Message message = connection.receiveMessage();
+            if(message.getMessageType()==MessageType.FILE_DESCRIPTOR) {
+                try {
+                    var session = sessions.get(message.getSessionId());
+                    while (session!=null) {
+                        connection.setSessionId(message.getSessionId());
+                        connection.setConnectionId(message.getConnectionId());
+                        session.setConnection( connection);
+                        handleFileDescriptor(connection, session, (FileDescriptorMessage) message);
+                        message = connection.receiveMessage();
+                        handleFileData(connection, session, (FileDataMessage) message);
+                        message = connection.receiveMessage();
+                        handleFileEnd(connection, session, (FileEndMessage) message);
+                        session = sessions.get(message.getSessionId());
+                        message = connection.receiveMessage();
+                    }
+                    System.out.println("[SERVER] Client disconnected " );
+                }catch (Exception ex){
+                    System.err.println("[SERVER] Client disconnected " +ex.getMessage());
+                    return;
+                }
+            }
+
             if (message.getMessageType() != MessageType.CONNECT) {
                 connection.sendMessage(new ErrorMessage("ERR_PROTOCOL", "Expected CONNECT message"));
                 connection.close();
@@ -131,6 +153,7 @@ public class Server {
                     connectMessage.isDryRun() || dryRun
             );
             sessions.put(sessionId, session);
+            session.setMainConnection(connection);
 
             // Send connect response
             connection.sendMessage(new ConnectResponseMessage(true, null, settings.getMaxPacketSize(), settings.getMaxConnections()));
@@ -154,6 +177,7 @@ public class Server {
                     case SYNC_END:
                         handleSyncEnd(connection, session, (SyncEndMessage) message);
                         // End of session
+                        session.closeConnections();
                         sessions.remove(sessionId);
                         connection.close();
                         return;
@@ -180,7 +204,7 @@ public class Server {
      * @throws IOException If an I/O error occurs
      */
     private void handleFileList(TcpConnection connection, ClientSession session, FileListMessage message) throws IOException {
-        System.out.println("[SERVER] Received FILE_LIST message");
+        //System.out.println("[SERVER] Received FILE_LIST message");
 
         // Set whether this is a backup or restore operation
         session.setBackup(message.isBackup());
@@ -206,8 +230,8 @@ public class Server {
      * @throws IOException If an I/O error occurs
      */
     private void handleFileDescriptor(TcpConnection connection, ClientSession session, FileDescriptorMessage message) throws IOException {
-        System.out.println("[SERVER] Received FILE_DESCRIPTOR message: " + message.getFileInfo().getRelativePath() + 
-                         " on connection " + connection.getConnectionId());
+        //System.out.println("[SERVER] Received FILE_DESCRIPTOR message: " + message.getFileInfo().getRelativePath() +
+        //                 " on connection " + connection.getConnectionId());
 
         // Store the current file info in the session using connection ID as index
         if (session.isBackup()) {
@@ -236,7 +260,7 @@ public class Server {
      */
     private void handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException {
         int connectionId = connection.getConnectionId();
-        System.out.println("[SERVER] Received FILE_DATA message on connection " + connectionId);
+        //System.out.println("[SERVER] Received FILE_DATA message on connection " + connectionId);
 
         // Get the appropriate backup handler for the session's backup type
         BackupHandler handler = backupHandlers.get(session.getBackupType());
@@ -259,16 +283,7 @@ public class Server {
      * @throws IOException If an I/O error occurs
      */
     private void handleFileEnd(TcpConnection connection, ClientSession session, FileEndMessage message) throws IOException {
-        int connectionId = connection.getConnectionId();
-        System.out.println("[SERVER] Received FILE_END message for " + message.getRelativePath() + 
-                         " on connection " + connectionId);
 
-        // Clear the current file info from the session after transfer completes
-        if (session.isBackup()) {
-            session.clearCurrentFile(connectionId);
-        }
-
-        // Get the appropriate backup handler for the session's backup type
         BackupHandler handler = backupHandlers.get(session.getBackupType());
         if (handler == null) {
             System.err.println("No handler found for backup type: " + session.getBackupType());
@@ -289,7 +304,7 @@ public class Server {
      * @throws IOException If an I/O error occurs
      */
     private void handleSyncEnd(TcpConnection connection, ClientSession session, SyncEndMessage message) throws IOException {
-        System.out.println("[SERVER] Received SYNC_END message");
+        //System.out.println("[SERVER] Received SYNC_END message");
 
         // Get the appropriate backup handler for the session's backup type
         BackupHandler handler = backupHandlers.get(session.getBackupType());

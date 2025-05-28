@@ -7,8 +7,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Handles TCP communication between the client and server.
@@ -17,11 +17,22 @@ public class TcpConnection implements AutoCloseable {
     private final Socket socket;
     private InputStream inputStream;
     private OutputStream outputStream;
-    private final UUID sessionId;
-    private final AtomicInteger connectionId;
-    private final AtomicInteger packetId;
+    private UUID sessionId;
+    private int connectionId;
+    private final int packetId;
     private final int maxPacketSize;
-    
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof TcpConnection that)) return false;
+        return Objects.equals(socket, that.socket);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(socket);
+    }
+
     /**
      * Creates a new TCP connection.
      *
@@ -36,8 +47,8 @@ public class TcpConnection implements AutoCloseable {
         this.inputStream = socket.getInputStream();
         this.outputStream = socket.getOutputStream();
         this.sessionId = sessionId;
-        this.connectionId = new AtomicInteger(connectionId);
-        this.packetId = new AtomicInteger(0);
+        this.connectionId = connectionId;
+        this.packetId = 0;
         this.maxPacketSize = maxPacketSize;
     }
     
@@ -52,9 +63,9 @@ public class TcpConnection implements AutoCloseable {
         
         // Create a packet with the message data
         Packet packet = new Packet(
-                connectionId.get(),
+                connectionId,
                 sessionId,
-                packetId.getAndIncrement(),
+                packetId,
                 message.getMessageType().getCode(),
                 messageData
         );
@@ -106,7 +117,9 @@ public class TcpConnection implements AutoCloseable {
         Packet packet = Packet.deserialize(packetData);
         
         // Deserialize the message
-        return Message.deserialize(packet.getDecompressedContent());
+        var result = Message.deserialize(packet.getDecompressedContent());
+        result.initialize(packet.getConnectionId(), packet.getSessionId(), packet.getPacketId());
+        return result;
     }
     
     /**
@@ -136,7 +149,7 @@ public class TcpConnection implements AutoCloseable {
      * @return The connection ID
      */
     public int getConnectionId() {
-        return connectionId.get();
+        return connectionId;
     }
     
     /**
@@ -155,5 +168,13 @@ public class TcpConnection implements AutoCloseable {
      */
     public int getMaxPacketSize() {
         return maxPacketSize;
+    }
+
+    public void setSessionId(UUID sessionId) {
+        this.sessionId= sessionId;
+    }
+
+    public void setConnectionId(int connectionId) {
+        this.connectionId=connectionId;
     }
 }
