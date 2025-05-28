@@ -17,6 +17,8 @@ public  class CommandLineArgs {
     private boolean dryRun = false;
     private BackupType backupType = BackupType.PRESERVE;
     private boolean help = false;
+    private int maxConnections=0;
+    private int maxSize;
 
     public String getSourceFolder() {
         return sourceFolder;
@@ -96,5 +98,21 @@ public  class CommandLineArgs {
 
     public void setHelp(boolean help) {
         this.help = help;
+    }
+
+    public void setMaxConnections(int maxConnections) {
+        this.maxConnections = maxConnections;
+    }
+
+    public int getMaxConnections() {
+        return maxConnections;
+    }
+
+    public void setMaxSize(int maxSize) {
+        this.maxSize = maxSize;
+    }
+
+    public int getMaxSize() {
+        return maxSize;
     }
 }

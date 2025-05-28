@@ -1,21 +1,6 @@
 package org.kendar.sync.client;
 
-import org.kendar.sync.lib.model.FileInfo;
-import org.kendar.sync.lib.network.TcpConnection;
-import org.kendar.sync.lib.protocol.*;
-import org.kendar.sync.lib.utils.FileUtils;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.Socket;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.attribute.FileTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.*;
-import java.util.stream.Collectors;
+import org.kendar.sync.lib.protocol.BackupType;
 
 /**
  * Main class for the sync client application.
@@ -40,9 +25,6 @@ public class SyncClientApp {
     }
 
 
-
-
-
     /**
      * Parses command line arguments.
      *
@@ -64,6 +46,18 @@ public class SyncClientApp {
                 case "-s":
                     if (i + 1 < args.length) {
                         commandLineArgs.setSourceFolder(args[++i]);
+                    }
+                    break;
+                case "--conn":
+                case "-c":
+                    if (i + 1 < args.length) {
+                        commandLineArgs.setMaxConnections(Integer.parseInt(args[++i]));
+                    }
+                    break;
+                case "--size":
+                case "-z":
+                    if (i + 1 < args.length) {
+                        commandLineArgs.setMaxSize(Integer.parseInt(args[++i]));
                     }
                     break;
                 case "--target":
@@ -139,6 +133,8 @@ public class SyncClientApp {
         System.out.println("  --target, -t <folder>       Target folder (virtual folder on server)");
         System.out.println("  --backup, -b                Perform backup (default)");
         System.out.println("  --restore, -r               Perform restore");
+        System.out.println("  --conn, -c                  Max connections");
+        System.out.println("  --size, -z                  Max packet size in bytes");
         System.out.println("  --server <address>          Server address");
         System.out.println("  --port, -p <port>           Server port (default: 8080)");
         System.out.println("  --username, -u <username>   Username for authentication");

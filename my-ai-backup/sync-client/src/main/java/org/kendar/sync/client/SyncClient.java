@@ -22,10 +22,11 @@ public class SyncClient {
     public static final int DEFAULT_MAX_PACKET_SIZE = 1024 * 1024; // 1 MB
     private static final int DEFAULT_MAX_CONNECTIONS = 5;
 
-    protected TcpConnection getTcpConnection(TcpConnection connection, CommandLineArgs args, int i) throws IOException {
+    protected TcpConnection getTcpConnection(TcpConnection connection,
+                                             CommandLineArgs args, int i,int maxPacketSize) throws IOException {
         Socket socket = new Socket(args.getServerAddress(), args.getServerPort());
         TcpConnection subConnection = new TcpConnection(socket, connection.getSessionId(),
-                i + 1, DEFAULT_MAX_PACKET_SIZE);
+                i + 1, maxPacketSize);
         return subConnection;
     }
 
@@ -35,9 +36,10 @@ public class SyncClient {
      * @param connection     The TCP connection
      * @param args           The command line arguments
      * @param maxConnections
+     * @param maxPacketSize
      * @throws IOException If an I/O error occurs
      */
-    private  void performRestore(TcpConnection connection, CommandLineArgs args, int maxConnections) throws IOException {
+    private  void performRestore(TcpConnection connection, CommandLineArgs args, int maxConnections, int maxPacketSize) throws IOException {
         System.out.println("[CLIENT] Starting restore from " + args.getTargetFolder() + " to " + args.getSourceFolder());
 
         // Get list of files to backup
@@ -259,7 +261,6 @@ public class SyncClient {
         // Send file descriptor
         FileDescriptorMessage fileDescriptorMessage = new FileDescriptorMessage(file);
         connection.sendMessage(fileDescriptorMessage);
-
         // Wait for file descriptor ack
         Message response = connection.receiveMessage();
         if (response.getMessageType() != MessageType.FILE_DESCRIPTOR_ACK) {
@@ -361,15 +362,16 @@ public class SyncClient {
                     return;
                 }
                 connection.setSessionId(connectResponse.getSessionId());
-                var maxConnections = connectResponse.getMaxConnections();
+                var maxConnections = Math.min(commandLineArgs.getMaxConnections(),connectResponse.getMaxConnections());
+                var maxPacketSize = Math.min(commandLineArgs.getMaxSize(), connectResponse.getMaxPacketSize());
 
                 System.out.println("[CLIENT] Connected to server");
 
                 // Perform backup or restore
                 if (commandLineArgs.isBackup()) {
-                    performBackup(connection, commandLineArgs, maxConnections);
+                    performBackup(connection, commandLineArgs, maxConnections,maxPacketSize);
                 } else {
-                    performRestore(connection, commandLineArgs, maxConnections);
+                    performRestore(connection, commandLineArgs, maxConnections,maxPacketSize);
                 }
 
                 // Send sync end message
@@ -401,9 +403,10 @@ public class SyncClient {
      * @param connection     The TCP connection
      * @param args           The command line arguments
      * @param maxConnections
+     * @param maxPacketSize
      * @throws IOException If an I/O error occurs
      */
-    private void performBackup(TcpConnection connection, CommandLineArgs args, int maxConnections) throws IOException {
+    private void performBackup(TcpConnection connection, CommandLineArgs args, int maxConnections, int maxPacketSize) throws IOException {
         System.out.println("[CLIENT] Starting backup from " + args.getSourceFolder() + " to " + args.getTargetFolder());
 
         // Get list of files to backup
@@ -454,7 +457,7 @@ public class SyncClient {
         ConcurrentLinkedQueue<TcpConnection> connections = new ConcurrentLinkedQueue<>();// Start from 1 as main connection is 0
         Semaphore semaphore = new Semaphore(maxConnections);
         for (int i = 0; i < maxConnections; i++) {
-            TcpConnection subConnection = getTcpConnection(connection, args, i);
+            TcpConnection subConnection = getTcpConnection(connection, args, i,maxPacketSize);
             connections.add(subConnection);
         }
 

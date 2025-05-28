@@ -206,6 +206,9 @@ Modify the Server to allow concurrent files sent by SyncClientApp
 * The server,
 * Everything
 
+### Prompt 010
+
+In the client instead of sending all data in one block, read in blocks of maxPacketSize and send multiple FileDataMessage
 
 
 
