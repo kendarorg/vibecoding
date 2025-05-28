@@ -283,10 +283,35 @@ public class SyncClient {
         // Send file data
         if (!args.isDryRun()) {
             File sourceFile = new File(file.getPath());
-            byte[] fileData = FileUtils.readFile(sourceFile);
+            long fileSize = sourceFile.length();
+            int maxPacketSize = connection.getMaxPacketSize();
 
-            FileDataMessage fileDataMessage = new FileDataMessage(file.getRelativePath(), 0, 1, fileData);
-            connection.sendMessage(fileDataMessage);
+            // Calculate how many blocks we need to send
+            int totalBlocks = (int) Math.ceil((double) fileSize / maxPacketSize);
+            if (totalBlocks == 0) totalBlocks = 1; // Ensure at least one block for empty files
+
+            System.out.println("[CLIENT-" + connectionId + "] Sending file " + file.getRelativePath() + 
+                             " in " + totalBlocks + " blocks (" + fileSize + " bytes)");
+
+            try (java.io.FileInputStream fis = new java.io.FileInputStream(sourceFile)) {
+                byte[] buffer = new byte[maxPacketSize];
+                int blockNumber = 0;
+                int bytesRead;
+
+                while ((bytesRead = fis.read(buffer)) != -1) {
+                    // If we read less than the buffer size, create a smaller array with just the data
+                    byte[] blockData = bytesRead == buffer.length ? buffer : java.util.Arrays.copyOf(buffer, bytesRead);
+
+                    FileDataMessage fileDataMessage = new FileDataMessage(
+                            file.getRelativePath(), blockNumber, totalBlocks, blockData);
+                    connection.sendMessage(fileDataMessage);
+
+                    System.out.println("[CLIENT-" + connectionId + "] Sent block " + (blockNumber + 1) + 
+                                     " of " + totalBlocks + " (" + blockData.length + " bytes)");
+
+                    blockNumber++;
+                }
+            }
         } else {
             System.out.println("[CLIENT-" + connectionId + "] Dry run: Would send file data for " + file.getRelativePath());
         }

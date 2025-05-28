@@ -146,10 +146,14 @@ public class PreserveBackupHandler extends BackupHandler {
                 return;
             }
             System.out.println("[PRESERVE] Received FILE_DATA message for " + fileInfo.getRelativePath() + 
-                             " on connection " + connectionId);
+                             " on connection " + connectionId + 
+                             " (block " + (message.getBlockNumber() + 1) + " of " + message.getTotalBlocks() + 
+                             ", " + message.getData().length + " bytes)");
         } else {
             System.out.println("[PRESERVE] Received FILE_DATA message for " + message.getRelativePath() + 
-                             " on connection " + connectionId);
+                             " on connection " + connectionId + 
+                             " (block " + (message.getBlockNumber() + 1) + " of " + message.getTotalBlocks() + 
+                             ", " + message.getData().length + " bytes)");
         }
 
         // Write the data to the file
