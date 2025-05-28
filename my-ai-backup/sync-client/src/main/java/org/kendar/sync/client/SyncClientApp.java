@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -338,6 +339,11 @@ public class SyncClientApp {
             // Send file end ack
             FileEndAckMessage fileEndAck = FileEndAckMessage.success(fileInfo.getRelativePath());
             connection.sendMessage(fileEndAck);
+
+            var realPath = targetFile.toPath();
+            Files.setAttribute(realPath, "creationTime", FileTime.fromMillis(fileInfo.getCreationTime().toEpochMilli()));
+            Files.setLastModifiedTime(realPath, FileTime.fromMillis(fileInfo.getModificationTime().toEpochMilli()));
+
 
             System.out.println("[CLIENT] Received file: " + fileInfo.getRelativePath());
         }

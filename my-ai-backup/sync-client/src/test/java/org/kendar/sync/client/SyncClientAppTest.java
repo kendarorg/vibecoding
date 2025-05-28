@@ -67,7 +67,7 @@ class SyncClientAppTest {
         Object result = parseCommandLineArgs.invoke(null, (Object) backupArgs);
         
         // Get the CommandLineArgs class
-        Class<?> commandLineArgsClass = Class.forName("org.kendar.sync.client.SyncClientApp$CommandLineArgs");
+        Class<?> commandLineArgsClass = Class.forName("org.kendar.sync.client.CommandLineArgs");
         
         // Get field values using reflection
         Field sourceFolder = commandLineArgsClass.getDeclaredField("sourceFolder");
@@ -119,7 +119,7 @@ class SyncClientAppTest {
         Object result = parseCommandLineArgs.invoke(null, (Object) restoreArgs);
         
         // Get the CommandLineArgs class
-        Class<?> commandLineArgsClass = Class.forName("org.kendar.sync.client.SyncClientApp$CommandLineArgs");
+        Class<?> commandLineArgsClass = Class.forName("org.kendar.sync.client.CommandLineArgs");
         
         // Get field values using reflection
         Field sourceFolder = commandLineArgsClass.getDeclaredField("sourceFolder");
@@ -142,11 +142,11 @@ class SyncClientAppTest {
     void testValidateArgs() throws Exception {
         // Get the private validateArgs method using reflection
         Method validateArgs = SyncClientApp.class.getDeclaredMethod("validateArgs", 
-            Class.forName("org.kendar.sync.client.SyncClientApp$CommandLineArgs"));
+            Class.forName("org.kendar.sync.client.CommandLineArgs"));
         validateArgs.setAccessible(true);
         
         // Get the CommandLineArgs class
-        Class<?> commandLineArgsClass = Class.forName("org.kendar.sync.client.SyncClientApp$CommandLineArgs");
+        Class<?> commandLineArgsClass = Class.forName("org.kendar.sync.client.CommandLineArgs");
         
         // Create a valid args object using reflection
         Object args = commandLineArgsClass.getDeclaredConstructor().newInstance();
@@ -226,7 +226,7 @@ class SyncClientAppTest {
     @Test
     void testCommandLineArgsGettersAndSetters() throws Exception {
         // Get the CommandLineArgs class
-        Class<?> commandLineArgsClass = Class.forName("org.kendar.sync.client.SyncClientApp$CommandLineArgs");
+        Class<?> commandLineArgsClass = Class.forName("org.kendar.sync.client.CommandLineArgs");
         
         // Create a CommandLineArgs object
         Object args = commandLineArgsClass.getDeclaredConstructor().newInstance();

@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 
@@ -87,6 +88,7 @@ public class PreserveBackupHandler extends BackupHandler {
                 System.out.println("[SERVER] Dry run: Would send file data for " + file.getRelativePath());
             }
 
+
             FileEndMessage fileEndMessage = new FileEndMessage(file.getRelativePath(), file);
             connection.sendMessage(fileEndMessage);
 
@@ -149,6 +151,10 @@ public class PreserveBackupHandler extends BackupHandler {
     @Override
     public void handleFileEnd(TcpConnection connection, ClientSession session, FileEndMessage message) throws IOException {
         System.out.println("[PRESERVE] Received FILE_END message");
+        var fi = message.getFileInfo();
+        var realPath = Path.of(session.getFolder().getRealPath()+File.separator+fi.getRelativePath());
+        Files.setAttribute(realPath, "creationTime", FileTime.fromMillis(fi.getCreationTime().toEpochMilli()));
+        Files.setLastModifiedTime(realPath, FileTime.fromMillis(fi.getModificationTime().toEpochMilli()));
 
         connection.sendMessage(FileEndAckMessage.success(message.getRelativePath()));
     }

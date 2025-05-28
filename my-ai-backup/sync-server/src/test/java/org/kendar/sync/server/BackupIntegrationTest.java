@@ -15,6 +15,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -36,7 +38,6 @@ public class BackupIntegrationTest {
     private Path testRoot;
     private File sourceDir;
     private File targetDir;
-    private List<File> createdFiles;
     private File removedFile;
     private ServerConfig serverConfig;
     private Server server;
@@ -147,7 +148,7 @@ public class BackupIntegrationTest {
     void testBackupAndRestorePreserve() throws Exception {
 
         startServer(BackupType.PRESERVE);
-        createdFiles = createRandomFiles(sourceDir, 5, 3);
+        createRandomFiles(sourceDir, 5, 3);
 
         // Perform backup
         System.out.println("Performing backup...");
@@ -158,6 +159,21 @@ public class BackupIntegrationTest {
         System.out.println("Verifying backup...");
         assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
 
+        //Add a non deletable file tot destination
+        Files.writeString(Path.of(targetDir.toPath()+"/atest.txt"), "testBackup");
+
+        // Perform backup
+        System.out.println("Performing backup...");
+        commandLineArgs.setBackup(true);
+        SyncClientApp.doSync(commandLineArgs);
+
+        // Verify backup
+        System.out.println("Verifying backup...");
+        List<String> diff = new ArrayList<>();
+        assertFalse(areDirectoriesEqual(sourceDir.toPath(), targetDir.toPath(),diff));
+        assertEquals(List.of(sourceDir.toPath()+File.separator+"atest.txt"), diff);
+
+
         // Remove a file from the source directory
         removedFile = removeRandomFile(sourceDir.toPath());
 
@@ -165,10 +181,8 @@ public class BackupIntegrationTest {
         System.out.println("Performing restore...");
         commandLineArgs.setBackup(false);
         SyncClientApp.doSync(commandLineArgs);
+        assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
 
-        // Verify restore
-        System.out.println("Verifying restore...");
-        verifyRestore();
         cleanupDirs();
     }
 
@@ -177,7 +191,7 @@ public class BackupIntegrationTest {
     void testBackupAndRestoreMirror() throws Exception {
 
         startServer(BackupType.MIRROR);
-        createdFiles = createRandomFiles(sourceDir, 5, 3);
+        createRandomFiles(sourceDir, 5, 3);
 
         // Perform backup
         System.out.println("Performing backup...");
@@ -251,63 +265,14 @@ public class BackupIntegrationTest {
                 String content = "Content for " + name + ": " + UUID.randomUUID();
                 Files.writeString(file.toPath(), content);
                 files.add(file);
+                var randomLong =getRandomNumber(228967200000L,1585965600000L);
+                Files.setAttribute(file.toPath(), "creationTime", FileTime.fromMillis(randomLong));
+                Files.setLastModifiedTime(file.toPath(), FileTime.fromMillis(randomLong+100000L));
+
             }
         }
 
         return files;
-    }
-
-    /**
-     * Performs a backup operation by copying files from source to target.
-     *
-     * @throws IOException If an I/O error occurs
-     */
-    private void performBackup() throws IOException {
-        System.out.println("Performing backup from " + sourceDir.getAbsolutePath() + " to " + targetDir.getAbsolutePath());
-        
-        // Copy all files from source to target
-        for (File sourceFile : createdFiles) {
-            if (sourceFile.isDirectory()) {
-                continue; // Skip directories, they'll be created when needed
-            }
-            
-            String relativePath = getRelativePath(sourceFile, sourceDir);
-            File targetFile = new File(targetDir, relativePath);
-            
-            // Create parent directories if needed
-            targetFile.getParentFile().mkdirs();
-            
-            // Copy the file
-            Files.copy(sourceFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            System.out.println("Backed up file: " + relativePath);
-        }
-    }
-
-    /**
-     * Verifies that files were backed up correctly.
-     *
-     * @throws IOException If an I/O error occurs
-     */
-    private void verifyBackup() throws IOException {
-        System.out.println("Verifying backup...");
-        
-        // Check that all files were backed up
-        for (File sourceFile : createdFiles) {
-            if (sourceFile.isDirectory()) {
-                continue; // Skip directories
-            }
-            
-            String relativePath = getRelativePath(sourceFile, sourceDir);
-            File targetFile = new File(targetDir, relativePath);
-            
-            assertTrue(targetFile.exists(), "Target file should exist: " + relativePath);
-            
-            String sourceContent = Files.readString(sourceFile.toPath());
-            String targetContent = Files.readString(targetFile.toPath());
-            assertEquals(sourceContent, targetContent, "File content should match for " + relativePath);
-        }
-        
-        System.out.println("Backup verification successful");
     }
 
     /**
@@ -320,6 +285,11 @@ public class BackupIntegrationTest {
     private int getRandomNumber(int min, int max) {
         Random random = new Random();
         return random.nextInt(max - min + 1) + min;
+    }
+
+    private long getRandomNumber(long min, long max) {
+        Random random = new Random();
+        return random.nextLong(max - min + 1) + min;
     }
     /**
      * Removes a random file from the source directory.
@@ -338,7 +308,6 @@ public class BackupIntegrationTest {
         
         // Remove a random file
         File fileToRemove = allFiles.get(rand).toFile();
-        createdFiles.remove(fileToRemove);
         Files.delete(fileToRemove.toPath());
         
         System.out.println("Removed file: " + getRelativePath(fileToRemove, sourceDir));
@@ -346,31 +315,14 @@ public class BackupIntegrationTest {
         return fileToRemove;
     }
 
-    /**
-     * Performs a restore operation by copying files from target to source.
-     *
-     * @throws IOException If an I/O error occurs
-     */
-    private void performRestore() throws IOException {
-        System.out.println("Performing restore from " + targetDir.getAbsolutePath() + " to " + sourceDir.getAbsolutePath());
-        
-        // Get the relative path of the removed file
-        String removedFilePath = getRelativePath(removedFile, sourceDir);
-        File targetFile = new File(targetDir, removedFilePath);
-        
-        // Copy the file back from target to source
-        Files.copy(targetFile.toPath(), removedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        
-        System.out.println("Restored file: " + removedFilePath);
-    }
 
     public static void assertDirectoriesEqual(Path dir1, Path dir2) throws IOException {
-        if (!areDirectoriesEqual(dir1, dir2)) {
+        if (!areDirectoriesEqual(dir1, dir2,new ArrayList<>())) {
             fail("Directories are not equal: " + dir1 + " and " + dir2);
         }
     }
 
-    public static boolean areDirectoriesEqual(Path dir1, Path dir2) throws IOException {
+    public static boolean areDirectoriesEqual(Path dir1, Path dir2,List<String> different) throws IOException {
         if (!Files.isDirectory(dir1) || !Files.isDirectory(dir2)) {
             System.err.println("Not a directory: " + dir1+" "+dir2);
             return false;
@@ -390,7 +342,6 @@ public class BackupIntegrationTest {
         // Check if both directories have the same files
         if (!dir1Files.equals(dir2Files)) {
             System.err.println("Not same files: " + dir1+" "+dir2);
-            return false;
         }
 
         // Compare the content of each file
@@ -398,39 +349,48 @@ public class BackupIntegrationTest {
             Path file1 = dir1.resolve(relativePath);
             Path file2 = dir2.resolve(relativePath);
 
+            if(!Files.exists(file2)) {
+                different.add(file2.toString());
+                continue;
+            }
+
             if (Files.size(file1) != Files.size(file2)) {
                 System.err.println("Different size: " + file1+" "+file2);
-                return false;
+                different.add(file1.toString());
+                continue;
             }
 
             if (!Arrays.equals(Files.readAllBytes(file1), Files.readAllBytes(file2))) {
                 System.err.println("Different content: " + file1+" "+file2);
-                return false;
+                different.add(file1.toString());
+                continue;
+            }
+            var attr1 = Files.readAttributes(file1, BasicFileAttributes.class);
+            var attr2 = Files.readAttributes(file2, BasicFileAttributes.class);
+            if(attr1.lastModifiedTime().toInstant().getEpochSecond()!=
+            attr2.lastModifiedTime().toInstant().getEpochSecond()) {
+                System.err.println("Different modification: " + file1+" "+file2);
+                different.add(file1.toString());
+                continue;
+            }
+            if(attr1.creationTime().toInstant().getEpochSecond()!=
+                    attr2.creationTime().toInstant().getEpochSecond()) {
+                System.err.println("Different creation: " + file1+" "+file2);
+                different.add(file1.toString());
             }
         }
 
-        return true;
+        for (Path relativePath : dir2Files) {
+            Path file1 = dir1.resolve(relativePath);
+
+            if(!Files.exists(file1)) {
+                different.add(file1.toString());
+            }
+        }
+
+        return different.size()==0;
     }
-    /**
-     * Verifies that files were restored correctly.
-     *
-     * @throws IOException If an I/O error occurs
-     */
-    private void verifyRestore() throws IOException {
-        System.out.println("Verifying restore...");
-        
-        // Check that the removed file was restored
-        String relativePath = getRelativePath(removedFile, sourceDir);
-        
-        assertTrue(removedFile.exists(), "Removed file should be restored: " + relativePath);
-        
-        // Check content
-        String targetContent = Files.readString(new File(targetDir, relativePath).toPath());
-        String restoredContent = Files.readString(removedFile.toPath());
-        assertEquals(targetContent, restoredContent, "Restored file content should match target file content");
-        
-        System.out.println("Restore verification successful");
-    }
+
 
     /**
      * Gets the relative path of a file to a base directory.

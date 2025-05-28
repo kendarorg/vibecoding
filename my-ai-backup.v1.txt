@@ -179,7 +179,7 @@ Mostly done but without
 
 ### Fix 007
 
-By hand build the implementation of the main syncs
+* Implement most of backup handlers
 
 
 

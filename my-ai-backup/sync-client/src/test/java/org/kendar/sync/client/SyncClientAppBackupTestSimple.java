@@ -124,11 +124,11 @@ class SyncClientAppBackupTestSimple {
         // We need to create a custom method that takes our MockTcpConnection instead of TcpConnection
         performBackupMethod = SyncClientApp.class.getDeclaredMethod("performBackup", 
             org.kendar.sync.lib.network.TcpConnection.class, 
-            Class.forName("org.kendar.sync.client.SyncClientApp$CommandLineArgs"));
+            Class.forName("org.kendar.sync.client.CommandLineArgs"));
         performBackupMethod.setAccessible(true);
 
         // Create CommandLineArgs object using reflection
-        Class<?> commandLineArgsClass = Class.forName("org.kendar.sync.client.SyncClientApp$CommandLineArgs");
+        Class<?> commandLineArgsClass = Class.forName("org.kendar.sync.client.CommandLineArgs");
         commandLineArgs = commandLineArgsClass.getDeclaredConstructor().newInstance();
 
         // Set field values using reflection
@@ -208,7 +208,7 @@ class SyncClientAppBackupTestSimple {
     @Test
     void testPerformBackupDryRun() throws Exception {
         // Set dry run mode
-        Class<?> commandLineArgsClass = Class.forName("org.kendar.sync.client.SyncClientApp$CommandLineArgs");
+        Class<?> commandLineArgsClass = Class.forName("org.kendar.sync.client.CommandLineArgs");
         commandLineArgsClass.getDeclaredMethod("setDryRun", boolean.class)
             .invoke(commandLineArgs, true);
 

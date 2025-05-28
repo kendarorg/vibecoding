@@ -73,11 +73,11 @@ class SyncClientAppBackupTest {
 
         // Get the private performBackup method using reflection
         performBackupMethod = SyncClientApp.class.getDeclaredMethod("performBackup", TcpConnection.class, 
-            Class.forName("org.kendar.sync.client.SyncClientApp$CommandLineArgs"));
+            Class.forName("org.kendar.sync.client.CommandLineArgs"));
         performBackupMethod.setAccessible(true);
 
         // Create CommandLineArgs object using reflection
-        Class<?> commandLineArgsClass = Class.forName("org.kendar.sync.client.SyncClientApp$CommandLineArgs");
+        Class<?> commandLineArgsClass = Class.forName("org.kendar.sync.client.CommandLineArgs");
         commandLineArgs = commandLineArgsClass.getDeclaredConstructor().newInstance();
 
         // Set field values using reflection
@@ -165,7 +165,7 @@ class SyncClientAppBackupTest {
     @Test
     void testPerformBackupDryRun() throws Exception {
         // Set dry run mode
-        Class<?> commandLineArgsClass = Class.forName("org.kendar.sync.client.SyncClientApp$CommandLineArgs");
+        Class<?> commandLineArgsClass = Class.forName("org.kendar.sync.client.CommandLineArgs");
         commandLineArgsClass.getDeclaredMethod("setDryRun", boolean.class)
             .invoke(commandLineArgs, true);
 
