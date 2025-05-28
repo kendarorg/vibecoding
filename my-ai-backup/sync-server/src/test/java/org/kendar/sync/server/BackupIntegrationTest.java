@@ -3,6 +3,12 @@ package org.kendar.sync.server;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.kendar.sync.client.CommandLineArgs;
+import org.kendar.sync.client.SyncClientApp;
+import org.kendar.sync.lib.model.ServerSettings;
+import org.kendar.sync.lib.protocol.BackupType;
+import org.kendar.sync.server.config.ServerConfig;
+import org.kendar.sync.server.server.Server;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,6 +40,10 @@ public class BackupIntegrationTest {
     private File targetDir;
     private List<File> createdFiles;
     private File removedFile;
+    private ServerConfig serverConfig;
+    private Server server;
+    private int serverPort;
+    private CommandLineArgs commandLineArgs;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -52,17 +62,47 @@ public class BackupIntegrationTest {
         createdFiles = createRandomFiles(sourceDir, 5, 3);
         
         System.out.println("Created test files in " + sourceDir.getAbsolutePath());
+
+        serverPort = 8085;
+        serverConfig = new ServerConfig();
+        var serverSettings = new ServerSettings();
+        serverSettings.setPort(serverPort);
+        serverSettings.setMaxConnections(1);
+        serverSettings.setMaxPacketSize(1024*1024); // 1 MB
+        ServerSettings.User newUser = new ServerSettings.User(UUID.randomUUID().toString(),
+                "user", "password", true);
+        serverSettings.getUsers().add(newUser);
+
+        ServerSettings.BackupFolder backupFolder = new ServerSettings.BackupFolder();
+        backupFolder.setBackupType(BackupType.MIRROR);
+        backupFolder.setAllowedUsers(List.of(newUser.getId()));
+        backupFolder.setRealPath(targetDir.getAbsolutePath());
+        backupFolder.setVirtualName("testBackup");
+        serverSettings.getBackupFolders().add(backupFolder);
+        serverConfig.setServerSettings(serverSettings);
+        server = new Server(serverConfig, false);
+        new Thread(()->server.startTcpServer()).start();
+        Thread.sleep(200);
+        commandLineArgs = new CommandLineArgs();
+        commandLineArgs.setServerAddress("127.0.0.1");
+        commandLineArgs.setServerPort(serverPort);
+        commandLineArgs.setSourceFolder(sourceDir.getAbsolutePath());
+        commandLineArgs.setTargetFolder("testBackup");
+        commandLineArgs.setUsername("user");
+        commandLineArgs.setPassword("password");
     }
 
     @AfterEach
     void tearDown() throws Exception {
         // Clean up test directories if needed
+        server.stop();
     }
 
     @Test
     void testBackupAndRestore() throws Exception {
         // Perform backup
-        performBackup();
+        commandLineArgs.setBackup(true);
+        SyncClientApp.doSync(commandLineArgs);
 
         // Verify backup
         verifyBackup();
@@ -71,7 +111,8 @@ public class BackupIntegrationTest {
         removedFile = removeRandomFile();
 
         // Perform restore
-        performRestore();
+        commandLineArgs.setBackup(false);
+        SyncClientApp.doSync(commandLineArgs);
 
         // Verify restore
         verifyRestore();

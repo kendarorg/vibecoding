@@ -1,3 +1,5 @@
+All prompts are BRAVE!
+
 ### Prompt 001
 
 Should create a java system to backup and synchronize files from a client to server
@@ -154,5 +156,14 @@ Fix all the tests by hand AI went in loopholes
 	* Verify that everything is backed up
 	* Remove some file from the source
 	* Start the client and do the restore
+
+```Completely failed```
+
+### Fix 005
+
+* Extract the server to be run programmatically
+* Extract the client to be run programmatically
+* Modify the test to run with the new approach
+	
 
   

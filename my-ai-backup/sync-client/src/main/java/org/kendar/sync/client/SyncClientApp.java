@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
  * Main class for the sync client application.
  */
 public class SyncClientApp {
-    private static final int DEFAULT_PORT = 8080;
     private static final int DEFAULT_MAX_PACKET_SIZE = 1024 * 1024; // 1 MB
     private static final int DEFAULT_MAX_CONNECTIONS = 5;
 
@@ -37,6 +36,10 @@ public class SyncClientApp {
             return;
         }
 
+        doSync(commandLineArgs);
+    }
+
+    public static void doSync(CommandLineArgs commandLineArgs) {
         // Validate arguments
         if (!validateArgs(commandLineArgs)) {
             return;
@@ -44,19 +47,19 @@ public class SyncClientApp {
 
         try {
             // Connect to server
-            System.out.println("Connecting to server " + commandLineArgs.getServerAddress() + ":" + commandLineArgs.getServerPort());
+            System.out.println("[CLIENT] Connecting to server " + commandLineArgs.getServerAddress() + ":" + commandLineArgs.getServerPort());
 
             if (commandLineArgs.isDryRun()) {
-                System.out.println("Running in dry-run mode. No actual file operations will be performed.");
+                System.out.println("[CLIENT] Running in dry-run mode. No actual file operations will be performed.");
             }
 
             Socket socket = new Socket(commandLineArgs.getServerAddress(), commandLineArgs.getServerPort());
             UUID sessionId = UUID.randomUUID();
 
             try (TcpConnection connection = new TcpConnection(
-                    socket, 
-                    sessionId, 
-                    0, 
+                    socket,
+                    sessionId,
+                    0,
                     DEFAULT_MAX_PACKET_SIZE)) {
 
                 // Send connect message
@@ -75,17 +78,17 @@ public class SyncClientApp {
                 // Wait for connect response
                 Message response = connection.receiveMessage();
                 if (response.getMessageType() != MessageType.CONNECT_RESPONSE) {
-                    System.err.println("Unexpected response: " + response.getMessageType());
+                    System.err.println("[CLIENT] Unexpected response 1: " + response.getMessageType());
                     return;
                 }
 
                 ConnectResponseMessage connectResponse = (ConnectResponseMessage) response;
                 if (!connectResponse.isAccepted()) {
-                    System.err.println("Connection rejected: " + connectResponse.getErrorMessage());
+                    System.err.println("[CLIENT] Connection rejected: " + connectResponse.getErrorMessage());
                     return;
                 }
 
-                System.out.println("Connected to server");
+                System.out.println("[CLIENT] Connected to server");
 
                 // Perform backup or restore
                 if (commandLineArgs.isBackup()) {
@@ -100,20 +103,20 @@ public class SyncClientApp {
                 // Wait for sync end ack
                 response = connection.receiveMessage();
                 if (response.getMessageType() != MessageType.SYNC_END_ACK) {
-                    System.err.println("Unexpected response: " + response.getMessageType());
+                    System.err.println("[CLIENT] Unexpected response 2: " + response.getMessageType());
                     return;
                 }
 
                 SyncEndAckMessage syncEndAck = (SyncEndAckMessage) response;
                 if (!syncEndAck.isSuccess()) {
-                    System.err.println("Sync failed: " + syncEndAck.getErrorMessage());
+                    System.err.println("[CLIENT] Sync failed: " + syncEndAck.getErrorMessage());
                     return;
                 }
 
-                System.out.println("Sync completed successfully");
+                System.out.println("[CLIENT] Sync completed successfully");
             }
         } catch (IOException e) {
-            System.err.println("Error: " + e.getMessage());
+            System.err.println("[CLIENT] Error: " + e.getMessage());
         }
     }
 
@@ -125,21 +128,21 @@ public class SyncClientApp {
      * @throws IOException If an I/O error occurs
      */
     private static void performBackup(TcpConnection connection, CommandLineArgs args) throws IOException {
-        System.out.println("Starting backup from " + args.getSourceFolder() + " to " + args.getTargetFolder());
+        System.out.println("[CLIENT] Starting backup from " + args.getSourceFolder() + " to " + args.getTargetFolder());
 
         // Get list of files to backup
         List<FileInfo> files = new ArrayList<>();
         File sourceDir = new File(args.getSourceFolder());
 
         if (!sourceDir.exists() || !sourceDir.isDirectory()) {
-            System.err.println("Source folder does not exist or is not a directory");
+            System.err.println("[CLIENT] Source folder does not exist or is not a directory");
             return;
         }
 
         // Recursively scan the source directory
         scanDirectory(sourceDir, sourceDir.getAbsolutePath(), files);
 
-        System.out.println("Found " + files.size() + " files to backup");
+        System.out.println("[CLIENT] Found " + files.size() + " files to backup");
 
         // Send file list message
         FileListMessage fileListMessage = new FileListMessage(files, args.isBackup(), 1, 1);
@@ -148,7 +151,7 @@ public class SyncClientApp {
         // Wait for file list response
         Message response = connection.receiveMessage();
         if (response.getMessageType() != MessageType.FILE_LIST_RESPONSE) {
-            System.err.println("Unexpected response: " + response.getMessageType());
+            System.err.println("[CLIENT] Unexpected response 3: " + response.getMessageType());
             return;
         }
 
@@ -170,19 +173,19 @@ public class SyncClientApp {
             // Wait for file descriptor ack
             response = connection.receiveMessage();
             if (response.getMessageType() != MessageType.FILE_DESCRIPTOR_ACK) {
-                System.err.println("Unexpected response: " + response.getMessageType());
+                System.err.println("[CLIENT] Unexpected response 4: " + response.getMessageType());
                 return;
             }
 
             FileDescriptorAckMessage fileDescriptorAck = (FileDescriptorAckMessage) response;
             if (!fileDescriptorAck.isReady()) {
-                System.err.println("Server not ready to receive file: " + fileDescriptorAck.getErrorMessage());
+                System.err.println("[CLIENT] Server not ready to receive file: " + fileDescriptorAck.getErrorMessage());
                 continue;
             }
 
             // If it's a directory, no need to send data
             if (file.isDirectory()) {
-                System.out.println("Created directory: " + file.getRelativePath());
+                System.out.println("[CLIENT] Created directory: " + file.getRelativePath());
                 continue;
             }
 
@@ -194,7 +197,7 @@ public class SyncClientApp {
                 FileDataMessage fileDataMessage = new FileDataMessage(file.getRelativePath(), 0, 1, fileData);
                 connection.sendMessage(fileDataMessage);
             } else {
-                System.out.println("Dry run: Would send file data for " + file.getRelativePath());
+                System.out.println("[CLIENT] Dry run: Would send file data for " + file.getRelativePath());
             }
 
             // Send file end
@@ -204,17 +207,17 @@ public class SyncClientApp {
             // Wait for file end ack
             response = connection.receiveMessage();
             if (response.getMessageType() != MessageType.FILE_END_ACK) {
-                System.err.println("Unexpected response: " + response.getMessageType());
+                System.err.println("[CLIENT] Unexpected response 5: " + response.getMessageType());
                 return;
             }
 
             FileEndAckMessage fileEndAck = (FileEndAckMessage) response;
             if (!fileEndAck.isSuccess()) {
-                System.err.println("File transfer failed: " + fileEndAck.getErrorMessage());
+                System.err.println("[CLIENT] File transfer failed: " + fileEndAck.getErrorMessage());
                 continue;
             }
 
-            System.out.println("Transferred file: " + file.getRelativePath());
+            System.out.println("[CLIENT] Transferred file: " + file.getRelativePath());
         }
     }
 
@@ -226,7 +229,7 @@ public class SyncClientApp {
      * @throws IOException If an I/O error occurs
      */
     private static void performRestore(TcpConnection connection, CommandLineArgs args) throws IOException {
-        System.out.println("Starting restore from " + args.getTargetFolder() + " to " + args.getSourceFolder());
+        System.out.println("[CLIENT] Starting restore from " + args.getTargetFolder() + " to " + args.getSourceFolder());
 
         // Send file list message
         FileListMessage fileListMessage = new FileListMessage(new ArrayList<>(), args.isBackup(), 1, 1);
@@ -235,7 +238,7 @@ public class SyncClientApp {
         // Wait for file list response
         Message response = connection.receiveMessage();
         if (response.getMessageType() != MessageType.FILE_LIST_RESPONSE) {
-            System.err.println("Unexpected response: " + response.getMessageType());
+            System.err.println("[CLIENT] Unexpected response 6: " + response.getMessageType());
             return;
         }
 
@@ -246,14 +249,14 @@ public class SyncClientApp {
             // Wait for file descriptor
             Message message = connection.receiveMessage();
             if (message.getMessageType() != MessageType.FILE_DESCRIPTOR) {
-                System.err.println("Unexpected message: " + message.getMessageType());
+                System.err.println("[CLIENT] Unexpected message: " + message.getMessageType());
                 return;
             }
 
             FileDescriptorMessage fileDescriptorMessage = (FileDescriptorMessage) message;
             FileInfo fileInfo = fileDescriptorMessage.getFileInfo();
 
-            System.out.println("Receiving file: " + fileInfo.getRelativePath());
+            System.out.println("[CLIENT] Receiving file: " + fileInfo.getRelativePath());
 
             // Create the file or directory
             File targetFile = new File(args.getSourceFolder(), fileInfo.getRelativePath());
@@ -262,7 +265,7 @@ public class SyncClientApp {
                 if (!args.isDryRun()) {
                     targetFile.mkdirs();
                 } else {
-                    System.out.println("Dry run: Would create directory " + targetFile.getAbsolutePath());
+                    System.out.println("[CLIENT] Dry run: Would create directory " + targetFile.getAbsolutePath());
                 }
 
                 // Send file descriptor ack
@@ -276,7 +279,7 @@ public class SyncClientApp {
             if (!args.isDryRun()) {
                 targetFile.getParentFile().mkdirs();
             } else {
-                System.out.println("Dry run: Would create parent directories for " + targetFile.getAbsolutePath());
+                System.out.println("[CLIENT] Dry run: Would create parent directories for " + targetFile.getAbsolutePath());
             }
 
             // Send file descriptor ack
@@ -286,7 +289,7 @@ public class SyncClientApp {
             // Wait for file data
             message = connection.receiveMessage();
             if (message.getMessageType() != MessageType.FILE_DATA) {
-                System.err.println("Unexpected message: " + message.getMessageType());
+                System.err.println("[CLIENT] Unexpected message: " + message.getMessageType());
                 return;
             }
 
@@ -296,13 +299,13 @@ public class SyncClientApp {
             if (!args.isDryRun()) {
                 FileUtils.writeFile(targetFile, fileDataMessage.getData());
             } else {
-                System.out.println("Dry run: Would write file data to " + targetFile.getAbsolutePath());
+                System.out.println("[CLIENT] Dry run: Would write file data to " + targetFile.getAbsolutePath());
             }
 
             // Wait for file end
             message = connection.receiveMessage();
             if (message.getMessageType() != MessageType.FILE_END) {
-                System.err.println("Unexpected message: " + message.getMessageType());
+                System.err.println("[CLIENT] Unexpected message: " + message.getMessageType());
                 return;
             }
 
@@ -310,7 +313,7 @@ public class SyncClientApp {
             FileEndAckMessage fileEndAck = FileEndAckMessage.success(fileInfo.getRelativePath());
             connection.sendMessage(fileEndAck);
 
-            System.out.println("Received file: " + fileInfo.getRelativePath());
+            System.out.println("[CLIENT] Received file: " + fileInfo.getRelativePath());
         }
 
         // Process files to delete
@@ -322,10 +325,10 @@ public class SyncClientApp {
                     fileToDelete.delete();
                 }
             } else {
-                System.out.println("Dry run: Would delete file " + fileToDelete.getAbsolutePath());
+                System.out.println("[CLIENT] Dry run: Would delete file " + fileToDelete.getAbsolutePath());
             }
 
-            System.out.println("Deleted file: " + relativePath);
+            System.out.println("[CLIENT] Deleted file: " + relativePath);
         }
     }
 
@@ -402,7 +405,7 @@ public class SyncClientApp {
                         try {
                             commandLineArgs.setServerPort(Integer.parseInt(args[++i]));
                         } catch (NumberFormatException e) {
-                            System.err.println("Invalid port number: " + args[i]);
+                            System.err.println("[CLIENT] Invalid port number: " + args[i]);
                         }
                     }
                     break;
@@ -428,8 +431,8 @@ public class SyncClientApp {
                         try {
                             commandLineArgs.setBackupType(BackupType.valueOf(typeArg));
                         } catch (IllegalArgumentException e) {
-                            System.err.println("Invalid backup type: " + typeArg);
-                            System.err.println("Valid types are: PRESERVE, MIRROR, DATE_SEPARATED");
+                            System.err.println("[CLIENT] Invalid backup type: " + typeArg);
+                            System.err.println("[CLIENT] Valid types are: PRESERVE, MIRROR, DATE_SEPARATED");
                         }
                     }
                     break;
@@ -449,30 +452,30 @@ public class SyncClientApp {
         boolean valid = true;
 
         if (args.getSourceFolder() == null) {
-            System.err.println("Source folder is required (--source)");
+            System.err.println("[CLIENT] Source folder is required (--source)");
             valid = false;
         }else if(!Files.exists(Path.of(args.getSourceFolder()))) {
-            System.err.println("Source folder does not exists (--source)");
+            System.err.println("[CLIENT] Source folder does not exists (--source)");
             valid = false;
         }
 
         if (args.getTargetFolder() == null) {
-            System.err.println("Target folder is required (--target)");
+            System.err.println("[CLIENT] Target folder is required (--target)");
             valid = false;
         }
 
         if (args.getServerAddress() == null) {
-            System.err.println("Server address is required (--server)");
+            System.err.println("[CLIENT] Server address is required (--server)");
             valid = false;
         }
 
         if (args.getUsername() == null) {
-            System.err.println("Username is required (--username)");
+            System.err.println("[CLIENT] Username is required (--username)");
             valid = false;
         }
 
         if (args.getPassword() == null) {
-            System.err.println("Password is required (--password)");
+            System.err.println("[CLIENT] Password is required (--password)");
             valid = false;
         }
 
@@ -502,99 +505,5 @@ public class SyncClientApp {
         System.out.println("  --type <type>               Backup type: PRESERVE, MIRROR, DATE_SEPARATED (default: PRESERVE)");
     }
 
-    /**
-     * Class to hold command line arguments.
-     */
-    public static class CommandLineArgs {
-        private String sourceFolder;
-        private String targetFolder;
-        private boolean backup = true;
-        private String serverAddress;
-        private int serverPort = DEFAULT_PORT;
-        private String username;
-        private String password;
-        private boolean dryRun = false;
-        private BackupType backupType = BackupType.PRESERVE;
-        private boolean help = false;
 
-        public String getSourceFolder() {
-            return sourceFolder;
-        }
-
-        public void setSourceFolder(String sourceFolder) {
-            this.sourceFolder = sourceFolder;
-        }
-
-        public String getTargetFolder() {
-            return targetFolder;
-        }
-
-        public void setTargetFolder(String targetFolder) {
-            this.targetFolder = targetFolder;
-        }
-
-        public boolean isBackup() {
-            return backup;
-        }
-
-        public void setBackup(boolean backup) {
-            this.backup = backup;
-        }
-
-        public String getServerAddress() {
-            return serverAddress;
-        }
-
-        public void setServerAddress(String serverAddress) {
-            this.serverAddress = serverAddress;
-        }
-
-        public int getServerPort() {
-            return serverPort;
-        }
-
-        public void setServerPort(int serverPort) {
-            this.serverPort = serverPort;
-        }
-
-        public String getUsername() {
-            return username;
-        }
-
-        public void setUsername(String username) {
-            this.username = username;
-        }
-
-        public String getPassword() {
-            return password;
-        }
-
-        public void setPassword(String password) {
-            this.password = password;
-        }
-
-        public boolean isDryRun() {
-            return dryRun;
-        }
-
-        public void setDryRun(boolean dryRun) {
-            this.dryRun = dryRun;
-        }
-
-        public BackupType getBackupType() {
-            return backupType;
-        }
-
-        public void setBackupType(BackupType backupType) {
-            this.backupType = backupType;
-        }
-
-        public boolean isHelp() {
-            return help;
-        }
-
-        public void setHelp(boolean help) {
-            this.help = help;
-        }
-    }
 }

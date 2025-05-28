@@ -14,7 +14,8 @@ import java.io.IOException;
 public class ServerConfig {
     @Value("${server.settings.file:settings.json}")
     private String settingsFile;
-    
+    private ServerSettings serverSettings;
+
     /**
      * Creates a server settings bean.
      *
@@ -23,7 +24,10 @@ public class ServerConfig {
      */
     @Bean
     public ServerSettings serverSettings() throws IOException {
-        return ServerSettings.load(settingsFile);
+        if(serverSettings==null) {
+            serverSettings = ServerSettings.load(settingsFile);
+        }
+        return serverSettings;
     }
     
     /**
@@ -43,5 +47,9 @@ public class ServerConfig {
      */
     public String getSettingsFile() {
         return settingsFile;
+    }
+
+    public void setServerSettings(ServerSettings serverSettings) {
+        this.serverSettings = serverSettings;
     }
 }
