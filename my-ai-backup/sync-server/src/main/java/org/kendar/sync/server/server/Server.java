@@ -4,6 +4,10 @@ import org.kendar.sync.lib.model.ServerSettings;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
 import org.kendar.sync.server.SyncServerApplication;
+import org.kendar.sync.server.backup.BackupHandler;
+import org.kendar.sync.server.backup.DateSeparatedBackupHandler;
+import org.kendar.sync.server.backup.MirrorBackupHandler;
+import org.kendar.sync.server.backup.PreserveBackupHandler;
 import org.kendar.sync.server.config.ServerConfig;
 
 import java.io.File;
@@ -21,14 +25,19 @@ public class Server {
 
     private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final Map<UUID, ClientSession> sessions = new HashMap<>();
+    private final Map<BackupType, BackupHandler> backupHandlers = new HashMap<>();
     private boolean running = true;
     private boolean dryRun = false;
     private ServerSocket mainSocket;
 
     public Server(ServerConfig serverConfig, boolean dryRun) {
-
         this.serverConfig = serverConfig;
         this.dryRun = dryRun;
+
+        // Initialize backup handlers
+        backupHandlers.put(BackupType.PRESERVE, new PreserveBackupHandler());
+        backupHandlers.put(BackupType.MIRROR, new MirrorBackupHandler());
+        backupHandlers.put(BackupType.DATE_SEPARATED, new DateSeparatedBackupHandler());
     }
     private ServerConfig serverConfig;
     /**
@@ -173,11 +182,18 @@ public class Server {
      * @throws IOException If an I/O error occurs
      */
     private void handleFileList(TcpConnection connection, ClientSession session, FileListMessage message) throws IOException {
-        // Implementation depends on the backup type and whether it's a dry run
         System.out.println("[SERVER] Received FILE_LIST message");
 
-        // For now, just acknowledge the message with an empty list
-        connection.sendMessage(new FileListResponseMessage(new ArrayList<>(), new ArrayList<>(), true, 1, 1));
+        // Get the appropriate backup handler for the session's backup type
+        BackupHandler handler = backupHandlers.get(session.getBackupType());
+        if (handler == null) {
+            System.err.println("No handler found for backup type: " + session.getBackupType());
+            connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
+            return;
+        }
+
+        // Delegate to the backup handler
+        handler.handleFileList(connection, session, message);
     }
 
     /**
@@ -191,23 +207,16 @@ public class Server {
     private void handleFileDescriptor(TcpConnection connection, ClientSession session, FileDescriptorMessage message) throws IOException {
         System.out.println("[SERVER] Received FILE_DESCRIPTOR message: " + message.getFileInfo().getRelativePath());
 
-        // If this is a dry run, just acknowledge the message
-        if (session.isDryRun()) {
-            System.out.println("Dry run: Would create file " + message.getFileInfo().getRelativePath());
-            connection.sendMessage(FileDescriptorAckMessage.ready(message.getFileInfo().getRelativePath()));
+        // Get the appropriate backup handler for the session's backup type
+        BackupHandler handler = backupHandlers.get(session.getBackupType());
+        if (handler == null) {
+            System.err.println("No handler found for backup type: " + session.getBackupType());
+            connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
             return;
         }
 
-        // Create the file or directory
-        File file = new File(session.getFolder().getRealPath(), message.getFileInfo().getRelativePath());
-
-        if (message.getFileInfo().isDirectory()) {
-            file.mkdirs();
-        } else {
-            file.getParentFile().mkdirs();
-        }
-
-        connection.sendMessage(FileDescriptorAckMessage.ready(message.getFileInfo().getRelativePath()));
+        // Delegate to the backup handler
+        handler.handleFileDescriptor(connection, session, message);
     }
 
     /**
@@ -219,14 +228,18 @@ public class Server {
      * @throws IOException If an I/O error occurs
      */
     private void handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException {
-        // If this is a dry run, just ignore the data
-        if (session.isDryRun()) {
+        System.out.println("[SERVER] Received FILE_DATA message");
+
+        // Get the appropriate backup handler for the session's backup type
+        BackupHandler handler = backupHandlers.get(session.getBackupType());
+        if (handler == null) {
+            System.err.println("No handler found for backup type: " + session.getBackupType());
+            connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
             return;
         }
 
-        // Implementation depends on the backup type
-        // For now, just print a message
-        System.out.println("[SERVER] Received FILE_DATA message");
+        // Delegate to the backup handler
+        handler.handleFileData(connection, session, message);
     }
 
     /**
@@ -240,7 +253,16 @@ public class Server {
     private void handleFileEnd(TcpConnection connection, ClientSession session, FileEndMessage message) throws IOException {
         System.out.println("[SERVER] Received FILE_END message");
 
-        connection.sendMessage(FileEndAckMessage.success(message.getRelativePath()));
+        // Get the appropriate backup handler for the session's backup type
+        BackupHandler handler = backupHandlers.get(session.getBackupType());
+        if (handler == null) {
+            System.err.println("No handler found for backup type: " + session.getBackupType());
+            connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
+            return;
+        }
+
+        // Delegate to the backup handler
+        handler.handleFileEnd(connection, session, message);
     }
 
     /**
@@ -254,7 +276,16 @@ public class Server {
     private void handleSyncEnd(TcpConnection connection, ClientSession session, SyncEndMessage message) throws IOException {
         System.out.println("[SERVER] Received SYNC_END message");
 
-        connection.sendMessage(new SyncEndAckMessage(true, "Sync completed"));
+        // Get the appropriate backup handler for the session's backup type
+        BackupHandler handler = backupHandlers.get(session.getBackupType());
+        if (handler == null) {
+            System.err.println("No handler found for backup type: " + session.getBackupType());
+            connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
+            return;
+        }
+
+        // Delegate to the backup handler
+        handler.handleSyncEnd(connection, session, message);
     }
 
     public void stop() {

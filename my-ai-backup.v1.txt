@@ -164,6 +164,11 @@ Fix all the tests by hand AI went in loopholes
 * Extract the server to be run programmatically
 * Extract the client to be run programmatically
 * Modify the test to run with the new approach
+
+### Prompt 006
+
+* Create one class for each backup type to be used in Server.java with implementation and unit test
 	
+```Quota for Pro is 52%```
 
   
