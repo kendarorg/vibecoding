@@ -182,6 +182,9 @@ public class Server {
     private void handleFileList(TcpConnection connection, ClientSession session, FileListMessage message) throws IOException {
         System.out.println("[SERVER] Received FILE_LIST message");
 
+        // Set whether this is a backup or restore operation
+        session.setBackup(message.isBackup());
+
         // Get the appropriate backup handler for the session's backup type
         BackupHandler handler = backupHandlers.get(session.getBackupType());
         if (handler == null) {
@@ -203,7 +206,13 @@ public class Server {
      * @throws IOException If an I/O error occurs
      */
     private void handleFileDescriptor(TcpConnection connection, ClientSession session, FileDescriptorMessage message) throws IOException {
-        System.out.println("[SERVER] Received FILE_DESCRIPTOR message: " + message.getFileInfo().getRelativePath());
+        System.out.println("[SERVER] Received FILE_DESCRIPTOR message: " + message.getFileInfo().getRelativePath() + 
+                         " on connection " + connection.getConnectionId());
+
+        // Store the current file info in the session using connection ID as index
+        if (session.isBackup()) {
+            session.setCurrentFile(connection.getConnectionId(), message.getFileInfo());
+        }
 
         // Get the appropriate backup handler for the session's backup type
         BackupHandler handler = backupHandlers.get(session.getBackupType());
@@ -226,7 +235,8 @@ public class Server {
      * @throws IOException If an I/O error occurs
      */
     private void handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException {
-        System.out.println("[SERVER] Received FILE_DATA message");
+        int connectionId = connection.getConnectionId();
+        System.out.println("[SERVER] Received FILE_DATA message on connection " + connectionId);
 
         // Get the appropriate backup handler for the session's backup type
         BackupHandler handler = backupHandlers.get(session.getBackupType());
@@ -249,7 +259,14 @@ public class Server {
      * @throws IOException If an I/O error occurs
      */
     private void handleFileEnd(TcpConnection connection, ClientSession session, FileEndMessage message) throws IOException {
-        System.out.println("[SERVER] Received FILE_END message");
+        int connectionId = connection.getConnectionId();
+        System.out.println("[SERVER] Received FILE_END message for " + message.getRelativePath() + 
+                         " on connection " + connectionId);
+
+        // Clear the current file info from the session after transfer completes
+        if (session.isBackup()) {
+            session.clearCurrentFile(connectionId);
+        }
 
         // Get the appropriate backup handler for the session's backup type
         BackupHandler handler = backupHandlers.get(session.getBackupType());

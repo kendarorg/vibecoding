@@ -158,7 +158,9 @@ public class DateSeparatedBackupHandler extends BackupHandler {
 
     @Override
     public void handleFileDescriptor(TcpConnection connection, ClientSession session, FileDescriptorMessage message) throws IOException {
-        System.out.println("[DATE_SEPARATED] Received FILE_DESCRIPTOR message: " + message.getFileInfo().getRelativePath());
+        int connectionId = connection.getConnectionId();
+        System.out.println("[DATE_SEPARATED] Received FILE_DESCRIPTOR message: " + message.getFileInfo().getRelativePath() + 
+                         " on connection " + connectionId);
 
         // If this is a dry run, just acknowledge the message
         if (session.isDryRun()) {

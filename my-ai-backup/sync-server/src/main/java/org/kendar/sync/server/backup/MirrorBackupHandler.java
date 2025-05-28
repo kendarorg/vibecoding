@@ -136,7 +136,9 @@ public class MirrorBackupHandler extends BackupHandler {
 
     @Override
     public void handleFileDescriptor(TcpConnection connection, ClientSession session, FileDescriptorMessage message) throws IOException {
-        System.out.println("[MIRROR] Received FILE_DESCRIPTOR message: " + message.getFileInfo().getRelativePath());
+        int connectionId = connection.getConnectionId();
+        System.out.println("[MIRROR] Received FILE_DESCRIPTOR message: " + message.getFileInfo().getRelativePath() + 
+                         " on connection " + connectionId);
 
         // If this is a dry run, just acknowledge the message
         if (session.isDryRun()) {
@@ -164,10 +166,26 @@ public class MirrorBackupHandler extends BackupHandler {
             return;
         }
 
-        System.out.println("[MIRROR] Received FILE_DATA message");
+        int connectionId = connection.getConnectionId();
+        FileInfo fileInfo = null;
+
+        // Get the file info from the session if it's a backup operation
+        if (session.isBackup()) {
+            fileInfo = session.getCurrentFile(connectionId);
+            if (fileInfo == null) {
+                System.err.println("[MIRROR] No file info found for connection " + connectionId);
+                return;
+            }
+            System.out.println("[MIRROR] Received FILE_DATA message for " + fileInfo.getRelativePath() + 
+                             " on connection " + connectionId);
+        } else {
+            System.out.println("[MIRROR] Received FILE_DATA message for " + message.getRelativePath() + 
+                             " on connection " + connectionId);
+        }
 
         // Write the data to the file
-        File file = new File(session.getFolder().getRealPath(), message.getRelativePath());
+        String relativePath = session.isBackup() ? fileInfo.getRelativePath() : message.getRelativePath();
+        File file = new File(session.getFolder().getRealPath(), relativePath);
         try (FileOutputStream fos = new FileOutputStream(file, !message.isFirstBlock())) {
             fos.write(message.getData());
         }
@@ -175,13 +193,30 @@ public class MirrorBackupHandler extends BackupHandler {
 
     @Override
     public void handleFileEnd(TcpConnection connection, ClientSession session, FileEndMessage message) throws IOException {
-        System.out.println("[MIRROR] Received FILE_END message");
-        var fi = message.getFileInfo();
-        var realPath = Path.of(session.getFolder().getRealPath()+File.separator+fi.getRelativePath());
-        Files.setAttribute(realPath, "creationTime", FileTime.fromMillis(fi.getCreationTime().toEpochMilli()));
-        Files.setLastModifiedTime(realPath, FileTime.fromMillis(fi.getModificationTime().toEpochMilli()));
+        int connectionId = connection.getConnectionId();
+        FileInfo fileInfo = null;
 
-        connection.sendMessage(FileEndAckMessage.success(message.getRelativePath()));
+        // Get the file info - either from the message or from the session
+        if (session.isBackup()) {
+            fileInfo = message.getFileInfo() != null ? message.getFileInfo() : session.getCurrentFile(connectionId);
+            if (fileInfo == null) {
+                System.err.println("[MIRROR] No file info found for connection " + connectionId);
+                connection.sendMessage(FileEndAckMessage.failure(message.getRelativePath(), "No file info found"));
+                return;
+            }
+            System.out.println("[MIRROR] Received FILE_END message for " + fileInfo.getRelativePath() + 
+                             " on connection " + connectionId);
+        } else {
+            fileInfo = message.getFileInfo();
+            System.out.println("[MIRROR] Received FILE_END message for " + message.getRelativePath() + 
+                             " on connection " + connectionId);
+        }
+
+        var realPath = Path.of(session.getFolder().getRealPath() + File.separator + fileInfo.getRelativePath());
+        Files.setAttribute(realPath, "creationTime", FileTime.fromMillis(fileInfo.getCreationTime().toEpochMilli()));
+        Files.setLastModifiedTime(realPath, FileTime.fromMillis(fileInfo.getModificationTime().toEpochMilli()));
+
+        connection.sendMessage(FileEndAckMessage.success(fileInfo.getRelativePath()));
     }
 
     @Override

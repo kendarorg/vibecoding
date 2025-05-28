@@ -192,6 +192,14 @@ On the SyncClient::performBackup function,  after receiving the FileListResponse
 
 * Fix parallelization
 
+### Prompt 009
+
+Modify the Server to allow concurrent files sent by SyncClientApp
+
+* This should happen only when the session.isBackup==true
+* When receiving a FILE_DESCRIPTOR should store the current file data in session, using the connectionId as index
+* When receiving a FILE_DATA or a FILE_END should retrieve the FileInfo from the session, using the connectionId as index
+
 
 
 
