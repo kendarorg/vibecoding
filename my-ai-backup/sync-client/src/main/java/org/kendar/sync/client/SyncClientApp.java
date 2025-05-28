@@ -14,6 +14,10 @@ import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -162,63 +166,42 @@ public class SyncClientApp {
                     return FileUtils.makeUniformPath(fileInfo.getRelativePath());
                 }, fileInfo -> fileInfo));
 
-        // Process files to transfer
-        for (FileInfo file : files) {
-            // Send file descriptor
-            if(!mapToTransfer.containsKey(FileUtils.makeUniformPath(file.getRelativePath()))) {
-                continue;
-            }
-            FileDescriptorMessage fileDescriptorMessage = new FileDescriptorMessage(file);
-            connection.sendMessage(fileDescriptorMessage);
+        // Prepare list of files to transfer
+        List<FileInfo> filesToTransfer = files.stream()
+                .filter(file -> mapToTransfer.containsKey(FileUtils.makeUniformPath(file.getRelativePath())))
+                .collect(Collectors.toList());
 
-            // Wait for file descriptor ack
-            response = connection.receiveMessage();
-            if (response.getMessageType() != MessageType.FILE_DESCRIPTOR_ACK) {
-                System.err.println("[CLIENT] Unexpected response 4: " + response.getMessageType());
-                return;
-            }
+        System.out.println("[CLIENT] Transferring " + filesToTransfer.size() + " files with 10 parallel connections");
 
-            FileDescriptorAckMessage fileDescriptorAck = (FileDescriptorAckMessage) response;
-            if (!fileDescriptorAck.isReady()) {
-                System.err.println("[CLIENT] Server not ready to receive file: " + fileDescriptorAck.getErrorMessage());
-                continue;
-            }
+        // Use a fixed pool of 10 threads for parallel file transfers
+        int numConnections = 10;
+        ExecutorService executorService = Executors.newFixedThreadPool(numConnections);
+        CountDownLatch completionLatch = new CountDownLatch(filesToTransfer.size());
+        AtomicInteger connectionIdCounter = new AtomicInteger(1); // Start from 1 as main connection is 0
 
-            // If it's a directory, no need to send data
-            if (file.isDirectory()) {
-                System.out.println("[CLIENT] Created directory: " + file.getRelativePath());
-                continue;
-            }
 
-            // Send file data
-            if (!args.isDryRun()) {
-                File sourceFile = new File(file.getPath());
-                byte[] fileData = FileUtils.readFile(sourceFile);
+        // Process files to transfer in parallel
+        for (FileInfo file : filesToTransfer) {
+            executorService.submit(() -> {
+                try {
+                    transferFile(file, args, connection.getSessionId(), connectionIdCounter.getAndIncrement() % numConnections + 1);
+                } catch (IOException e) {
+                    System.err.println("[CLIENT] Error transferring file " + file.getRelativePath() + ": " + e.getMessage());
+                } finally {
+                    completionLatch.countDown();
+                }
+            });
+        }
 
-                FileDataMessage fileDataMessage = new FileDataMessage(file.getRelativePath(), 0, 1, fileData);
-                connection.sendMessage(fileDataMessage);
-            } else {
-                System.out.println("[CLIENT] Dry run: Would send file data for " + file.getRelativePath());
-            }
-
-            // Send file end
-            FileEndMessage fileEndMessage = new FileEndMessage(file.getRelativePath(), file);
-            connection.sendMessage(fileEndMessage);
-
-            // Wait for file end ack
-            response = connection.receiveMessage();
-            if (response.getMessageType() != MessageType.FILE_END_ACK) {
-                System.err.println("[CLIENT] Unexpected response 5: " + response.getMessageType());
-                return;
-            }
-
-            FileEndAckMessage fileEndAck = (FileEndAckMessage) response;
-            if (!fileEndAck.isSuccess()) {
-                System.err.println("[CLIENT] File transfer failed: " + fileEndAck.getErrorMessage());
-                continue;
-            }
-
-            System.out.println("[CLIENT] Transferred file: " + file.getRelativePath());
+        // Wait for all transfers to complete
+        try {
+            completionLatch.await();
+            System.out.println("[CLIENT] All file transfers completed");
+        } catch (InterruptedException e) {
+            System.err.println("[CLIENT] File transfer interrupted: " + e.getMessage());
+            Thread.currentThread().interrupt();
+        } finally {
+            executorService.shutdown();
         }
     }
 
@@ -537,5 +520,76 @@ public class SyncClientApp {
         System.out.println("  --type <type>               Backup type: PRESERVE, MIRROR, DATE_SEPARATED (default: PRESERVE)");
     }
 
+    /**
+     * Transfers a single file using a dedicated connection.
+     *
+     * @param file The file to transfer
+     * @param args The command line arguments
+     * @param sessionId The session ID
+     * @param connectionId The connection ID
+     * @throws IOException If an I/O error occurs
+     */
+    private static void transferFile(FileInfo file, CommandLineArgs args, UUID sessionId, int connectionId) throws IOException {
+        String threadName = Thread.currentThread().getName();
+        System.out.println("[CLIENT-" + connectionId + "] Starting transfer of " + file.getRelativePath());
+
+        // Create new connection to the server
+        try (Socket socket = new Socket(args.getServerAddress(), args.getServerPort());
+             TcpConnection connection = new TcpConnection(socket, sessionId, connectionId, DEFAULT_MAX_PACKET_SIZE)) {
+
+            // Send file descriptor
+            FileDescriptorMessage fileDescriptorMessage = new FileDescriptorMessage(file);
+            connection.sendMessage(fileDescriptorMessage);
+
+            // Wait for file descriptor ack
+            Message response = connection.receiveMessage();
+            if (response.getMessageType() != MessageType.FILE_DESCRIPTOR_ACK) {
+                System.err.println("[CLIENT-" + connectionId + "] Unexpected response: " + response.getMessageType());
+                return;
+            }
+
+            FileDescriptorAckMessage fileDescriptorAck = (FileDescriptorAckMessage) response;
+            if (!fileDescriptorAck.isReady()) {
+                System.err.println("[CLIENT-" + connectionId + "] Server not ready to receive file: " + fileDescriptorAck.getErrorMessage());
+                return;
+            }
+
+            // If it's a directory, no need to send data
+            if (file.isDirectory()) {
+                System.out.println("[CLIENT-" + connectionId + "] Created directory: " + file.getRelativePath());
+                return;
+            }
+
+            // Send file data
+            if (!args.isDryRun()) {
+                File sourceFile = new File(file.getPath());
+                byte[] fileData = FileUtils.readFile(sourceFile);
+
+                FileDataMessage fileDataMessage = new FileDataMessage(file.getRelativePath(), 0, 1, fileData);
+                connection.sendMessage(fileDataMessage);
+            } else {
+                System.out.println("[CLIENT-" + connectionId + "] Dry run: Would send file data for " + file.getRelativePath());
+            }
+
+            // Send file end
+            FileEndMessage fileEndMessage = new FileEndMessage(file.getRelativePath(), file);
+            connection.sendMessage(fileEndMessage);
+
+            // Wait for file end ack
+            response = connection.receiveMessage();
+            if (response.getMessageType() != MessageType.FILE_END_ACK) {
+                System.err.println("[CLIENT-" + connectionId + "] Unexpected response: " + response.getMessageType());
+                return;
+            }
+
+            FileEndAckMessage fileEndAck = (FileEndAckMessage) response;
+            if (!fileEndAck.isSuccess()) {
+                System.err.println("[CLIENT-" + connectionId + "] File transfer failed: " + fileEndAck.getErrorMessage());
+                return;
+            }
+
+            System.out.println("[CLIENT-" + connectionId + "] Transferred file: " + file.getRelativePath());
+        }
+    }
 
 }

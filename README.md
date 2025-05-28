@@ -30,6 +30,8 @@ Backup client and server with Junie, spring-boot, binary tcp protocol and web-ui
 * Then i required for an integration test, but it made a test about copying files without any server
 * At that point i refactored the application to extract server and client and discovered that the implementation of the listing of file was missing
 * I requested to fill it, but it was not respecting the requirements... and decided to implement it with Copilot and Claude
+* I went to implement directly the algorithm for internal synchronization and its tests (plus some small refactoring) because it would had been to long to explain!
+
 
 
 ### my-ai-cms according to Claude

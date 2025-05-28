@@ -183,6 +183,12 @@ Mostly done but without
 
 ### Prompt 008
 
+On the SyncClient::performBackup function,  after receiving the FileListResponseMessage should
+* Open 10 connections to the server
+* Parallelize the sending of the files on the ten connections
+* Before exiting the function wait for the completion of the sending of all files
+
+
 
 
   
