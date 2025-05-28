@@ -159,13 +159,13 @@ public class SyncClientApp {
         FileListResponseMessage fileListResponse = (FileListResponseMessage) response;
         var mapToTransfer = fileListResponse.getFilesToTransfer()
                 .stream().collect(Collectors.toMap(fileInfo -> {
-                    return fileInfo.getRelativePath().replaceAll("\\\\","/");
+                    return FileUtils.makeUniformPath(fileInfo.getRelativePath());
                 }, fileInfo -> fileInfo));
 
         // Process files to transfer
         for (FileInfo file : files) {
             // Send file descriptor
-            if(!mapToTransfer.containsKey(file.getRelativePath().replaceAll("\\\\","/"))) {
+            if(!mapToTransfer.containsKey(FileUtils.makeUniformPath(file.getRelativePath()))) {
                 continue;
             }
             FileDescriptorMessage fileDescriptorMessage = new FileDescriptorMessage(file);
@@ -261,7 +261,7 @@ public class SyncClientApp {
 
         var mapToTransfer = fileListResponse.getFilesToTransfer().stream()
                 .collect(Collectors.toMap(fileInfo -> {
-                    return fileInfo.getRelativePath().replaceAll("\\\\","/");
+                    return FileUtils.makeUniformPath(fileInfo.getRelativePath());
                 }, fileInfo -> fileInfo));
         // Process files to transfer
         while (!mapToTransfer.isEmpty()) {
@@ -274,14 +274,14 @@ public class SyncClientApp {
 
             FileDescriptorMessage fileDescriptorMessage = (FileDescriptorMessage) message;
             FileInfo fileInfo = fileDescriptorMessage.getFileInfo();
-            if(!mapToTransfer.containsKey(fileInfo.getRelativePath().replaceAll("\\\\","/"))) {
+            if(!mapToTransfer.containsKey(FileUtils.makeUniformPath(fileInfo.getRelativePath()))) {
                 System.out.println("[CLIENT] Skipping file not in transfer list: " + fileInfo.getRelativePath());
                 // Send file descriptor ack
                 FileDescriptorAckMessage fileDescriptorAck = FileDescriptorAckMessage.ready(fileInfo.getRelativePath());
                 connection.sendMessage(fileDescriptorAck);
                 continue;
             }
-            mapToTransfer.remove(fileInfo.getRelativePath().replaceAll("\\\\","/"));
+            mapToTransfer.remove(FileUtils.makeUniformPath(fileInfo.getRelativePath()));
 
             System.out.println("[CLIENT] Receiving file: " + fileInfo.getRelativePath());
 

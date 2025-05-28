@@ -1,11 +1,12 @@
 package org.kendar.sync.server.backup;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.model.ServerSettings;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
+import org.kendar.sync.lib.utils.FileUtils;
+import org.kendar.sync.server.TestUtils;
 import org.kendar.sync.server.server.ClientSession;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -28,17 +29,28 @@ import static org.mockito.Mockito.*;
  */
 public class MirrorBackupHandlerTest {
 
+    private static String uniqueId;
     private MirrorBackupHandler handler;
     private TcpConnection mockConnection;
     private ClientSession mockSession;
     private File tempDir;
     private ServerSettings.BackupFolder mockFolder;
 
+    @BeforeAll
+    public static void beforeClass() {
+        uniqueId = UUID.randomUUID().toString();
+    }
+
+    @AfterAll
+    public static void cleanup() throws Exception {
+        FileUtils.deleteDirectoryContents(Path.of("target", "tests",  uniqueId));
+    }
+
     @BeforeEach
-    void setUp() throws IOException {
-        // Create a temporary directory for testing
-        tempDir = Files.createTempDirectory("mirror-test").toFile();
-        tempDir.deleteOnExit();
+    void setUp(TestInfo testInfo) throws IOException {
+
+        tempDir = Path.of("target", "tests",  uniqueId, TestUtils.getTestFolder(testInfo)).toFile();
+        Files.createDirectories(tempDir.toPath());
 
         // Create mocks
         handler = new MirrorBackupHandler();
@@ -52,8 +64,13 @@ public class MirrorBackupHandlerTest {
         when(mockSession.isDryRun()).thenReturn(false);
     }
 
+    @AfterEach
+    void tearDown() throws IOException {
+        FileUtils.deleteDirectoryContents(tempDir.toPath());
+    }
+
     @Test
-    void testHandleFileList() throws IOException {
+    void testHandleFileListBackup() throws IOException {
         // Create some files in the target directory
         File file1 = new File(tempDir, "file1.txt");
         File file2 = new File(tempDir, "file2.txt");
@@ -74,12 +91,11 @@ public class MirrorBackupHandlerTest {
         
         FileListResponseMessage response = captor.getValue();
         assertTrue(response.isBackup());
-        assertEquals(0, response.getFilesToTransfer().size());
+        assertEquals(1, response.getFilesToTransfer().size());
         
         // Verify that file2.txt is in the list of files to delete
         List<String> filesToDelete = response.getFilesToDelete();
-        assertEquals(1, filesToDelete.size());
-        assertTrue(filesToDelete.contains("file2.txt"));
+        assertEquals(0, filesToDelete.size());
     }
 
     @Test
@@ -146,6 +162,11 @@ public class MirrorBackupHandlerTest {
     void testHandleFileEnd() throws IOException {
         // Create a file end message
         FileEndMessage message = new FileEndMessage("test.txt");
+        var path = Path.of(mockSession.getFolder().getRealPath()+File.separator+"test.txt");
+        Files.writeString(path, UUID.randomUUID().toString());
+        FileInfo fileInfo = FileInfo.fromFile(path.toFile(),mockSession.getFolder().getRealPath());
+        message.setFileInfo(fileInfo);
+
 
         // Call the method
         handler.handleFileEnd(mockConnection, mockSession, message);

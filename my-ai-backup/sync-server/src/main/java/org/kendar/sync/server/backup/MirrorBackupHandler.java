@@ -34,19 +34,23 @@ public class MirrorBackupHandler extends BackupHandler {
                 value -> value
         ));
 
-        var filesToRemove = message.getFiles().stream().map(key -> key.getRelativePath()).
-                collect(Collectors.toSet(
-        ));
+        var filesToRemove = message.getFiles().stream().
+                map(key -> key.getRelativePath()).
+                collect(Collectors.toSet());
 
-        var allFiles = listAllFiles(Path.of(session.getFolder().getRealPath()));
+        var allFiles = listAllFilesAndDirs(Path.of(session.getFolder().getRealPath()));
         var removedFiles = new ArrayList<String>();
-        //if(message.isBackup()) {
+
         for (var file : allFiles) {
-            var fts = file.toString().replace(session.getFolder().getRealPath(), "")
-                    .replaceAll("\\\\","/").substring(1);
+            var fts = FileUtils.makeUniformPath(file.toString().replace(session.getFolder().getRealPath(), ""));
             var filePath = session.getFolder().getRealPath() +"/"+ fts;
             BasicFileAttributes attr = Files.readAttributes(Path.of(filePath), BasicFileAttributes.class);
 
+            if(file.toFile().isDirectory()){
+                filesOnClient.remove(fts);
+                filesToRemove.remove(fts);
+                continue;
+            }
             if(message.isBackup() && !filesOnClient.containsKey(fts)){
                 Files.delete(Path.of(filePath));
                 continue;
@@ -68,13 +72,19 @@ public class MirrorBackupHandler extends BackupHandler {
         }
         if(!message.isBackup()) {
             removedFiles.addAll(filesToRemove);
+            for(var toRemove : filesToRemove){
+                filesOnClient.remove(toRemove);
+            }
         }
-        var filesToSend = filesOnClient.values().stream().toList();
+        var filesToSend = filesOnClient.values().stream().filter(f->!f.isDirectory()).toList();
         connection.sendMessage(new FileListResponseMessage(filesToSend, removedFiles, true, 1, 1));
         if (message.isBackup()) {
             return;
         }
         for (var file : filesToSend) {
+            if(file.isDirectory()){
+                continue;
+            }
             FileDescriptorMessage fileDescriptorMessage = new FileDescriptorMessage(file);
             connection.sendMessage(fileDescriptorMessage);
 
@@ -94,7 +104,8 @@ public class MirrorBackupHandler extends BackupHandler {
                 continue;
             }
             if (!session.isDryRun()) {
-                File sourceFile = new File(file.getPath());
+                var relPath = Path.of(session.getFolder().getRealPath(), file.getRelativePath());
+                File sourceFile = relPath.toFile();
                 byte[] fileData = FileUtils.readFile(sourceFile);
 
                 FileDataMessage fileDataMessage = new FileDataMessage(file.getRelativePath(), 0, 1, fileData);

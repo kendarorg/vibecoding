@@ -70,6 +70,13 @@ public class FileUtils {
         }
     }
 
+    public static String makeUniformPath(String path) {
+        var res = path.replaceAll("\\\\","/");
+        if(res.startsWith("/")) {
+            return res.substring(1);
+        }
+        return res;
+    }
     /**
      * Calculates the files that need to be transferred and deleted.
      *
@@ -240,5 +247,42 @@ public class FileUtils {
     public static void writeFile(File file, byte[] data) throws IOException {
         createDirectoryIfNotExists(file.getParentFile());
         Files.write(file.toPath(), data);
+    }
+
+    /**
+     * Deletes all files and subdirectories in the specified directory.
+     * The directory itself is not deleted.
+     *
+     * @param directory The directory to clean
+     * @return true if all files were deleted successfully, false otherwise
+     * @throws IOException If an I/O error occurs
+     */
+    public static boolean deleteDirectoryContents(Path directory) throws IOException {
+        if (!Files.exists(directory) || !Files.isDirectory(directory)) {
+            return false;
+        }
+
+        boolean success = true;
+
+        // Use Files.walk to traverse the directory tree in depth-first order
+        try (var paths = Files.walk(directory)) {
+            // Skip the root directory itself
+            var filesToDelete = paths
+                    .filter(path -> !path.equals(directory))
+                    .sorted((a, b) -> -a.compareTo(b)) // Reverse order to delete children before parents
+                    .toList();
+
+            for (Path path : filesToDelete) {
+                try {
+                    Files.delete(path);
+                } catch (IOException e) {
+                    success = false;
+                    System.err.println("Failed to delete: " + path + " - " + e.getMessage());
+                }
+            }
+        }
+        Files.delete(directory);
+
+        return success;
     }
 }

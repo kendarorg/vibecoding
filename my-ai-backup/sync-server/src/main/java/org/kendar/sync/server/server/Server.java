@@ -138,8 +138,6 @@ public class Server {
             // Handle messages
             while (true) {
                 message = connection.receiveMessage();
-                System.out.println("[SERVER] "+message.getMessageType());
-
                 switch (message.getMessageType()) {
                     case FILE_LIST:
                         handleFileList(connection, session, (FileListMessage) message);

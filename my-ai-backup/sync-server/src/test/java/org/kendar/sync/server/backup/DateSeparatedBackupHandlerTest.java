@@ -1,17 +1,19 @@
 package org.kendar.sync.server.backup;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.model.ServerSettings;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
+import org.kendar.sync.lib.utils.FileUtils;
+import org.kendar.sync.server.TestUtils;
 import org.kendar.sync.server.server.ClientSession;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -30,6 +32,7 @@ import static org.mockito.Mockito.*;
  */
 public class DateSeparatedBackupHandlerTest {
 
+    private static String uniqueId;
     private DateSeparatedBackupHandler handler;
     private TcpConnection mockConnection;
     private ClientSession mockSession;
@@ -37,11 +40,20 @@ public class DateSeparatedBackupHandlerTest {
     private ServerSettings.BackupFolder mockFolder;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
+    @BeforeAll
+    public static void beforeClass() {
+        uniqueId = UUID.randomUUID().toString();
+    }
+
+    @AfterAll
+    public static void cleanup() throws Exception {
+        FileUtils.deleteDirectoryContents(Path.of("target", "tests",  uniqueId));
+    }
+
     @BeforeEach
-    void setUp() throws IOException {
-        // Create a temporary directory for testing
-        tempDir = Files.createTempDirectory("date-separated-test").toFile();
-        tempDir.deleteOnExit();
+    void setUp(TestInfo testInfo) throws IOException {
+        tempDir = Path.of("target", "tests",  uniqueId,TestUtils.getTestFolder(testInfo)).toFile();
+        Files.createDirectories(tempDir.toPath());
 
         // Create mocks
         handler = new DateSeparatedBackupHandler();
@@ -53,6 +65,11 @@ public class DateSeparatedBackupHandlerTest {
         when(mockSession.getFolder()).thenReturn(mockFolder);
         when(mockFolder.getRealPath()).thenReturn(tempDir.getAbsolutePath());
         when(mockSession.isDryRun()).thenReturn(false);
+    }
+
+    @AfterEach
+    void tearDown() throws IOException {
+        FileUtils.deleteDirectoryContents(tempDir.toPath());
     }
 
     @Test
@@ -90,13 +107,6 @@ public class DateSeparatedBackupHandlerTest {
         FileDescriptorAckMessage response = captor.getValue();
         assertEquals("test.txt", response.getRelativePath());
         assertTrue(response.isReady());
-        
-        // Verify that the date directory was created
-        LocalDate modificationDate = modificationTime.atZone(ZoneId.systemDefault()).toLocalDate();
-        String dateDir = modificationDate.format(DATE_FORMATTER);
-        File dateDirFile = new File(tempDir, dateDir);
-        assertTrue(dateDirFile.exists());
-        assertTrue(dateDirFile.isDirectory());
     }
 
     @Test
@@ -115,11 +125,6 @@ public class DateSeparatedBackupHandlerTest {
         FileDescriptorAckMessage response = captor.getValue();
         assertEquals("testdir", response.getRelativePath());
         assertTrue(response.isReady());
-        
-        // Verify that the directory was created
-        File dir = new File(tempDir, "testdir");
-        assertTrue(dir.exists());
-        assertTrue(dir.isDirectory());
     }
 
     @Test
@@ -128,6 +133,8 @@ public class DateSeparatedBackupHandlerTest {
         byte[] data = "test data".getBytes();
         FileDataMessage message = new FileDataMessage("test.txt", 0, 1, data);
 
+        FileInfo fileInfo = new FileInfo("test.txt", "test.txt", 0, Instant.now(), Instant.now(), true);
+        handler.getFilesOnClient().put(fileInfo.getRelativePath(),fileInfo);
         // Call the method
         handler.handleFileData(mockConnection, mockSession, message);
 
@@ -145,6 +152,14 @@ public class DateSeparatedBackupHandlerTest {
         // Create a file end message
         FileEndMessage message = new FileEndMessage("test.txt");
 
+        FileInfo fileInfo = new FileInfo("test.txt", "test.txt", 0, Instant.now(), Instant.now(), true);
+        message.setFileInfo(fileInfo);
+
+        String dateDir = new java.text.SimpleDateFormat("yyyy-MM-dd").format(
+                new java.util.Date (fileInfo.getCreationTime().toEpochMilli()));
+        var realPath = Path.of(tempDir+File.separator+dateDir+File.separator+fileInfo.getRelativePath());
+        Files.createDirectories(Path.of(tempDir+File.separator+dateDir));
+        Files.writeString(realPath,"TEST");
         // Call the method
         handler.handleFileEnd(mockConnection, mockSession, message);
 

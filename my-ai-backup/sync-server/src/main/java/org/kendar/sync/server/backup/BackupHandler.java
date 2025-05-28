@@ -80,6 +80,14 @@ public abstract class BackupHandler {
                 .collect(Collectors.toList());
     }
 
+    protected List<Path> listAllFilesAndDirs(Path sourcePath) throws IOException {
+        if (!Files.exists(sourcePath) || !Files.isDirectory(sourcePath)) {
+            return new ArrayList<>();
+        }
+
+        return Files.walk(sourcePath)
+                .collect(Collectors.toList());
+    }
 
     protected boolean shouldUpdate(FileInfo fileInfo, Path file, BasicFileAttributes attr) {
         if(fileInfo==null)return true;

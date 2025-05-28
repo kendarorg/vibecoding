@@ -35,10 +35,9 @@ public class PreserveBackupHandler extends BackupHandler {
         ));
 
         var allFiles = listAllFiles(Path.of(session.getFolder().getRealPath()));
-        //if(message.isBackup()) {
+
         for (var file : allFiles) {
-            var fts = file.toString().replace(session.getFolder().getRealPath(), "")
-                    .replaceAll("\\\\","/").substring(1);
+            var fts = FileUtils.makeUniformPath(file.toString().replace(session.getFolder().getRealPath(), ""));
             var filePath = session.getFolder().getRealPath() +"/"+ fts;
             BasicFileAttributes attr = Files.readAttributes(Path.of(filePath), BasicFileAttributes.class);
 
@@ -54,12 +53,15 @@ public class PreserveBackupHandler extends BackupHandler {
                 }
             }
         }
-        var filesToSend = filesOnClient.values().stream().toList();
+        var filesToSend = filesOnClient.values().stream().filter(f->!f.isDirectory()).toList();
         connection.sendMessage(new FileListResponseMessage(filesToSend, new ArrayList<>(), true, 1, 1));
         if (message.isBackup()) {
             return;
         }
         for (var file : filesToSend) {
+            if(file.isDirectory()){
+                continue;
+            }
             FileDescriptorMessage fileDescriptorMessage = new FileDescriptorMessage(file);
             connection.sendMessage(fileDescriptorMessage);
 
@@ -79,7 +81,8 @@ public class PreserveBackupHandler extends BackupHandler {
                 continue;
             }
             if (!session.isDryRun()) {
-                File sourceFile = new File(file.getPath());
+                var relPath = Path.of(session.getFolder().getRealPath(), file.getRelativePath());
+                File sourceFile = relPath.toFile();
                 byte[] fileData = FileUtils.readFile(sourceFile);
 
                 FileDataMessage fileDataMessage = new FileDataMessage(file.getRelativePath(), 0, 1, fileData);

@@ -1,12 +1,11 @@
 package org.kendar.sync.server;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.kendar.sync.client.CommandLineArgs;
 import org.kendar.sync.client.SyncClientApp;
 import org.kendar.sync.lib.model.ServerSettings;
 import org.kendar.sync.lib.protocol.BackupType;
+import org.kendar.sync.lib.utils.FileUtils;
 import org.kendar.sync.server.config.ServerConfig;
 import org.kendar.sync.server.server.Server;
 
@@ -18,6 +17,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -43,12 +43,26 @@ public class BackupIntegrationTest {
     private Server server;
     private int serverPort;
     private CommandLineArgs commandLineArgs;
+    private static String uniqueId;
+
+    @AfterEach
+    void tearDown() throws Exception {
+        server.stop();
+    }
+
+    @AfterAll
+    public static void cleanup() throws Exception {
+        FileUtils.deleteDirectoryContents(Path.of("target", "tests",  uniqueId));
+    }
+
+    @BeforeAll
+    public static void beforeClass() {
+        uniqueId = UUID.randomUUID().toString();
+    }
 
     @BeforeEach
-    void setUp() throws Exception {
-        // Create a unique test directory inside target/tests
-        String uniqueId = UUID.randomUUID().toString();
-        testRoot = Path.of("target", "tests", uniqueId);
+    void setUp(TestInfo testInfo) throws Exception {
+        testRoot = Path.of("target", "tests",  uniqueId,TestUtils.getTestFolder(testInfo));
         Files.createDirectories(testRoot);
 
         // Create source and target directories
@@ -60,7 +74,7 @@ public class BackupIntegrationTest {
         // Create test files in the source directory with random content
 
         
-        System.out.println("Created test files in " + sourceDir.getAbsolutePath());
+        System.out.println("================= Created test files in " + sourceDir.getAbsolutePath());
 
         serverPort = 8085;
 
@@ -95,53 +109,51 @@ public class BackupIntegrationTest {
         commandLineArgs.setPassword("password");
     }
 
-    @AfterEach
-    void tearDown() throws Exception {
-        // Clean up test directories if needed
-        server.stop();
 
-    }
 
-    public void cleanupDirs() throws IOException
-    {
-        deleteDirectoryContents(sourceDir.toPath());
-        deleteDirectoryContents(targetDir.toPath());
-    }
 
-    /**
-     * Deletes all files and subdirectories in the specified directory.
-     * The directory itself is not deleted.
-     *
-     * @param directory The directory to clean
-     * @return true if all files were deleted successfully, false otherwise
-     * @throws IOException If an I/O error occurs
-     */
-    private boolean deleteDirectoryContents(Path directory) throws IOException {
-        if (!Files.exists(directory) || !Files.isDirectory(directory)) {
-            return false;
-        }
 
-        boolean success = true;
 
-        // Use Files.walk to traverse the directory tree in depth-first order
-        try (var paths = Files.walk(directory)) {
-            // Skip the root directory itself
-            var filesToDelete = paths
-                    .filter(path -> !path.equals(directory))
-                    .sorted((a, b) -> -a.compareTo(b)) // Reverse order to delete children before parents
-                    .toList();
+    @Test
+    void testBackupAndRestoreDateSeparated() throws Exception {
 
-            for (Path path : filesToDelete) {
-                try {
-                    Files.delete(path);
-                } catch (IOException e) {
-                    success = false;
-                    System.err.println("Failed to delete: " + path + " - " + e.getMessage());
-                }
-            }
-        }
+        startServer(BackupType.DATE_SEPARATED);
+        createRandomFiles(sourceDir, 5, 3);
 
-        return success;
+        // Perform backup
+        System.out.println("================= Performing backup...");
+        commandLineArgs.setBackup(true);
+        SyncClientApp.doSync(commandLineArgs);
+
+        // Verify backup
+        System.out.println("================= Verifying backup...");
+        assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath(),BackupType.DATE_SEPARATED);
+
+        //Add a non deletable file tot destination
+        System.out.println("================= Adding new file on target...");
+        Files.writeString(Path.of(targetDir.toPath()+"/atest.txt"), "testBackup");
+
+        // Perform backup
+        System.out.println("================= Performing backup...");
+        commandLineArgs.setBackup(true);
+        SyncClientApp.doSync(commandLineArgs);
+
+        // Verify backup
+        System.out.println("================= Verifying backup...");
+        List<String> diff = new ArrayList<>();
+        assertFalse(areDirectoriesEqual(sourceDir.toPath(), targetDir.toPath(),diff,BackupType.DATE_SEPARATED));
+        assertEquals(List.of(sourceDir.toPath()+File.separator+"atest.txt"), diff);
+
+
+        // Remove a file from the source directory
+        removedFile = removeRandomFile(sourceDir.toPath());
+
+        // Perform restore
+        System.out.println("================= Performing restore...");
+        commandLineArgs.setBackup(false);
+        SyncClientApp.doSync(commandLineArgs);
+        assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath(),BackupType.DATE_SEPARATED);
+
     }
 
     @Test
@@ -151,24 +163,25 @@ public class BackupIntegrationTest {
         createRandomFiles(sourceDir, 5, 3);
 
         // Perform backup
-        System.out.println("Performing backup...");
+        System.out.println("================= Performing backup...");
         commandLineArgs.setBackup(true);
         SyncClientApp.doSync(commandLineArgs);
 
         // Verify backup
-        System.out.println("Verifying backup...");
+        System.out.println("================= Verifying backup...");
         assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
 
         //Add a non deletable file tot destination
+        System.out.println("================= ADd file on target...");
         Files.writeString(Path.of(targetDir.toPath()+"/atest.txt"), "testBackup");
 
         // Perform backup
-        System.out.println("Performing backup...");
+        System.out.println("================= Performing backup...");
         commandLineArgs.setBackup(true);
         SyncClientApp.doSync(commandLineArgs);
 
         // Verify backup
-        System.out.println("Verifying backup...");
+        System.out.println("================= Verifying backup...");
         List<String> diff = new ArrayList<>();
         assertFalse(areDirectoriesEqual(sourceDir.toPath(), targetDir.toPath(),diff));
         assertEquals(List.of(sourceDir.toPath()+File.separator+"atest.txt"), diff);
@@ -178,12 +191,11 @@ public class BackupIntegrationTest {
         removedFile = removeRandomFile(sourceDir.toPath());
 
         // Perform restore
-        System.out.println("Performing restore...");
+        System.out.println("================= Performing restore...");
         commandLineArgs.setBackup(false);
         SyncClientApp.doSync(commandLineArgs);
         assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
 
-        cleanupDirs();
     }
 
 
@@ -194,12 +206,12 @@ public class BackupIntegrationTest {
         createRandomFiles(sourceDir, 5, 3);
 
         // Perform backup
-        System.out.println("Performing backup...");
+        System.out.println("================= Performing backup...");
         commandLineArgs.setBackup(true);
         SyncClientApp.doSync(commandLineArgs);
 
         // Verify backup
-        System.out.println("Verifying backup...");
+        System.out.println("================= Verifying backup...");
         assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
 
         // Remove a file from the source directory
@@ -209,7 +221,7 @@ public class BackupIntegrationTest {
         SyncClientApp.doSync(commandLineArgs);
 
         // Verify backup
-        System.out.println("Verifying backup with deleted...");
+        System.out.println("================= Verifying backup with deleted...");
         assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
 
         // Remove a file from the source directory
@@ -219,34 +231,31 @@ public class BackupIntegrationTest {
         SyncClientApp.doSync(commandLineArgs);
 
         // Verify backup
-        System.out.println("Verifying backup with deleted target...");
+        System.out.println("================= Verifying backup with deleted target...");
         assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
 
         // Delete a file from the target directory
-        // Remove a file from the source directory
         removedFile = removeRandomFile(targetDir.toPath());
 
+        System.out.println("================= Adding file on target...");
+        Files.writeString(Path.of(targetDir.toPath()+"/atest.txt"), "testBackup");
+
         // Perform restore
-        System.out.println("Performing restore...");
+        System.out.println("================= Performing restore...");
         commandLineArgs.setBackup(false);
         SyncClientApp.doSync(commandLineArgs);
 
         // Verify restore
-        System.out.println("Verifying restore...");
+        System.out.println("================= Verifying restore...");
         assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
-        cleanupDirs();
+
     }
 
-    /**
-     * Creates random files in the specified directory.
-     *
-     * @param dir The directory to create files in
-     * @param numFiles The number of files to create
-     * @param maxDepth The maximum directory depth
-     * @return The list of created files
-     * @throws IOException If an I/O error occurs
-     */
     private List<File> createRandomFiles(File dir, int numFiles, int maxDepth) throws IOException {
+        return createRandomFiles(dir,dir,numFiles,maxDepth);
+    }
+
+    private List<File> createRandomFiles(File rootDir,File dir, int numFiles, int maxDepth) throws IOException {
         List<File> files = new ArrayList<>();
         Random random = new Random();
 
@@ -256,19 +265,45 @@ public class BackupIntegrationTest {
             String name = isDirectory ? "dir_" + i : "file_" + i + ".txt";
             File file = new File(dir, name);
 
-            if (isDirectory) {
-                file.mkdir();
-                // Recursively create files in the directory
-                files.addAll(createRandomFiles(file, numFiles / 2, maxDepth - 1));
-            } else {
-                // Create a file with random content
-                String content = "Content for " + name + ": " + UUID.randomUUID();
-                Files.writeString(file.toPath(), content);
+            if (!isDirectory) {
+
                 files.add(file);
                 var randomLong =getRandomNumber(228967200000L,1585965600000L);
-                Files.setAttribute(file.toPath(), "creationTime", FileTime.fromMillis(randomLong));
-                Files.setLastModifiedTime(file.toPath(), FileTime.fromMillis(randomLong+100000L));
+                String date = new java.text.SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new java.util.Date (randomLong));
+                // Create a file with random content
+                String content = "Content for " + name + ": " + UUID.randomUUID();
+                var path = file.toPath();
+                var parent = path.getParent().toString();
+                if(parent.equalsIgnoreCase(rootDir.toPath().toString())){
+                    parent =null;
+                }else {
+                    parent = parent.replace(rootDir.toPath() + File.separator, "");
+                }
 
+//                if(backupType==BackupType.DATE_SEPARATED){
+//                    if(parent==null){
+//                        Files.createDirectories(Path.of(rootDir.toString(), date));
+//                        path = Path.of(rootDir.toString(), date, file.getName());
+//                    }else {
+//                        Files.createDirectories(Path.of(rootDir.toString(), date, parent));
+//                        path = Path.of(rootDir.toString(), date, parent, file.getName());
+//                    }
+//                }else{
+                    if(parent==null){
+                        Files.createDirectories(Path.of(rootDir.toString()));
+                        path = Path.of(rootDir.toString(), file.getName());
+                    }else {
+                        Files.createDirectories(Path.of(rootDir.toString(), parent));
+                        path = Path.of(rootDir.toString(), parent, file.getName());
+                    }
+                //}
+                Files.writeString(path, content);
+                Files.setAttribute(path, "creationTime", FileTime.fromMillis(randomLong));
+                Files.setLastModifiedTime(path, FileTime.fromMillis(randomLong+100000L));
+
+            } else {
+                // Recursively create files in the directory
+                files.addAll(createRandomFiles(rootDir,file, numFiles / 2, maxDepth - 1));
             }
         }
 
@@ -309,12 +344,16 @@ public class BackupIntegrationTest {
         // Remove a random file
         File fileToRemove = allFiles.get(rand).toFile();
         Files.delete(fileToRemove.toPath());
-        
-        System.out.println("Removed file: " + getRelativePath(fileToRemove, sourceDir));
+        System.out.println("================= Removed file: " + getRelativePath(fileToRemove, sourceDir));
         
         return fileToRemove;
     }
 
+    public static void assertDirectoriesEqual(Path dir1, Path dir2,BackupType backupType) throws IOException {
+        if (!areDirectoriesEqual(dir1, dir2,new ArrayList<>(),backupType)) {
+            fail("Directories are not equal: " + dir1 + " and " + dir2);
+        }
+    }
 
     public static void assertDirectoriesEqual(Path dir1, Path dir2) throws IOException {
         if (!areDirectoriesEqual(dir1, dir2,new ArrayList<>())) {
@@ -323,6 +362,10 @@ public class BackupIntegrationTest {
     }
 
     public static boolean areDirectoriesEqual(Path dir1, Path dir2,List<String> different) throws IOException {
+        return areDirectoriesEqual(dir1, dir2,different,BackupType.MIRROR);
+    }
+
+    public static boolean areDirectoriesEqual(Path dir1, Path dir2,List<String> different,BackupType backupType) throws IOException {
         if (!Files.isDirectory(dir1) || !Files.isDirectory(dir2)) {
             System.err.println("Not a directory: " + dir1+" "+dir2);
             return false;
@@ -348,6 +391,14 @@ public class BackupIntegrationTest {
         for (Path relativePath : dir1Files) {
             Path file1 = dir1.resolve(relativePath);
             Path file2 = dir2.resolve(relativePath);
+            if(backupType==BackupType.DATE_SEPARATED){
+                if(!Files.exists(file2)){
+                    BasicFileAttributes attrs = Files.readAttributes(file1, BasicFileAttributes.class);
+                    String date = new java.text.SimpleDateFormat("yyyy-MM-dd").
+                            format(new java.util.Date (attrs.creationTime().toMillis()));
+                    file2 = dir2.resolve(Path.of(date,relativePath.toString()));
+                }
+            }
 
             if(!Files.exists(file2)) {
                 different.add(file2.toString());
@@ -380,11 +431,21 @@ public class BackupIntegrationTest {
             }
         }
 
+        var isDatePattern = Pattern.compile("^[0-9]{4}-[0-9]{2}-[0-9]{2}.*");
+
         for (Path relativePath : dir2Files) {
             Path file1 = dir1.resolve(relativePath);
 
-            if(!Files.exists(file1)) {
-                different.add(file1.toString());
+            if(!Files.exists(file1) && backupType==BackupType.DATE_SEPARATED && isDatePattern.matcher(relativePath.toString()).matches()) {
+                var rp = relativePath.toString().substring("yyyy-mm-dd".length()+1);
+                var finalPath = dir1.toString()+File.separator+rp;
+                if (!Files.exists(Path.of(finalPath))) {
+                    different.add(finalPath);
+                }
+            }else {
+                if (!Files.exists(file1)) {
+                    different.add(file1.toString());
+                }
             }
         }
 

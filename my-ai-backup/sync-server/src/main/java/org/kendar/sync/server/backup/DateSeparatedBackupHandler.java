@@ -3,6 +3,7 @@ package org.kendar.sync.server.backup;
 import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
+import org.kendar.sync.lib.utils.FileUtils;
 import org.kendar.sync.server.server.ClientSession;
 
 import java.io.File;
@@ -11,11 +12,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.time.LocalDate;
-import java.time.ZoneId;
+import java.nio.file.attribute.FileTime;
+import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -59,25 +61,100 @@ public class DateSeparatedBackupHandler extends BackupHandler {
 
         var allFiles = listAllFiles(Path.of(session.getFolder().getRealPath()));
         for(var file:allFiles){
-            var fts = file.toString().replace(session.getFolder().getRealPath(), "");
-            var filePath = session.getFolder().getRealPath()+fts;
+            var fts = FileUtils.makeUniformPath(file.toString().replace(session.getFolder().getRealPath(), ""));
+            var filePath = session.getFolder().getRealPath()+File.separator+fts;
             BasicFileAttributes attr = Files.readAttributes(Path.of(filePath), BasicFileAttributes.class);
-            if(!fts.matches("\\d{4}-\\d{2}-\\d{2}")){
+            if(!fts.matches(".*\\d{4}-\\d{2}-\\d{2}.*")){
                 if(!shouldUpdate(filesOnClient.get(fts), file,attr)){
                     filesOnClient.remove(fts);
+                }
+                if(!message.isBackup()){
+                    if(filesOnClient.get(fts)==null){
+                        filesOnClient.put(fts,FileInfo.fromFile(file.toFile(),session.getFolder().getRealPath()));
+                    }
                 }
             }else{
                 var newFts = fts.substring(11);
                 if(!shouldUpdate(filesOnClient.get(newFts), file,attr)){
                     filesOnClient.remove(fts);
                 }// Remove the date prefix
+                if(!message.isBackup()){
+                    if(filesOnClient.get(newFts)==null){
+                        var fi = FileInfo.fromFile(file.toFile(),session.getFolder().getRealPath());
+                        fi.setRelativePath(newFts);
+                        filesOnClient.put(newFts,fi);
+                    }
+                }
             }
         }
-        var filesToSend = filesOnClient.values().stream().toList();
+        var filesToSend = filesOnClient.values().stream().filter(f->!f.isDirectory()).toList();
         // For DATE_SEPARATED backup type, we don't need to compare files or delete anything
         // Just acknowledge the message with an empty list
         connection.sendMessage(new FileListResponseMessage(filesToSend, new ArrayList<>(), true, 1, 1));
+        if(message.isBackup()){
+            return;
+        }
+
+        for (var file : filesToSend) {
+            if(file.isDirectory()){
+                continue;
+            }
+            FileDescriptorMessage fileDescriptorMessage = new FileDescriptorMessage(file);
+            connection.sendMessage(fileDescriptorMessage);
+
+            var response = connection.receiveMessage();
+            if (response.getMessageType() != MessageType.FILE_DESCRIPTOR_ACK) {
+                System.err.println("[SERVER] Unexpected response 4: " + response.getMessageType());
+                return;
+            }
+
+            FileDescriptorAckMessage fileDescriptorAck = (FileDescriptorAckMessage) response;
+            if (!fileDescriptorAck.isReady()) {
+                System.err.println("[SERVER] Server not ready to receive file: " + fileDescriptorAck.getErrorMessage());
+                continue;
+            }
+            if (file.isDirectory()) {
+                System.out.println("[SERVER] Created directory: " + file.getRelativePath());
+                continue;
+            }
+            if (!session.isDryRun()) {
+                String date = new SimpleDateFormat("yyyy-MM-dd").
+                        format(new java.util.Date (file.getCreationTime().toEpochMilli()));
+                var relPath = Path.of(session.getFolder().getRealPath(), date,file.getRelativePath());
+                if(!Files.exists(relPath)){
+                    relPath = Path.of(session.getFolder().getRealPath(), file.getRelativePath());
+                }
+
+                File sourceFile =relPath.toFile();
+                byte[] fileData = FileUtils.readFile(sourceFile);
+
+                FileDataMessage fileDataMessage = new FileDataMessage(file.getRelativePath(), 0, 1, fileData);
+                connection.sendMessage(fileDataMessage);
+            } else {
+                System.out.println("[SERVER] Dry run: Would send file data for " + file.getRelativePath());
+            }
+
+            FileEndMessage fileEndMessage = new FileEndMessage(file.getRelativePath(), file);
+            connection.sendMessage(fileEndMessage);
+
+            // Wait for file end ack
+            response = connection.receiveMessage();
+            if (response.getMessageType() != MessageType.FILE_END_ACK) {
+                System.err.println("[SERVER] Unexpected response 5: " + response.getMessageType());
+                return;
+            }
+
+            FileEndAckMessage fileEndAck = (FileEndAckMessage) response;
+            if (!fileEndAck.isSuccess()) {
+                System.err.println("[SERVER] File transfer failed: " + fileEndAck.getErrorMessage());
+                continue;
+            }
+
+            System.out.println("[SERVER] Transferred file: " + file.getRelativePath());
+        }
     }
+
+    private ConcurrentHashMap<String,FileInfo> filesOnClient = new ConcurrentHashMap<>();
 
     @Override
     public void handleFileDescriptor(TcpConnection connection, ClientSession session, FileDescriptorMessage message) throws IOException {
@@ -92,33 +169,13 @@ public class DateSeparatedBackupHandler extends BackupHandler {
 
         // For DATE_SEPARATED backup type, we need to create a directory structure based on the file's modification date
         FileInfo fileInfo = message.getFileInfo();
-
-        if (fileInfo.isDirectory()) {
-            // For directories, just create them as is
-            File dir = new File(session.getFolder().getRealPath(), fileInfo.getRelativePath());
-            dir.mkdirs();
-        } else {
-            // For files, create a date-based directory structure
-            LocalDate modificationDate = fileInfo.getCreationTime()
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDate();
-
-            String dateDir = modificationDate.format(DATE_FORMATTER);
-
-            // Create the date directory
-            File dateDirFile = new File(session.getFolder().getRealPath(), dateDir);
-            dateDirFile.mkdirs();
-
-            // Create parent directories for the file if needed
-            String relativePath = fileInfo.getRelativePath();
-            String parentPath = new File(relativePath).getParent();
-            if (parentPath != null) {
-                File parentDir = new File(dateDirFile, parentPath);
-                parentDir.mkdirs();
-            }
-        }
+        filesOnClient.put(fileInfo.getRelativePath(), fileInfo);
 
         connection.sendMessage(FileDescriptorAckMessage.ready(fileInfo.getRelativePath()));
+    }
+
+    public ConcurrentHashMap<String, FileInfo> getFilesOnClient() {
+        return filesOnClient;
     }
 
     @Override
@@ -129,12 +186,9 @@ public class DateSeparatedBackupHandler extends BackupHandler {
         }
 
         System.out.println("[DATE_SEPARATED] Received FILE_DATA message");
-
-        // For DATE_SEPARATED backup type, we need to write the data to a file in the date-based directory structure
-        // Get the file's modification date from the file descriptor
-        // For simplicity, we'll use the current date if we can't determine the file's modification date
-        LocalDate currentDate = LocalDate.now();
-        String dateDir = currentDate.format(DATE_FORMATTER);
+        var fileInfo = filesOnClient.get(message.getRelativePath());
+        String dateDir = new java.text.SimpleDateFormat("yyyy-MM-dd").format(
+                new java.util.Date (fileInfo.getCreationTime().toEpochMilli()));
 
         // Create the full path for the file
         String relativePath = message.getRelativePath();
@@ -153,6 +207,14 @@ public class DateSeparatedBackupHandler extends BackupHandler {
     public void handleFileEnd(TcpConnection connection, ClientSession session, FileEndMessage message) throws IOException {
         System.out.println("[DATE_SEPARATED] Received FILE_END message");
 
+        var fileInfo = message.getFileInfo();
+
+        String dateDir = new java.text.SimpleDateFormat("yyyy-MM-dd").format(
+                new java.util.Date (fileInfo.getCreationTime().toEpochMilli()));
+        var realPath = Path.of(session.getFolder().getRealPath()+File.separator+dateDir+File.separator+fileInfo.getRelativePath());
+        Files.setAttribute(realPath, "creationTime", FileTime.fromMillis(fileInfo.getCreationTime().toEpochMilli()));
+        Files.setLastModifiedTime(realPath, FileTime.fromMillis(fileInfo.getModificationTime().toEpochMilli()));
+        filesOnClient.remove(fileInfo.getRelativePath());
         connection.sendMessage(FileEndAckMessage.success(message.getRelativePath()));
     }
 
