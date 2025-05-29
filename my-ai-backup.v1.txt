@@ -215,6 +215,10 @@ In the client instead of sending all data in one block, read in blocks of maxPac
 * Fixing the backup splitted
 * Setup the restore splitted
 
+### Prompt 011
+
+As you did for the backup, use maxConnections tcp connections to receive the files when restoring
+
 
 
 

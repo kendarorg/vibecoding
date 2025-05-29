@@ -13,9 +13,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class SyncClient {
@@ -74,106 +76,180 @@ public class SyncClient {
                 .collect(Collectors.toMap(fileInfo -> {
                     return FileUtils.makeUniformPath(fileInfo.getRelativePath());
                 }, fileInfo -> fileInfo));
-        // Process files to transfer
-        while (!mapToTransfer.isEmpty()) {
-            // Wait for file descriptor
-            Message message = connection.receiveMessage();
-            if (message.getMessageType() != MessageType.FILE_DESCRIPTOR) {
-                System.err.println("[CLIENT] Unexpected message 1: " + message.getMessageType());
-                return;
-            }
 
-            FileDescriptorMessage fileDescriptorMessage = (FileDescriptorMessage) message;
-            FileInfo fileInfo = fileDescriptorMessage.getFileInfo();
-            if (!mapToTransfer.containsKey(FileUtils.makeUniformPath(fileInfo.getRelativePath()))) {
-                System.out.println("[CLIENT] Skipping file not in transfer list: " + fileInfo.getRelativePath());
-                // Send file descriptor ack
-                FileDescriptorAckMessage fileDescriptorAck = FileDescriptorAckMessage.ready(fileInfo.getRelativePath());
-                connection.sendMessage(fileDescriptorAck);
-                continue;
-            }
-            mapToTransfer.remove(FileUtils.makeUniformPath(fileInfo.getRelativePath()));
+        System.out.println("[CLIENT] Receiving " + mapToTransfer.size() + " files with " + maxConnections + " parallel connections");
 
-            System.out.println("[CLIENT] Receiving file: " + fileInfo.getRelativePath());
+        // Setup connections pool for parallel downloads
+        ExecutorService executorService = new ThreadPoolExecutor(maxConnections, maxConnections,
+                0L, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>());
 
-            // Create the file or directory
-            File targetFile = new File(args.getSourceFolder(), fileInfo.getRelativePath());
+        ConcurrentLinkedQueue<TcpConnection> connections = new ConcurrentLinkedQueue<>();
+        ConcurrentLinkedQueue<FileInfo> filesToReceive = new ConcurrentLinkedQueue<>(mapToTransfer.values());
 
-            if (fileInfo.isDirectory()) {
-                if (!args.isDryRun()) {
-                    targetFile.mkdirs();
-                } else {
-                    System.out.println("[CLIENT] Dry run: Would create directory " + targetFile.getAbsolutePath());
-                }
+        // Create additional connections
+        for (int i = 0; i < maxConnections; i++) {
+            TcpConnection subConnection = getTcpConnection(connection, args, i, maxPacketSize);
+            connections.add(subConnection);
+        }
 
-                // Send file descriptor ack
-                FileDescriptorAckMessage fileDescriptorAck = FileDescriptorAckMessage.ready(fileInfo.getRelativePath());
-                connection.sendMessage(fileDescriptorAck);
+        CountDownLatch completionLatch = new CountDownLatch(1);
+        AtomicInteger remainingFiles = new AtomicInteger(mapToTransfer.size());
 
-                continue;
-            }
-
-            // Create parent directories
-            if (!args.isDryRun()) {
-                targetFile.getParentFile().mkdirs();
-            } else {
-                System.out.println("[CLIENT] Dry run: Would create parent directories for " + targetFile.getAbsolutePath());
-            }
-
-            // Send file descriptor ack
-            FileDescriptorAckMessage fileDescriptorAck = FileDescriptorAckMessage.ready(fileInfo.getRelativePath());
-            connection.sendMessage(fileDescriptorAck);
-
-            // Wait for file data
-            message = connection.receiveMessage();
-            if (message.getMessageType() != MessageType.FILE_DATA) {
-                System.err.println("[CLIENT] Unexpected message 2: " + message.getMessageType());
-                return;
-            }
-
-            FileDataMessage fileDataMessage = (FileDataMessage) message;
-
-            while(true) {
-                // Write file data
-                if (!args.isDryRun()) {
-                    // Create parent directories if needed
-                    targetFile.getParentFile().mkdirs();
-
-                    // Write the data to the file
-                    try (FileOutputStream fos = new FileOutputStream(targetFile, !fileDataMessage.isFirstBlock())) {
-                        fos.write(fileDataMessage.getData());
-                    }
-                } else {
-                    System.out.println("[CLIENT] Dry run: Would write file data to " + targetFile.getAbsolutePath());
-                }
-                message = connection.receiveMessage();
-                if (message.getMessageType() != MessageType.FILE_DATA ) {
-                    if(!fileDataMessage.isLastBlock()) {
-                        System.err.println("[CLIENT] Unexpected message 3: " + message.getMessageType());
+        // Create worker threads to process incoming files
+        for (int i = 0; i < maxConnections; i++) {
+            executorService.submit(() -> {
+                TcpConnection workerConnection = null;
+                try {
+                    workerConnection = connections.poll();
+                    if (workerConnection == null) {
+                        System.err.println("[CLIENT] Could not get a connection from the pool");
                         return;
-                    }else{
-                        break;
+                    }
+
+                    int connectionId = workerConnection.getConnectionId();
+
+                    while (!filesToReceive.isEmpty() && !Thread.currentThread().isInterrupted()) {
+                        // Wait for file descriptor
+                        Message message = workerConnection.receiveMessage();
+                        if (message.getMessageType() != MessageType.FILE_DESCRIPTOR) {
+                            System.err.println("[CLIENT-" + connectionId + "] Unexpected message: " + message.getMessageType());
+                            continue;
+                        }
+
+                        FileDescriptorMessage fileDescriptorMessage = (FileDescriptorMessage) message;
+                        FileInfo fileInfo = fileDescriptorMessage.getFileInfo();
+                        String uniformPath = FileUtils.makeUniformPath(fileInfo.getRelativePath());
+
+                        // Remove from our queue if it's one of the files we're expecting
+                        boolean expectedFile = false;
+                        for (Iterator<FileInfo> it = filesToReceive.iterator(); it.hasNext();) {
+                            FileInfo queued = it.next();
+                            if (FileUtils.makeUniformPath(queued.getRelativePath()).equals(uniformPath)) {
+                                filesToReceive.remove(queued);
+                                expectedFile = true;
+                                break;
+                            }
+                        }
+
+                        if (!expectedFile) {
+                            System.out.println("[CLIENT-" + connectionId + "] Skipping file not in transfer list: " + fileInfo.getRelativePath());
+                            // Send file descriptor ack
+                            FileDescriptorAckMessage fileDescriptorAck = FileDescriptorAckMessage.ready(fileInfo.getRelativePath());
+                            workerConnection.sendMessage(fileDescriptorAck);
+                            continue;
+                        }
+
+                        System.out.println("[CLIENT-" + connectionId + "] Receiving file: " + fileInfo.getRelativePath());
+
+                        // Create the file or directory
+                        File targetFile = new File(args.getSourceFolder(), fileInfo.getRelativePath());
+
+                        if (fileInfo.isDirectory()) {
+                            if (!args.isDryRun()) {
+                                targetFile.mkdirs();
+                            } else {
+                                System.out.println("[CLIENT-" + connectionId + "] Dry run: Would create directory " + targetFile.getAbsolutePath());
+                            }
+
+                            // Send file descriptor ack
+                            FileDescriptorAckMessage fileDescriptorAck = FileDescriptorAckMessage.ready(fileInfo.getRelativePath());
+                            workerConnection.sendMessage(fileDescriptorAck);
+
+                            // Decrement count and check if we're done
+                            if (remainingFiles.decrementAndGet() <= 0) {
+                                completionLatch.countDown();
+                            }
+                            continue;
+                        }
+
+                        // Create parent directories
+                        if (!args.isDryRun()) {
+                            targetFile.getParentFile().mkdirs();
+                        } else {
+                            System.out.println("[CLIENT-" + connectionId + "] Dry run: Would create parent directories for " + targetFile.getAbsolutePath());
+                        }
+
+                        // Send file descriptor ack
+                        FileDescriptorAckMessage fileDescriptorAck = FileDescriptorAckMessage.ready(fileInfo.getRelativePath());
+                        workerConnection.sendMessage(fileDescriptorAck);
+
+                        // Process incoming file data in blocks
+                        FileDataMessage fileDataMessage = null;
+                        boolean fileComplete = false;
+
+                        while (!fileComplete) {
+                            message = workerConnection.receiveMessage();
+
+                            if (message.getMessageType() == MessageType.FILE_DATA) {
+                                fileDataMessage = (FileDataMessage) message;
+
+                                // Write file data
+                                if (!args.isDryRun()) {
+                                    // Create parent directories if needed
+                                    targetFile.getParentFile().mkdirs();
+
+                                    // Write the data to the file
+                                    try (FileOutputStream fos = new FileOutputStream(targetFile, !fileDataMessage.isFirstBlock())) {
+                                        fos.write(fileDataMessage.getData());
+                                    }
+
+                                    System.out.println("[CLIENT-" + connectionId + "] Received block " + 
+                                            (fileDataMessage.getBlockNumber() + 1) + " of " + 
+                                            fileDataMessage.getTotalBlocks() + " (" + 
+                                            fileDataMessage.getData().length + " bytes)");
+                                } else {
+                                    System.out.println("[CLIENT-" + connectionId + "] Dry run: Would write block " + 
+                                            (fileDataMessage.getBlockNumber() + 1) + " of " + 
+                                            fileDataMessage.getTotalBlocks() + " to " + 
+                                            targetFile.getAbsolutePath());
+                                }
+                            } else if (message.getMessageType() == MessageType.FILE_END) {
+                                // File transfer complete
+                                fileComplete = true;
+
+                                // Send file end ack
+                                FileEndAckMessage fileEndAck = FileEndAckMessage.success(fileInfo.getRelativePath());
+                                workerConnection.sendMessage(fileEndAck);
+
+                                if (!args.isDryRun()) {
+                                    // Set file timestamps
+                                    var realPath = targetFile.toPath();
+                                    Files.setAttribute(realPath, "creationTime", FileTime.fromMillis(fileInfo.getCreationTime().toEpochMilli()));
+                                    Files.setLastModifiedTime(realPath, FileTime.fromMillis(fileInfo.getModificationTime().toEpochMilli()));
+                                }
+
+                                System.out.println("[CLIENT-" + connectionId + "] Received file: " + fileInfo.getRelativePath());
+
+                                // Decrement count and check if we're done
+                                if (remainingFiles.decrementAndGet() <= 0) {
+                                    completionLatch.countDown();
+                                }
+                            } else {
+                                System.err.println("[CLIENT-" + connectionId + "] Unexpected message type: " + message.getMessageType());
+                                break;
+                            }
+                        }
+                    }
+                } catch (IOException e) {
+                    System.err.println("[CLIENT] Error during file reception: " + e.getMessage());
+                } finally {
+                    if (workerConnection != null) {
+                        connections.add(workerConnection);
                     }
                 }
-                fileDataMessage = (FileDataMessage) message;
-            }
+            });
+        }
 
-            // Wait for file end
-            if (message.getMessageType() != MessageType.FILE_END) {
-                System.err.println("[CLIENT] Unexpected message 4: " + message.getMessageType());
-                return;
-            }
-
-            // Send file end ack
-            FileEndAckMessage fileEndAck = FileEndAckMessage.success(fileInfo.getRelativePath());
-            connection.sendMessage(fileEndAck);
-
-            var realPath = targetFile.toPath();
-            Files.setAttribute(realPath, "creationTime", FileTime.fromMillis(fileInfo.getCreationTime().toEpochMilli()));
-            Files.setLastModifiedTime(realPath, FileTime.fromMillis(fileInfo.getModificationTime().toEpochMilli()));
-
-
-            System.out.println("[CLIENT] Received file: " + fileInfo.getRelativePath());
+        // Wait for all downloads to complete
+        try {
+            completionLatch.await();
+            System.out.println("[CLIENT] All file transfers completed");
+        } catch (InterruptedException e) {
+            System.err.println("[CLIENT] File download interrupted: " + e.getMessage());
+            Thread.currentThread().interrupt();
+        } finally {
+            executorService.shutdown();
         }
 
         // Process files to delete
