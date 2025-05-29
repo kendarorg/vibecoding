@@ -7,11 +7,13 @@ import org.kendar.sync.lib.model.FileInfo;
  * Message sent after all blocks of a file have been transferred to signal the end of the file transfer.
  */
 public class FileEndMessage extends Message {
-    private String relativePath;
-    private FileInfo fileInfo;
     static {
         Message.registerMessageType(FileEndMessage.class);
     }
+
+    private String relativePath;
+    private FileInfo fileInfo;
+
     // Default constructor for Jackson
     public FileEndMessage() {
     }
@@ -45,15 +47,15 @@ public class FileEndMessage extends Message {
     @Override
     protected Message deserialize(ByteContainer buffer) {
         relativePath = buffer.readType(String.class);
-        var ff=buffer.readType(String.class);
-        if(!ff.isEmpty())fileInfo = FileInfo.fromLine(ff);
+        var ff = buffer.readType(String.class);
+        if (!ff.isEmpty()) fileInfo = FileInfo.fromLine(ff);
         return this;
     }
 
     @Override
     protected void serialize(ByteContainer buffer) {
         buffer.writeType(relativePath);
-        if(fileInfo!=null)buffer.writeType(fileInfo.toLine());
+        if (fileInfo != null) buffer.writeType(fileInfo.toLine());
         else buffer.writeType("");
     }
 

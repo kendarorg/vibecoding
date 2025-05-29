@@ -11,13 +11,15 @@ import java.util.List;
  * Used during both backup and restore operations.
  */
 public class FileListMessage extends Message {
+    static {
+        Message.registerMessageType(FileListMessage.class);
+    }
+
     private List<FileInfo> files;
     private boolean isBackup;
     private int partNumber;
     private int totalParts;
-    static {
-        Message.registerMessageType(FileListMessage.class);
-    }
+
     // Default constructor for Jackson
     public FileListMessage() {
         this.files = new ArrayList<>();
@@ -47,7 +49,7 @@ public class FileListMessage extends Message {
     protected Message deserialize(ByteContainer buffer) {
         var filesLines = buffer.readType(String.class).split("\n");
         files = new ArrayList<>();
-        for(var fileLine:filesLines){
+        for (var fileLine : filesLines) {
             if (!fileLine.isEmpty()) {
                 files.add(FileInfo.fromLine(fileLine));
             }
@@ -63,7 +65,7 @@ public class FileListMessage extends Message {
         var filesLines = files.stream()
                 .map(FileInfo::toLine)
                 .toList();
-        buffer.writeType(String.join("\n",filesLines));
+        buffer.writeType(String.join("\n", filesLines));
         buffer.writeType(isBackup);
         buffer.writeType(partNumber);
         buffer.writeType(totalParts);

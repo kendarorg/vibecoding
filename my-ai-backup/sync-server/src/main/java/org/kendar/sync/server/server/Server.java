@@ -97,8 +97,8 @@ public class Server {
             } else if (message.getMessageType() == MessageType.FILE_DESCRIPTOR) {
                 try {
                     var session = sessions.get(message.getSessionId());
-                    while (session != null ) {
-                        if(message==null)return;
+                    while (session != null) {
+                        if (message == null) return;
                         connection.setSessionId(message.getSessionId());
                         connection.setConnectionId(message.getConnectionId());
                         session.setConnection(connection);

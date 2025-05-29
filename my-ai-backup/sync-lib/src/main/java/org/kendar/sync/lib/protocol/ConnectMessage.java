@@ -7,6 +7,10 @@ import org.kendar.sync.lib.buffer.ByteContainer;
  * Contains authentication information and the target folder.
  */
 public class ConnectMessage extends Message {
+    static {
+        Message.registerMessageType(ConnectMessage.class);
+    }
+
     private String username;
     private String password;
     private String targetFolder;
@@ -14,10 +18,6 @@ public class ConnectMessage extends Message {
     private int maxConnections;
     private BackupType backupType;
     private boolean dryRun;
-
-    static {
-        Message.registerMessageType(ConnectMessage.class);
-    }
 
     // Default constructor for Jackson
     public ConnectMessage() {
@@ -48,9 +48,9 @@ public class ConnectMessage extends Message {
 
     @Override
     protected Message deserialize(ByteContainer buffer) {
-        username=buffer.readType(String.class);
-        password=buffer.readType(String.class);
-        targetFolder=buffer.readType(String.class);
+        username = buffer.readType(String.class);
+        password = buffer.readType(String.class);
+        targetFolder = buffer.readType(String.class);
         maxPacketSize = buffer.readType(Integer.class);
         maxConnections = buffer.readType(Integer.class);
         backupType = buffer.readType(BackupType.class);

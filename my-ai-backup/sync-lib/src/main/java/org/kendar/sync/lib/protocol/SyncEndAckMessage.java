@@ -7,12 +7,13 @@ import org.kendar.sync.lib.buffer.ByteContainer;
  * to acknowledge the end of the synchronization session.
  */
 public class SyncEndAckMessage extends Message {
-    private boolean success;
-    private String errorMessage;
-
     static {
         Message.registerMessageType(SyncEndAckMessage.class);
     }
+
+    private boolean success;
+    private String errorMessage;
+
     // Default constructor for Jackson
     public SyncEndAckMessage() {
     }

@@ -28,6 +28,16 @@ public class ByteContainer {
 
     }
 
+    /**
+     * Constructs a ByteContainer with a specified initial size.
+     *
+     * @param size the initial size of the container.
+     */
+    public ByteContainer(int size) {
+        this.size = size;
+        this.data.add(new byte[size]);
+    }
+
     public static ByteContainer create() {
         return new ByteContainer().withConverters(
                 new IntConverter(),
@@ -38,16 +48,6 @@ public class ByteContainer {
                 new MessageTypeConverter(),
                 new BackupTypeConverter(),
                 new BooleanConverter());
-    }
-
-    /**
-     * Constructs a ByteContainer with a specified initial size.
-     *
-     * @param size the initial size of the container.
-     */
-    public ByteContainer(int size) {
-        this.size = size;
-        this.data.add(new byte[size]);
     }
 
     /**

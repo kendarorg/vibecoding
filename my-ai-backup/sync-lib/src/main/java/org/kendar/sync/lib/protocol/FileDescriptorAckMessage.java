@@ -7,13 +7,14 @@ import org.kendar.sync.lib.buffer.ByteContainer;
  * is ready to receive the file data.
  */
 public class FileDescriptorAckMessage extends Message {
+    static {
+        Message.registerMessageType(FileDescriptorAckMessage.class);
+    }
+
     private String relativePath;
     private boolean ready;
     private String errorMessage;
 
-    static {
-        Message.registerMessageType(FileDescriptorAckMessage.class);
-    }
     // Default constructor for Jackson
     public FileDescriptorAckMessage() {
     }
@@ -69,7 +70,7 @@ public class FileDescriptorAckMessage extends Message {
     protected void serialize(ByteContainer buffer) {
         buffer.writeType(relativePath);
         buffer.writeType(ready);
-        if(errorMessage!=null)buffer.writeType(errorMessage);
+        if (errorMessage != null) buffer.writeType(errorMessage);
         else buffer.writeType("");
     }
 

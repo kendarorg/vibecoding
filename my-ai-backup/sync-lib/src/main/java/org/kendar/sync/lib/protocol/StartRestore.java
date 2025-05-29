@@ -10,6 +10,7 @@ public class StartRestore extends Message {
     static {
         Message.registerMessageType(StartRestore.class);
     }
+
     // Default constructor for Jackson
     public StartRestore() {
     }

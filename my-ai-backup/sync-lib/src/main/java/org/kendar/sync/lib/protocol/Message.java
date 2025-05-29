@@ -8,10 +8,8 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.kendar.sync.lib.buffer.ByteContainer;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Base class for all messages in the sync protocol.
@@ -50,12 +48,6 @@ import java.util.concurrent.atomic.AtomicReference;
 })
 public abstract class Message {
     private static final ConcurrentHashMap<String, Class<? extends Message>> messageTypeMap = new ConcurrentHashMap<>();
-    public static void registerMessageType(Class<? extends Message> clazz) {
-        if (clazz == null) {
-            throw new IllegalArgumentException("Type and class must not be null or empty");
-        }
-       messageTypeMap.put(clazz.getSimpleName(), clazz);
-    }
     private static final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule());
     @JsonIgnore
@@ -64,6 +56,13 @@ public abstract class Message {
     private UUID sessionId;
     @JsonIgnore
     private int packetId;
+
+    public static void registerMessageType(Class<? extends Message> clazz) {
+        if (clazz == null) {
+            throw new IllegalArgumentException("Type and class must not be null or empty");
+        }
+        messageTypeMap.put(clazz.getSimpleName(), clazz);
+    }
 
     /**
      * Deserializes a message from a JSON byte array.
@@ -81,8 +80,8 @@ public abstract class Message {
         buffer.resetWriteCursor();
         String type = buffer.readType(String.class);
         try {
-            var instance = (Message)clazz.newInstance();
-            return (T)instance.deserialize(buffer);
+            var instance = (Message) clazz.newInstance();
+            return (T) instance.deserialize(buffer);
         } catch (Exception e) {
             System.err.println("Error 1 deserializing message of type: " + type);
             throw new RuntimeException(e);
@@ -105,16 +104,16 @@ public abstract class Message {
         String type = buffer.readType(String.class);
         var clazz = messageTypeMap.get(type);
         try {
-            var instance = (Message)clazz.newInstance();
+            var instance = (Message) clazz.newInstance();
             return instance.deserialize(buffer);
         } catch (Exception e) {
             System.err.println("Error 2 deserializing message of type: " + type);
             throw new RuntimeException(e);
         }
-       // return objectMapper.readValue(data, Message.class);
+        // return objectMapper.readValue(data, Message.class);
     }
 
-    protected abstract Message deserialize(ByteContainer buffer) ;
+    protected abstract Message deserialize(ByteContainer buffer);
 
     public int getConnectionId() {
         return connectionId;
@@ -148,8 +147,8 @@ public abstract class Message {
             buffer.writeType(this.getClass().getSimpleName());
             this.serialize(buffer);
             return buffer.getBytes();
-        }catch (Exception e){
-            System.err.println("Error 3 serializing "+this.getClass().getSimpleName());
+        } catch (Exception e) {
+            System.err.println("Error 3 serializing " + this.getClass().getSimpleName());
             throw new RuntimeException(e);
         }
         //return objectMapper.writeValueAsBytes(this);

@@ -8,12 +8,12 @@ public class BooleanConverter extends ByteContainerConverter<Boolean> {
 
     @Override
     public Boolean fromBytes(byte[] bytes) {
-        return bytes[0]>0;
+        return bytes[0] > 0;
     }
 
     @Override
     public byte[] toBytes(Boolean value) {
-        return new byte[]{value? (byte)1:0};
+        return new byte[]{value ? (byte) 1 : 0};
     }
 
     @Override

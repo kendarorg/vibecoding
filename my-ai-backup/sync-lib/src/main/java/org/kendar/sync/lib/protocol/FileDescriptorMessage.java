@@ -7,11 +7,12 @@ import org.kendar.sync.lib.model.FileInfo;
  * Message sent before transferring a file to describe its metadata.
  */
 public class FileDescriptorMessage extends Message {
-    private FileInfo fileInfo;
-
     static {
         Message.registerMessageType(FileDescriptorMessage.class);
     }
+
+    private FileInfo fileInfo;
+
     // Default constructor for Jackson
     public FileDescriptorMessage() {
     }

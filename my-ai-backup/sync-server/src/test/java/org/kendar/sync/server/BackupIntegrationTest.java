@@ -133,17 +133,17 @@ public class BackupIntegrationTest {
             var dtf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
             var attr1 = Files.readAttributes(file1, BasicFileAttributes.class);
             var attr2 = Files.readAttributes(file2, BasicFileAttributes.class);
-            var lmt1 = dtf.format(new Date(attr1.lastModifiedTime().toInstant().getEpochSecond()*1000 ));
-            var lmt2 = dtf.format(new Date(attr2.lastModifiedTime().toInstant().getEpochSecond()*1000 ));
+            var lmt1 = dtf.format(new Date(attr1.lastModifiedTime().toInstant().getEpochSecond() * 1000));
+            var lmt2 = dtf.format(new Date(attr2.lastModifiedTime().toInstant().getEpochSecond() * 1000));
             if (!lmt1.equals(lmt2)) {
                 System.err.println("Different modification: " +
-                        file1 + " " +lmt1 + " " +
+                        file1 + " " + lmt1 + " " +
                         file2 + " " + lmt2);
                 different.add(file1.toString());
                 continue;
             }
-            var lct1 = dtf.format(new Date(attr1.creationTime().toInstant().getEpochSecond()*1000 ));
-            var lct2 = dtf.format(new Date(attr2.creationTime().toInstant().getEpochSecond()*1000 ));
+            var lct1 = dtf.format(new Date(attr1.creationTime().toInstant().getEpochSecond() * 1000));
+            var lct2 = dtf.format(new Date(attr2.creationTime().toInstant().getEpochSecond() * 1000));
             if (!lct1.equals(lct2)) {
                 System.err.println("Different creation: " +
                         file1 + " " + lct1 + " " +

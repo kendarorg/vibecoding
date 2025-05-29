@@ -93,7 +93,7 @@ public class FileInfo {
                     modificationTime,
                     isDirectory
             );
-        }catch (Exception ex){
+        } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
     }

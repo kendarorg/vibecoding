@@ -11,14 +11,16 @@ import java.util.List;
  * Contains the list of files that need to be transferred and the list of files that need to be deleted.
  */
 public class FileListResponseMessage extends Message {
+    static {
+        Message.registerMessageType(FileListResponseMessage.class);
+    }
+
     private List<FileInfo> filesToTransfer;
     private List<String> filesToDelete;
     private boolean isBackup;
     private int partNumber;
     private int totalParts;
-    static {
-        Message.registerMessageType(FileListResponseMessage.class);
-    }
+
     // Default constructor for Jackson
     public FileListResponseMessage() {
         this.filesToTransfer = new ArrayList<>();
@@ -52,14 +54,14 @@ public class FileListResponseMessage extends Message {
     protected Message deserialize(ByteContainer buffer) {
         var filesLines = buffer.readType(String.class).split("\n");
         filesToTransfer = new ArrayList<>();
-        for(var fileLine:filesLines){
+        for (var fileLine : filesLines) {
             if (!fileLine.isEmpty()) {
                 filesToTransfer.add(FileInfo.fromLine(fileLine));
             }
         }
         var filesToDeleteLine = buffer.readType(String.class);
         filesToDelete = new ArrayList<>();
-        for(var fileToDeleteLine:filesToDeleteLine.split("\n")){
+        for (var fileToDeleteLine : filesToDeleteLine.split("\n")) {
             if (!fileToDeleteLine.isEmpty()) {
                 filesToDelete.add(fileToDeleteLine);
             }
@@ -75,8 +77,8 @@ public class FileListResponseMessage extends Message {
         var filesLines = filesToTransfer.stream()
                 .map(FileInfo::toLine)
                 .toList();
-        buffer.writeType(String.join("\n",filesLines));
-        buffer.writeType(String.join("\n",filesToDelete));
+        buffer.writeType(String.join("\n", filesLines));
+        buffer.writeType(String.join("\n", filesToDelete));
         buffer.writeType(isBackup);
         buffer.writeType(partNumber);
         buffer.writeType(totalParts);

@@ -6,12 +6,14 @@ import org.kendar.sync.lib.buffer.ByteContainer;
  * Message sent by the client to the server to signal the end of a synchronization session.
  */
 public class SyncEndMessage extends Message {
-    private boolean isBackup;
-    private int filesTransferred;
-    private int filesDeleted;
     static {
         Message.registerMessageType(SyncEndMessage.class);
     }
+
+    private boolean isBackup;
+    private int filesTransferred;
+    private int filesDeleted;
+
     // Default constructor for Jackson
     public SyncEndMessage() {
     }
