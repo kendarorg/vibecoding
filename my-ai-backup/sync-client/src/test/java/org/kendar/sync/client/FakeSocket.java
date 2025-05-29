@@ -1,10 +1,6 @@
 package org.kendar.sync.client;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.Socket;
 
 /**
@@ -80,24 +76,24 @@ public class FakeSocket extends Socket {
         if (closed) {
             throw new IOException("Socket is closed");
         }
-        
+
         // Since ByteArrayInputStream doesn't support adding data after creation,
         // we need to create a new one with the combined data
         byte[] currentData = inputStream.readAllBytes();
         byte[] newData = new byte[currentData.length + data.length];
         System.arraycopy(currentData, 0, newData, 0, currentData.length);
         System.arraycopy(data, 0, newData, currentData.length, data.length);
-        
+
         // Replace the field with reflection since it's final
         try {
             java.lang.reflect.Field field = ByteArrayInputStream.class.getDeclaredField("buf");
             field.setAccessible(true);
             field.set(inputStream, newData);
-            
+
             field = ByteArrayInputStream.class.getDeclaredField("count");
             field.setAccessible(true);
             field.set(inputStream, newData.length);
-            
+
             field = ByteArrayInputStream.class.getDeclaredField("pos");
             field.setAccessible(true);
             field.set(inputStream, 0);

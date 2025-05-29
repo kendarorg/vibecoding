@@ -7,11 +7,11 @@ import org.kendar.sync.lib.model.FileInfo;
  */
 public class FileDescriptorMessage extends Message {
     private FileInfo fileInfo;
-    
+
     // Default constructor for Jackson
     public FileDescriptorMessage() {
     }
-    
+
     /**
      * Creates a new file descriptor message.
      *
@@ -20,17 +20,17 @@ public class FileDescriptorMessage extends Message {
     public FileDescriptorMessage(FileInfo fileInfo) {
         this.fileInfo = fileInfo;
     }
-    
+
     @Override
     public MessageType getMessageType() {
         return MessageType.FILE_DESCRIPTOR;
     }
-    
+
     // Getters and setters
     public FileInfo getFileInfo() {
         return fileInfo;
     }
-    
+
     public void setFileInfo(FileInfo fileInfo) {
         this.fileInfo = fileInfo;
     }

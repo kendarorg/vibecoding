@@ -25,13 +25,13 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class SyncClientAppBackupTestSimple {
 
-    private Path testRoot;
-    private File sourceDir;
-    private File targetDir;
     private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
     private final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
     private final PrintStream originalOut = System.out;
     private final PrintStream originalErr = System.err;
+    private Path testRoot;
+    private File sourceDir;
+    private File targetDir;
     private MockTcpConnection mockConnection;
     private java.lang.reflect.Method performBackupMethod;
     private Object commandLineArgs;
@@ -40,56 +40,6 @@ class SyncClientAppBackupTestSimple {
     /**
      * Simple mock implementation of TcpConnection for testing.
      */
-    /**
-     * A mock implementation of TcpConnection for testing.
-     * This class extends TcpConnection but overrides all methods to avoid using real sockets.
-     */
-    private static class MockTcpConnection extends TcpConnection {
-        private final List<Message> sentMessages = new ArrayList<>();
-        private final List<Message> messagesToReturn = new ArrayList<>();
-        private int currentMessageIndex = 0;
-
-        public MockTcpConnection() throws IOException {
-            // Create a fake socket that won't be used
-            super(new FakeSocket(), UUID.randomUUID(), 0, 1024);
-        }
-
-        @Override
-        public void sendMessage(Message message) throws IOException {
-            sentMessages.add(message);
-            System.out.println("[DEBUG_LOG] Sent message: " + message.getMessageType() + 
-                (message instanceof org.kendar.sync.lib.protocol.FileDescriptorMessage ? 
-                " for " + ((org.kendar.sync.lib.protocol.FileDescriptorMessage) message).getFileInfo().getRelativePath() : ""));
-        }
-
-        @Override
-        public Message receiveMessage() throws IOException {
-            if (currentMessageIndex < messagesToReturn.size()) {
-                Message message = messagesToReturn.get(currentMessageIndex++);
-                System.out.println("[DEBUG_LOG] Returning message: " + message.getMessageType() + 
-                    (message instanceof org.kendar.sync.lib.protocol.FileDescriptorAckMessage ? 
-                    " for " + ((org.kendar.sync.lib.protocol.FileDescriptorAckMessage) message).getRelativePath() : ""));
-                return message;
-            }
-            // If we run out of messages to return, return null
-            // This will cause the test to fail with a more descriptive error
-            System.out.println("[DEBUG_LOG] No more messages to return, returning null. Current index: " + currentMessageIndex);
-            return null;
-        }
-
-        @Override
-        public void close() throws IOException {
-            // Do nothing
-        }
-
-        public void addMessageToReturn(Message message) {
-            messagesToReturn.add(message);
-        }
-
-        public List<Message> getSentMessages() {
-            return sentMessages;
-        }
-    }
 
     @BeforeEach
     void setUp() throws Exception {
@@ -125,9 +75,9 @@ class SyncClientAppBackupTestSimple {
         // Get the private performBackup method using reflection
         // We need to create a custom method that takes our MockTcpConnection instead of TcpConnection
         performBackupMethod = SyncClient.class.getDeclaredMethod("performBackup",
-            org.kendar.sync.lib.network.TcpConnection.class, 
-            Class.forName("org.kendar.sync.client.CommandLineArgs"),
-                int.class,int.class);
+                org.kendar.sync.lib.network.TcpConnection.class,
+                Class.forName("org.kendar.sync.client.CommandLineArgs"),
+                int.class, int.class);
         performBackupMethod.setAccessible(true);
 
         // Create CommandLineArgs object using reflection
@@ -136,15 +86,15 @@ class SyncClientAppBackupTestSimple {
 
         // Set field values using reflection
         commandLineArgsClass.getDeclaredMethod("setSourceFolder", String.class)
-            .invoke(commandLineArgs, sourceDir.getAbsolutePath());
+                .invoke(commandLineArgs, sourceDir.getAbsolutePath());
         commandLineArgsClass.getDeclaredMethod("setTargetFolder", String.class)
-            .invoke(commandLineArgs, "documents");
+                .invoke(commandLineArgs, "documents");
         commandLineArgsClass.getDeclaredMethod("setBackup", boolean.class)
-            .invoke(commandLineArgs, true);
+                .invoke(commandLineArgs, true);
         commandLineArgsClass.getDeclaredMethod("setBackupType", BackupType.class)
-            .invoke(commandLineArgs, BackupType.MIRROR);
+                .invoke(commandLineArgs, BackupType.MIRROR);
         commandLineArgsClass.getDeclaredMethod("setDryRun", boolean.class)
-            .invoke(commandLineArgs, false);
+                .invoke(commandLineArgs, false);
 
         commandLineArgsClass.getDeclaredMethod("setMaxSize", int.class)
                 .invoke(commandLineArgs, 1024);
@@ -177,7 +127,7 @@ class SyncClientAppBackupTestSimple {
         mockConnection.addMessageToReturn(FileEndAckMessage.success(sourceDir.getName() + "/subdir/testFile2.txt"));
 
         // Call the performBackup method
-        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1,1024);
+        performBackupMethod.invoke(target, mockConnection, commandLineArgs, 1, 1024);
 
         // Get the sent messages
         List<Message> sentMessages = mockConnection.getSentMessages();
@@ -219,7 +169,7 @@ class SyncClientAppBackupTestSimple {
         // Set dry run mode
         Class<?> commandLineArgsClass = Class.forName("org.kendar.sync.client.CommandLineArgs");
         commandLineArgsClass.getDeclaredMethod("setDryRun", boolean.class)
-            .invoke(commandLineArgs, true);
+                .invoke(commandLineArgs, true);
 
         // Set up mock responses
         List<FileInfo> filesToTransfer = List.of(
@@ -238,7 +188,7 @@ class SyncClientAppBackupTestSimple {
         mockConnection.addMessageToReturn(FileEndAckMessage.success(sourceDir.getName() + "/subdir/testFile2.txt"));
 
         // Call the performBackup method
-        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1,1024);
+        performBackupMethod.invoke(target, mockConnection, commandLineArgs, 1, 1024);
 
         // Get the sent messages
         List<Message> sentMessages = mockConnection.getSentMessages();
@@ -267,7 +217,7 @@ class SyncClientAppBackupTestSimple {
     void testPerformBackupWithErrors() throws Exception {
         // Set up mock responses
         FileListResponseMessage fileListResponse = new FileListResponseMessage(
-            new ArrayList<>(), new ArrayList<>(), true, 1, 1);
+                new ArrayList<>(), new ArrayList<>(), true, 1, 1);
         mockConnection.addMessageToReturn(fileListResponse);
 
         // Add FileDescriptorAck responses with errors
@@ -280,7 +230,7 @@ class SyncClientAppBackupTestSimple {
         mockConnection.addMessageToReturn(FileEndAckMessage.failure(sourceDir.getName() + "/subdir/testFile2.txt", "Failed to write file"));
 
         // Call the performBackup method
-        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1,1024);
+        performBackupMethod.invoke(target, mockConnection, commandLineArgs, 1, 1024);
 
         // Get the sent messages
         List<Message> sentMessages = mockConnection.getSentMessages();
@@ -309,5 +259,56 @@ class SyncClientAppBackupTestSimple {
 
         assertTrue(fileAlreadyExistsErrorFound, "File already exists error not found");
         assertTrue(fileWriteErrorFound, "Failed to write file error not found");
+    }
+
+    /**
+     * A mock implementation of TcpConnection for testing.
+     * This class extends TcpConnection but overrides all methods to avoid using real sockets.
+     */
+    private static class MockTcpConnection extends TcpConnection {
+        private final List<Message> sentMessages = new ArrayList<>();
+        private final List<Message> messagesToReturn = new ArrayList<>();
+        private int currentMessageIndex = 0;
+
+        public MockTcpConnection() throws IOException {
+            // Create a fake socket that won't be used
+            super(new FakeSocket(), UUID.randomUUID(), 0, 1024);
+        }
+
+        @Override
+        public void sendMessage(Message message) throws IOException {
+            sentMessages.add(message);
+            System.out.println("[DEBUG_LOG] Sent message: " + message.getMessageType() +
+                    (message instanceof org.kendar.sync.lib.protocol.FileDescriptorMessage ?
+                            " for " + ((org.kendar.sync.lib.protocol.FileDescriptorMessage) message).getFileInfo().getRelativePath() : ""));
+        }
+
+        @Override
+        public Message receiveMessage() throws IOException {
+            if (currentMessageIndex < messagesToReturn.size()) {
+                Message message = messagesToReturn.get(currentMessageIndex++);
+                System.out.println("[DEBUG_LOG] Returning message: " + message.getMessageType() +
+                        (message instanceof org.kendar.sync.lib.protocol.FileDescriptorAckMessage ?
+                                " for " + ((org.kendar.sync.lib.protocol.FileDescriptorAckMessage) message).getRelativePath() : ""));
+                return message;
+            }
+            // If we run out of messages to return, return null
+            // This will cause the test to fail with a more descriptive error
+            System.out.println("[DEBUG_LOG] No more messages to return, returning null. Current index: " + currentMessageIndex);
+            return null;
+        }
+
+        @Override
+        public void close() throws IOException {
+            // Do nothing
+        }
+
+        public void addMessageToReturn(Message message) {
+            messagesToReturn.add(message);
+        }
+
+        public List<Message> getSentMessages() {
+            return sentMessages;
+        }
     }
 }

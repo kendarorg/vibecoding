@@ -1,28 +1,12 @@
 package org.kendar.sync.server;
 
 import jakarta.servlet.Servlet;
-import org.kendar.sync.lib.model.FileInfo;
-import org.kendar.sync.lib.model.ServerSettings;
-import org.kendar.sync.lib.network.TcpConnection;
-import org.kendar.sync.lib.protocol.*;
 import org.kendar.sync.server.config.ServerConfig;
 import org.kendar.sync.server.server.Server;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-import java.util.ArrayList;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * Main class for the sync server application.
@@ -64,7 +48,7 @@ public class SyncServerApplication implements CommandLineRunner {
         }
 
         new Thread(() -> {
-            var server = new Server(serverConfig,dryRun );
+            var server = new Server(serverConfig, dryRun);
             server.startTcpServer();
         }).start();
     }

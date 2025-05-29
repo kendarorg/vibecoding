@@ -21,10 +21,10 @@ import java.util.Optional;
 public class AuthController {
     @Autowired
     private JwtTokenUtil jwtTokenUtil;
-    
+
     @Autowired
     private ServerSettings serverSettings;
-    
+
     /**
      * Authenticates a user and generates a JWT token.
      *
@@ -36,16 +36,16 @@ public class AuthController {
         // Authenticate the user
         Optional<ServerSettings.User> userOpt = serverSettings.authenticate(
                 authenticationRequest.getUsername(), authenticationRequest.getPassword());
-        
+
         if (userOpt.isEmpty()) {
             return ResponseEntity.status(401).body("Invalid username or password");
         }
-        
+
         ServerSettings.User user = userOpt.get();
-        
+
         // Generate token
         final String token = jwtTokenUtil.generateToken(user);
-        
+
         return ResponseEntity.ok(new JwtResponse(token, user.getUsername(), user.getId(), user.isAdmin()));
     }
 }

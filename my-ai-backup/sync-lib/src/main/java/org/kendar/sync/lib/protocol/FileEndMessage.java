@@ -17,7 +17,7 @@ public class FileEndMessage extends Message {
      * Creates a new file end message.
      *
      * @param relativePath The relative path of the file
-     * @param fileInfo The file information
+     * @param fileInfo     The file information
      */
     public FileEndMessage(String relativePath, FileInfo fileInfo) {
         this.relativePath = relativePath;

@@ -8,34 +8,34 @@ public class ErrorMessage extends Message {
     private String errorCode;
     private String errorMessage;
     private String details;
-    
+
     // Default constructor for Jackson
     public ErrorMessage() {
     }
-    
+
     /**
      * Creates a new error message.
      *
-     * @param errorCode The error code
+     * @param errorCode    The error code
      * @param errorMessage The error message
-     * @param details Additional details about the error
+     * @param details      Additional details about the error
      */
     public ErrorMessage(String errorCode, String errorMessage, String details) {
         this.errorCode = errorCode;
         this.errorMessage = errorMessage;
         this.details = details;
     }
-    
+
     /**
      * Creates a new error message.
      *
-     * @param errorCode The error code
+     * @param errorCode    The error code
      * @param errorMessage The error message
      */
     public ErrorMessage(String errorCode, String errorMessage) {
         this(errorCode, errorMessage, null);
     }
-    
+
     /**
      * Creates a new error message from an exception.
      *
@@ -46,33 +46,33 @@ public class ErrorMessage extends Message {
     public static ErrorMessage fromException(String errorCode, Exception exception) {
         return new ErrorMessage(errorCode, exception.getMessage(), exception.toString());
     }
-    
+
     @Override
     public MessageType getMessageType() {
         return MessageType.ERROR;
     }
-    
+
     // Getters and setters
     public String getErrorCode() {
         return errorCode;
     }
-    
+
     public void setErrorCode(String errorCode) {
         this.errorCode = errorCode;
     }
-    
+
     public String getErrorMessage() {
         return errorMessage;
     }
-    
+
     public void setErrorMessage(String errorMessage) {
         this.errorMessage = errorMessage;
     }
-    
+
     public String getDetails() {
         return details;
     }
-    
+
     public void setDetails(String details) {
         this.details = details;
     }

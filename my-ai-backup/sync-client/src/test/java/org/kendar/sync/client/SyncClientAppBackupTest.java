@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
+import org.mockito.ArgumentMatcher;
+import org.mockito.ArgumentMatchers;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -18,23 +20,21 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
-import org.mockito.ArgumentMatcher;
-import org.mockito.ArgumentMatchers;
 
 /**
  * Tests for the backup functionality in SyncClientApp.
  */
 class SyncClientAppBackupTest {
 
+    private final PrintStream originalOut = System.out;
+    private final PrintStream originalErr = System.err;
     private Path testRoot;
     private File sourceDir;
     private File targetDir;
     private ByteArrayOutputStream outContent;
     private ByteArrayOutputStream errContent;
-    private final PrintStream originalOut = System.out;
-    private final PrintStream originalErr = System.err;
     private TcpConnection mockConnection;
     private Method performBackupMethod;
     private Object commandLineArgs;
@@ -76,7 +76,7 @@ class SyncClientAppBackupTest {
 
         // Get the private performBackup method using reflection
         performBackupMethod = SyncClient.class.getDeclaredMethod("performBackup", TcpConnection.class,
-            Class.forName("org.kendar.sync.client.CommandLineArgs"),int.class,int.class);
+                Class.forName("org.kendar.sync.client.CommandLineArgs"), int.class, int.class);
         performBackupMethod.setAccessible(true);
 
         // Create CommandLineArgs object using reflection
@@ -85,13 +85,13 @@ class SyncClientAppBackupTest {
 
         // Set field values using reflection
         commandLineArgsClass.getDeclaredMethod("setSourceFolder", String.class)
-            .invoke(commandLineArgs, sourceDir.getAbsolutePath());
+                .invoke(commandLineArgs, sourceDir.getAbsolutePath());
         commandLineArgsClass.getDeclaredMethod("setTargetFolder", String.class)
-            .invoke(commandLineArgs, "documents");
+                .invoke(commandLineArgs, "documents");
         commandLineArgsClass.getDeclaredMethod("setBackup", boolean.class)
-            .invoke(commandLineArgs, true);
+                .invoke(commandLineArgs, true);
         commandLineArgsClass.getDeclaredMethod("setBackupType", BackupType.class)
-            .invoke(commandLineArgs, BackupType.MIRROR);
+                .invoke(commandLineArgs, BackupType.MIRROR);
         commandLineArgsClass.getDeclaredMethod("setDryRun", boolean.class)
                 .invoke(commandLineArgs, false);
         commandLineArgsClass.getDeclaredMethod("setMaxSize", int.class)
@@ -120,7 +120,7 @@ class SyncClientAppBackupTest {
 
 
         // Call the performBackup method
-        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1,1024);
+        performBackupMethod.invoke(target, mockConnection, commandLineArgs, 1, 1024);
 
         // Verify that the correct messages were sent
         // 1. FileListMessage
@@ -174,21 +174,21 @@ class SyncClientAppBackupTest {
         // Set dry run mode
         Class<?> commandLineArgsClass = Class.forName("org.kendar.sync.client.CommandLineArgs");
         commandLineArgsClass.getDeclaredMethod("setDryRun", boolean.class)
-            .invoke(commandLineArgs, true);
+                .invoke(commandLineArgs, true);
 
         // Set up mock responses
         List<FileInfo> filesToTransfer = List.of(
                 new FileInfo("/test/subdir/testFile2.txt", "subdir/testFile2.txt", 0, Instant.now(), Instant.now(), false),
                 new FileInfo("/test/testFile1.txt", "testFile1.txt", 0, Instant.now(), Instant.now(), false));
         FileListResponseMessage fileListResponse = new FileListResponseMessage(
-            filesToTransfer, new ArrayList<>(), true, 1, 1);
+                filesToTransfer, new ArrayList<>(), true, 1, 1);
         when(mockConnection.receiveMessage())
                 .thenReturn(fileListResponse)
                 .thenReturn(FileDescriptorAckMessage.ready(sourceDir.getName() + "/subdir/testFile2.txt"))
                 .thenReturn(FileEndAckMessage.success("/subdir/testFile2.txt"));
 
         // Call the performBackup method
-        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1,1024);
+        performBackupMethod.invoke(target, mockConnection, commandLineArgs, 1, 1024);
 
         // Verify that the correct messages were sent
         // 1. FileListMessage
@@ -227,16 +227,16 @@ class SyncClientAppBackupTest {
         // Third response is FileDescriptorAck with success
         // Fourth response is FileEndAck with error
         when(mockConnection.receiveMessage())
-            .thenReturn(fileListResponse)
-            .thenReturn(FileDescriptorAckMessage.notReady(sourceDir.getName() + "/testFile1.txt", "File already exists"))
-            .thenReturn(FileDescriptorAckMessage.ready(sourceDir.getName() + "/subdir/testFile2.txt"))
-            .thenReturn(FileEndAckMessage.failure(sourceDir.getName() + "/subdir/testFile2.txt", "Failed to write file"));
+                .thenReturn(fileListResponse)
+                .thenReturn(FileDescriptorAckMessage.notReady(sourceDir.getName() + "/testFile1.txt", "File already exists"))
+                .thenReturn(FileDescriptorAckMessage.ready(sourceDir.getName() + "/subdir/testFile2.txt"))
+                .thenReturn(FileEndAckMessage.failure(sourceDir.getName() + "/subdir/testFile2.txt", "Failed to write file"));
 
         // Call the performBackup method
-        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1,1024);
+        performBackupMethod.invoke(target, mockConnection, commandLineArgs, 1, 1024);
 
         // Verify output
-        String output = outContent.toString()+ errContent.toString();
+        String output = outContent.toString() + errContent.toString();
         assertTrue(output.contains("Server not ready to receive file: File already exists"));
         assertTrue(output.contains("File transfer failed: Failed to write file"));
     }

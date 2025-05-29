@@ -20,10 +20,10 @@ import java.util.UUID;
 public class SettingsController {
     @Autowired
     private ServerSettings serverSettings;
-    
+
     @Autowired
     private ServerConfig serverConfig;
-    
+
     /**
      * Gets the server settings.
      *
@@ -34,7 +34,7 @@ public class SettingsController {
     public ResponseEntity<ServerSettings> getSettings() {
         return ResponseEntity.ok(serverSettings);
     }
-    
+
     /**
      * Updates the server settings.
      *
@@ -49,7 +49,7 @@ public class SettingsController {
         serverSettings = serverConfig.reloadSettings();
         return ResponseEntity.ok(serverSettings);
     }
-    
+
     /**
      * Gets all users.
      *
@@ -60,7 +60,7 @@ public class SettingsController {
     public ResponseEntity<List<ServerSettings.User>> getUsers() {
         return ResponseEntity.ok(serverSettings.getUsers());
     }
-    
+
     /**
      * Gets a user by ID.
      *
@@ -73,14 +73,14 @@ public class SettingsController {
         Optional<ServerSettings.User> user = serverSettings.getUsers().stream()
                 .filter(u -> u.getId().equals(id))
                 .findFirst();
-        
+
         if (user.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        
+
         return ResponseEntity.ok(user.get());
     }
-    
+
     /**
      * Creates a new user.
      *
@@ -95,25 +95,25 @@ public class SettingsController {
         if (user.getId() == null || user.getId().isEmpty()) {
             user.setId(UUID.randomUUID().toString());
         }
-        
+
         // Check if the username already exists
         boolean usernameExists = serverSettings.getUsers().stream()
                 .anyMatch(u -> u.getUsername().equals(user.getUsername()));
-        
+
         if (usernameExists) {
             return ResponseEntity.badRequest().build();
         }
-        
+
         serverSettings.getUsers().add(user);
         serverSettings.save(serverConfig.getSettingsFile());
-        
+
         return ResponseEntity.ok(user);
     }
-    
+
     /**
      * Updates a user.
      *
-     * @param id The user ID
+     * @param id   The user ID
      * @param user The updated user
      * @return The updated user
      * @throws IOException If an I/O error occurs
@@ -125,31 +125,31 @@ public class SettingsController {
         Optional<ServerSettings.User> existingUser = serverSettings.getUsers().stream()
                 .filter(u -> u.getId().equals(id))
                 .findFirst();
-        
+
         if (existingUser.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        
+
         // Update the user
         ServerSettings.User userToUpdate = existingUser.get();
-        
+
         // Only admins can change the admin status
         if (!userToUpdate.isAdmin() && user.isAdmin()) {
             return ResponseEntity.status(403).build();
         }
-        
+
         userToUpdate.setUsername(user.getUsername());
         userToUpdate.setPassword(user.getPassword());
-        
+
         if (userToUpdate.isAdmin()) {
             userToUpdate.setAdmin(user.isAdmin());
         }
-        
+
         serverSettings.save(serverConfig.getSettingsFile());
-        
+
         return ResponseEntity.ok(userToUpdate);
     }
-    
+
     /**
      * Deletes a user.
      *
@@ -164,24 +164,24 @@ public class SettingsController {
         Optional<ServerSettings.User> existingUser = serverSettings.getUsers().stream()
                 .filter(u -> u.getId().equals(id))
                 .findFirst();
-        
+
         if (existingUser.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        
+
         // Remove the user
         serverSettings.getUsers().remove(existingUser.get());
-        
+
         // Remove the user from all backup folders
         for (ServerSettings.BackupFolder folder : serverSettings.getBackupFolders()) {
             folder.getAllowedUsers().remove(id);
         }
-        
+
         serverSettings.save(serverConfig.getSettingsFile());
-        
+
         return ResponseEntity.noContent().build();
     }
-    
+
     /**
      * Gets all backup folders.
      *
@@ -192,7 +192,7 @@ public class SettingsController {
     public ResponseEntity<List<ServerSettings.BackupFolder>> getFolders() {
         return ResponseEntity.ok(serverSettings.getBackupFolders());
     }
-    
+
     /**
      * Gets a backup folder by name.
      *
@@ -205,14 +205,14 @@ public class SettingsController {
         Optional<ServerSettings.BackupFolder> folder = serverSettings.getBackupFolders().stream()
                 .filter(f -> f.getVirtualName().equals(name))
                 .findFirst();
-        
+
         if (folder.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        
+
         return ResponseEntity.ok(folder.get());
     }
-    
+
     /**
      * Creates a new backup folder.
      *
@@ -226,21 +226,21 @@ public class SettingsController {
         // Check if the folder name already exists
         boolean folderExists = serverSettings.getBackupFolders().stream()
                 .anyMatch(f -> f.getVirtualName().equals(folder.getVirtualName()));
-        
+
         if (folderExists) {
             return ResponseEntity.badRequest().build();
         }
-        
+
         serverSettings.getBackupFolders().add(folder);
         serverSettings.save(serverConfig.getSettingsFile());
-        
+
         return ResponseEntity.ok(folder);
     }
-    
+
     /**
      * Updates a backup folder.
      *
-     * @param name The folder name
+     * @param name   The folder name
      * @param folder The updated folder
      * @return The updated folder
      * @throws IOException If an I/O error occurs
@@ -252,23 +252,23 @@ public class SettingsController {
         Optional<ServerSettings.BackupFolder> existingFolder = serverSettings.getBackupFolders().stream()
                 .filter(f -> f.getVirtualName().equals(name))
                 .findFirst();
-        
+
         if (existingFolder.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        
+
         // Update the folder
         ServerSettings.BackupFolder folderToUpdate = existingFolder.get();
         folderToUpdate.setVirtualName(folder.getVirtualName());
         folderToUpdate.setRealPath(folder.getRealPath());
         folderToUpdate.setBackupType(folder.getBackupType());
         folderToUpdate.setAllowedUsers(folder.getAllowedUsers());
-        
+
         serverSettings.save(serverConfig.getSettingsFile());
-        
+
         return ResponseEntity.ok(folderToUpdate);
     }
-    
+
     /**
      * Deletes a backup folder.
      *
@@ -283,18 +283,18 @@ public class SettingsController {
         Optional<ServerSettings.BackupFolder> existingFolder = serverSettings.getBackupFolders().stream()
                 .filter(f -> f.getVirtualName().equals(name))
                 .findFirst();
-        
+
         if (existingFolder.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        
+
         // Remove the folder
         serverSettings.getBackupFolders().remove(existingFolder.get());
         serverSettings.save(serverConfig.getSettingsFile());
-        
+
         return ResponseEntity.noContent().build();
     }
-    
+
     /**
      * Updates the server port.
      *
@@ -307,10 +307,10 @@ public class SettingsController {
     public ResponseEntity<ServerSettings> updatePort(@RequestBody int port) throws IOException {
         serverSettings.setPort(port);
         serverSettings.save(serverConfig.getSettingsFile());
-        
+
         return ResponseEntity.ok(serverSettings);
     }
-    
+
     /**
      * Updates the maximum packet size.
      *
@@ -323,10 +323,10 @@ public class SettingsController {
     public ResponseEntity<ServerSettings> updateMaxPacketSize(@RequestBody int maxPacketSize) throws IOException {
         serverSettings.setMaxPacketSize(maxPacketSize);
         serverSettings.save(serverConfig.getSettingsFile());
-        
+
         return ResponseEntity.ok(serverSettings);
     }
-    
+
     /**
      * Updates the maximum number of connections.
      *
@@ -339,7 +339,7 @@ public class SettingsController {
     public ResponseEntity<ServerSettings> updateMaxConnections(@RequestBody int maxConnections) throws IOException {
         serverSettings.setMaxConnections(maxConnections);
         serverSettings.save(serverConfig.getSettingsFile());
-        
+
         return ResponseEntity.ok(serverSettings);
     }
 }

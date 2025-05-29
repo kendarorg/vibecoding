@@ -13,32 +13,31 @@ import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for the DateSeparatedBackupHandler class.
  */
 public class DateSeparatedBackupHandlerTest {
 
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static String uniqueId;
     private DateSeparatedBackupHandler handler;
     private TcpConnection mockConnection;
     private ClientSession mockSession;
     private File tempDir;
     private ServerSettings.BackupFolder mockFolder;
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     @BeforeAll
     public static void beforeClass() {
@@ -47,12 +46,12 @@ public class DateSeparatedBackupHandlerTest {
 
     @AfterAll
     public static void cleanup() throws Exception {
-        FileUtils.deleteDirectoryContents(Path.of("target", "tests",  uniqueId));
+        FileUtils.deleteDirectoryContents(Path.of("target", "tests", uniqueId));
     }
 
     @BeforeEach
     void setUp(TestInfo testInfo) throws IOException {
-        tempDir = Path.of("target", "tests",  uniqueId,TestUtils.getTestFolder(testInfo)).toFile();
+        tempDir = Path.of("target", "tests", uniqueId, TestUtils.getTestFolder(testInfo)).toFile();
         Files.createDirectories(tempDir.toPath());
 
         // Create mocks
@@ -83,7 +82,7 @@ public class DateSeparatedBackupHandlerTest {
         // Verify that the correct response was sent
         ArgumentCaptor<FileListResponseMessage> captor = ArgumentCaptor.forClass(FileListResponseMessage.class);
         verify(mockConnection).sendMessage(captor.capture());
-        
+
         FileListResponseMessage response = captor.getValue();
         assertTrue(response.isBackup());
         assertEquals(0, response.getFilesToTransfer().size());
@@ -103,7 +102,7 @@ public class DateSeparatedBackupHandlerTest {
         // Verify that the correct response was sent
         ArgumentCaptor<FileDescriptorAckMessage> captor = ArgumentCaptor.forClass(FileDescriptorAckMessage.class);
         verify(mockConnection).sendMessage(captor.capture());
-        
+
         FileDescriptorAckMessage response = captor.getValue();
         assertEquals("test.txt", response.getRelativePath());
         assertTrue(response.isReady());
@@ -121,7 +120,7 @@ public class DateSeparatedBackupHandlerTest {
         // Verify that the correct response was sent
         ArgumentCaptor<FileDescriptorAckMessage> captor = ArgumentCaptor.forClass(FileDescriptorAckMessage.class);
         verify(mockConnection).sendMessage(captor.capture());
-        
+
         FileDescriptorAckMessage response = captor.getValue();
         assertEquals("testdir", response.getRelativePath());
         assertTrue(response.isReady());
@@ -134,7 +133,7 @@ public class DateSeparatedBackupHandlerTest {
         FileDataMessage message = new FileDataMessage("test.txt", 0, 1, data);
 
         FileInfo fileInfo = new FileInfo("test.txt", "test.txt", 0, Instant.now(), Instant.now(), true);
-        handler.getFilesOnClient().put(fileInfo.getRelativePath(),fileInfo);
+        handler.getFilesOnClient().put(fileInfo.getRelativePath(), fileInfo);
         // Call the method
         handler.handleFileData(mockConnection, mockSession, message);
 
@@ -156,17 +155,17 @@ public class DateSeparatedBackupHandlerTest {
         message.setFileInfo(fileInfo);
 
         String dateDir = new java.text.SimpleDateFormat("yyyy-MM-dd").format(
-                new java.util.Date (fileInfo.getCreationTime().toEpochMilli()));
-        var realPath = Path.of(tempDir+File.separator+dateDir+File.separator+fileInfo.getRelativePath());
-        Files.createDirectories(Path.of(tempDir+File.separator+dateDir));
-        Files.writeString(realPath,"TEST");
+                new java.util.Date(fileInfo.getCreationTime().toEpochMilli()));
+        var realPath = Path.of(tempDir + File.separator + dateDir + File.separator + fileInfo.getRelativePath());
+        Files.createDirectories(Path.of(tempDir + File.separator + dateDir));
+        Files.writeString(realPath, "TEST");
         // Call the method
         handler.handleFileEnd(mockConnection, mockSession, message);
 
         // Verify that the correct response was sent
         ArgumentCaptor<FileEndAckMessage> captor = ArgumentCaptor.forClass(FileEndAckMessage.class);
         verify(mockConnection).sendMessage(captor.capture());
-        
+
         FileEndAckMessage response = captor.getValue();
         assertEquals("test.txt", response.getRelativePath());
         assertTrue(response.isSuccess());
@@ -183,7 +182,7 @@ public class DateSeparatedBackupHandlerTest {
         // Verify that the correct response was sent
         ArgumentCaptor<SyncEndAckMessage> captor = ArgumentCaptor.forClass(SyncEndAckMessage.class);
         verify(mockConnection).sendMessage(captor.capture());
-        
+
         SyncEndAckMessage response = captor.getValue();
         assertTrue(response.isSuccess());
     }

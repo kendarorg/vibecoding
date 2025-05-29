@@ -20,23 +20,34 @@ import java.util.ArrayList;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for the PreserveBackupHandler class.
  */
 public class PreserveBackupHandlerTest {
 
+    private static String uniqueId;
     private PreserveBackupHandler handler;
     private TcpConnection mockConnection;
     private ClientSession mockSession;
     private File tempDir;
     private ServerSettings.BackupFolder mockFolder;
-    private static String uniqueId;
+
+    @BeforeAll
+    public static void beforeClass() {
+        uniqueId = UUID.randomUUID().toString();
+    }
+
+    @AfterAll
+    public static void cleanup() throws Exception {
+        FileUtils.deleteDirectoryContents(Path.of("target", "tests", uniqueId));
+    }
 
     @BeforeEach
     void setUp(TestInfo testInfo) throws IOException {
-        tempDir = Path.of("target", "tests",  uniqueId, TestUtils.getTestFolder(testInfo)).toFile();
+        tempDir = Path.of("target", "tests", uniqueId, TestUtils.getTestFolder(testInfo)).toFile();
         Files.createDirectories(tempDir.toPath());
 
         // Create mocks
@@ -49,19 +60,6 @@ public class PreserveBackupHandlerTest {
         when(mockSession.getFolder()).thenReturn(mockFolder);
         when(mockFolder.getRealPath()).thenReturn(tempDir.getAbsolutePath());
         when(mockSession.isDryRun()).thenReturn(false);
-    }
-
-
-
-
-    @BeforeAll
-    public static void beforeClass() {
-        uniqueId = UUID.randomUUID().toString();
-    }
-
-    @AfterAll
-    public static void cleanup() throws Exception {
-        FileUtils.deleteDirectoryContents(Path.of("target", "tests",  uniqueId));
     }
 
     @Test
@@ -145,9 +143,9 @@ public class PreserveBackupHandlerTest {
     void testHandleFileEnd() throws IOException {
         // Create a file end message
         FileEndMessage message = new FileEndMessage("test.txt");
-        var path = Path.of(mockSession.getFolder().getRealPath()+File.separator+"test.txt");
+        var path = Path.of(mockSession.getFolder().getRealPath() + File.separator + "test.txt");
         Files.writeString(path, UUID.randomUUID().toString());
-        FileInfo fileInfo = FileInfo.fromFile(path.toFile(),mockSession.getFolder().getRealPath());
+        FileInfo fileInfo = FileInfo.fromFile(path.toFile(), mockSession.getFolder().getRealPath());
         message.setFileInfo(fileInfo);
 
         // Call the method

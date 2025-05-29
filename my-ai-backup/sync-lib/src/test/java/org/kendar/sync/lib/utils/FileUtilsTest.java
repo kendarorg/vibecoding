@@ -11,7 +11,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -20,6 +19,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class FileUtilsTest {
 
+    private static final String TEST_CONTENT_1 = "Test file content 1";
+    private static final String TEST_CONTENT_2 = "Test file content 2";
+    private static final String TEST_CONTENT_3 = "Test file content 3";
     private Path testRoot;
     private File sourceDir;
     private File targetDir;
@@ -27,9 +29,6 @@ class FileUtilsTest {
     private File testFile2;
     private File testSubDir;
     private File testSubFile;
-    private static final String TEST_CONTENT_1 = "Test file content 1";
-    private static final String TEST_CONTENT_2 = "Test file content 2";
-    private static final String TEST_CONTENT_3 = "Test file content 3";
 
     @BeforeEach
     void setUp() throws IOException {
@@ -139,7 +138,7 @@ class FileUtilsTest {
 
         // Calculate differences with PRESERVE backup type
         Map<String, List<FileInfo>> diffPreserve = FileUtils.calculateFileDifferences(
-            sourceFiles, targetFiles, BackupType.PRESERVE);
+                sourceFiles, targetFiles, BackupType.PRESERVE);
 
         // Verify differences
         List<FileInfo> toAdd = diffPreserve.get("transfer");
@@ -151,7 +150,7 @@ class FileUtilsTest {
 
         // Calculate differences with MIRROR backup type
         Map<String, List<FileInfo>> diffMirror = FileUtils.calculateFileDifferences(
-            sourceFiles, targetFiles, BackupType.MIRROR);
+                sourceFiles, targetFiles, BackupType.MIRROR);
 
         // Verify differences
         toAdd = diffMirror.get("transfer");
@@ -195,8 +194,8 @@ class FileUtilsTest {
 
         // Note: Some file systems might not support setting creation time
         // So we only check modification time
-        assertEquals(modificationTime.toEpochMilli() / 1000, 
-                    attrs.lastModifiedTime().toInstant().toEpochMilli() / 1000);
+        assertEquals(modificationTime.toEpochMilli() / 1000,
+                attrs.lastModifiedTime().toInstant().toEpochMilli() / 1000);
     }
 
     @Test

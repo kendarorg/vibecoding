@@ -8,11 +8,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -36,18 +32,18 @@ class ServerSettingsTest {
 
         // Create test user
         testUser = new ServerSettings.User(
-            "user1",
-            "testuser",
-            "password123",
-            false
+                "user1",
+                "testuser",
+                "password123",
+                false
         );
 
         // Create test backup folder
         testFolder = new ServerSettings.BackupFolder(
-            "documents",
-            testRoot.resolve("documents").toString(),
-            BackupType.MIRROR,
-            Arrays.asList("user1")
+                "documents",
+                testRoot.resolve("documents").toString(),
+                BackupType.MIRROR,
+                Arrays.asList("user1")
         );
 
         // Create server settings
@@ -125,10 +121,10 @@ class ServerSettingsTest {
         // Test getting a folder that the user doesn't have access to
         // First, create a folder that user1 doesn't have access to
         ServerSettings.BackupFolder restrictedFolder = new ServerSettings.BackupFolder(
-            "restricted",
-            testRoot.resolve("restricted").toString(),
-            BackupType.MIRROR,
-            Arrays.asList("user2")
+                "restricted",
+                testRoot.resolve("restricted").toString(),
+                BackupType.MIRROR,
+                Arrays.asList("user2")
         );
         serverSettings.getBackupFolders().add(restrictedFolder);
 

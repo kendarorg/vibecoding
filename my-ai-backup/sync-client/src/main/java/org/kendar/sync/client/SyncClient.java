@@ -24,7 +24,7 @@ public class SyncClient {
     private static final int DEFAULT_MAX_CONNECTIONS = 5;
 
     protected TcpConnection getTcpConnection(TcpConnection connection,
-                                             CommandLineArgs args, int i,int maxPacketSize) throws IOException {
+                                             CommandLineArgs args, int i, int maxPacketSize) throws IOException {
         Socket socket = new Socket(args.getServerAddress(), args.getServerPort());
         TcpConnection subConnection = new TcpConnection(socket, connection.getSessionId(),
                 i + 1, maxPacketSize);
@@ -40,7 +40,7 @@ public class SyncClient {
      * @param maxPacketSize
      * @throws IOException If an I/O error occurs
      */
-    private  void performRestore(TcpConnection connection, CommandLineArgs args, int maxConnections, int maxPacketSize) throws IOException {
+    private void performRestore(TcpConnection connection, CommandLineArgs args, int maxConnections, int maxPacketSize) throws IOException {
         System.out.println("[CLIENT] Starting restore from " + args.getTargetFolder() + " to " + args.getSourceFolder());
 
         // Get list of files to backup
@@ -83,23 +83,36 @@ public class SyncClient {
         ConcurrentLinkedQueue<TcpConnection> connections = new ConcurrentLinkedQueue<>();// Start from 1 as main connection is 0
         Semaphore semaphore = new Semaphore(maxConnections);
         for (int i = 0; i < maxConnections; i++) {
-            TcpConnection subConnection = getTcpConnection(connection, args, i,maxPacketSize);
+            TcpConnection subConnection = getTcpConnection(connection, args, i, maxPacketSize);
             connections.add(subConnection);
+            Message startRestoreMessage = new StartRestore();
+            startRestoreMessage.initialize(subConnection.getConnectionId(),
+                    subConnection.getSessionId(), 0);
+            subConnection.sendMessage(startRestoreMessage);
         }
+        Message startRestoreMessage = new StartRestore();
+        startRestoreMessage.initialize(connection.getConnectionId(),
+                connection.getSessionId(), 0);
+        connection.sendMessage(startRestoreMessage);
 
         // Process files to transfer
         while (!mapToTransfer.isEmpty()) {
             executorService.submit(() -> {
+                Message fileName = null;
                 TcpConnection currentConnection = null;
                 try {
                     currentConnection = connections.poll();
                     // Wait for file descriptor
                     Message message = currentConnection.receiveMessage();
+                    if (message == null) {
+                        return;
+                    }
                     if (message.getMessageType() != MessageType.FILE_DESCRIPTOR) {
                         System.err.println("[CLIENT] Unexpected message 1: " + message.getMessageType());
                         return;
                     }
 
+                    fileName = message;
                     FileDescriptorMessage fileDescriptorMessage = (FileDescriptorMessage) message;
                     FileInfo fileInfo = fileDescriptorMessage.getFileInfo();
                     if (!mapToTransfer.containsKey(FileUtils.makeUniformPath(fileInfo.getRelativePath()))) {
@@ -191,13 +204,22 @@ public class SyncClient {
 
 
                     System.out.println("[CLIENT] Received file: " + fileInfo.getRelativePath());
-                }catch (Exception e) {
+                } catch (Exception e) {
                     System.err.println("[CLIENT] Error receiving file: " + e.getMessage());
                 } finally {
-                    if(currentConnection!=null)connections.add(currentConnection);
+                    if (currentConnection != null) connections.add(currentConnection);
                     completionLatch.countDown();
                 }
             });
+        }
+        try {
+            completionLatch.await();
+            System.out.println("[CLIENT] All file transfers completed 1");
+        } catch (InterruptedException e) {
+            System.err.println("[CLIENT] File transfer interrupted 1: " + e.getMessage());
+            Thread.currentThread().interrupt();
+        } finally {
+            executorService.shutdown();
         }
 
         // Process files to delete
@@ -224,7 +246,7 @@ public class SyncClient {
      * @param files     The list to add files to
      * @throws IOException If an I/O error occurs
      */
-    private  void scanDirectory(File directory, String basePath, List<FileInfo> files) throws IOException {
+    private void scanDirectory(File directory, String basePath, List<FileInfo> files) throws IOException {
         // Add the directory itself
         files.add(FileInfo.fromFile(directory, basePath));
 
@@ -247,7 +269,7 @@ public class SyncClient {
      * @param args The command line arguments
      * @return Whether the arguments are valid
      */
-    private  boolean validateArgs(CommandLineArgs args) {
+    private boolean validateArgs(CommandLineArgs args) {
         boolean valid = true;
 
         if (args.getSourceFolder() == null) {
@@ -293,7 +315,7 @@ public class SyncClient {
      * @param connection Theconnection
      * @throws IOException If an I/O error occurs
      */
-    private  void transferFile(FileInfo file, CommandLineArgs args, TcpConnection connection) throws IOException {
+    private void transferFile(FileInfo file, CommandLineArgs args, TcpConnection connection) throws IOException {
         String threadName = Thread.currentThread().getName();
         var connectionId = connection.getConnectionId();
         System.out.println("[CLIENT-" + connectionId + "] Starting transfer of " + file.getRelativePath());
@@ -429,18 +451,18 @@ public class SyncClient {
                     return;
                 }
                 connection.setSessionId(connectResponse.getSessionId());
-                var maxConnections = Math.min(commandLineArgs.getMaxConnections(),connectResponse.getMaxConnections());
+                var maxConnections = Math.min(commandLineArgs.getMaxConnections(), connectResponse.getMaxConnections());
                 var maxPacketSize = Math.min(commandLineArgs.getMaxSize(), connectResponse.getMaxPacketSize());
-                if(maxConnections==0)maxConnections=connectResponse.getMaxConnections();
-                if(maxPacketSize==0)maxPacketSize=connectResponse.getMaxPacketSize();
+                if (maxConnections == 0) maxConnections = connectResponse.getMaxConnections();
+                if (maxPacketSize == 0) maxPacketSize = connectResponse.getMaxPacketSize();
 
                 System.out.println("[CLIENT] Connected to server");
 
                 // Perform backup or restore
                 if (commandLineArgs.isBackup()) {
-                    performBackup(connection, commandLineArgs, maxConnections,maxPacketSize);
+                    performBackup(connection, commandLineArgs, maxConnections, maxPacketSize);
                 } else {
-                    performRestore(connection, commandLineArgs, maxConnections,maxPacketSize);
+                    performRestore(connection, commandLineArgs, maxConnections, maxPacketSize);
                 }
 
                 // Send sync end message
@@ -526,7 +548,7 @@ public class SyncClient {
         ConcurrentLinkedQueue<TcpConnection> connections = new ConcurrentLinkedQueue<>();// Start from 1 as main connection is 0
         Semaphore semaphore = new Semaphore(maxConnections);
         for (int i = 0; i < maxConnections; i++) {
-            TcpConnection subConnection = getTcpConnection(connection, args, i,maxPacketSize);
+            TcpConnection subConnection = getTcpConnection(connection, args, i, maxPacketSize);
             connections.add(subConnection);
         }
 
@@ -542,7 +564,7 @@ public class SyncClient {
                 } catch (Exception e) {
                     System.err.println("[CLIENT] Error transferring file " + file.getRelativePath() + ": " + e.getMessage());
                 } finally {
-                    if(currentConnection!=null)connections.add(currentConnection);
+                    if (currentConnection != null) connections.add(currentConnection);
                     //semaphore.release();
                     completionLatch.countDown();
                 }
@@ -552,9 +574,9 @@ public class SyncClient {
         // Wait for all transfers to complete
         try {
             completionLatch.await();
-            System.out.println("[CLIENT] All file transfers completed");
+            System.out.println("[CLIENT] All file transfers completed 2");
         } catch (InterruptedException e) {
-            System.err.println("[CLIENT] File transfer interrupted: " + e.getMessage());
+            System.err.println("[CLIENT] File transfer interrupted 2: " + e.getMessage());
             Thread.currentThread().interrupt();
         } finally {
             executorService.shutdown();

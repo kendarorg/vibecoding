@@ -7,50 +7,50 @@ public class SyncEndMessage extends Message {
     private boolean isBackup;
     private int filesTransferred;
     private int filesDeleted;
-    
+
     // Default constructor for Jackson
     public SyncEndMessage() {
     }
-    
+
     /**
      * Creates a new sync end message.
      *
-     * @param isBackup Whether this was a backup operation (true) or restore operation (false)
+     * @param isBackup         Whether this was a backup operation (true) or restore operation (false)
      * @param filesTransferred The number of files transferred
-     * @param filesDeleted The number of files deleted
+     * @param filesDeleted     The number of files deleted
      */
     public SyncEndMessage(boolean isBackup, int filesTransferred, int filesDeleted) {
         this.isBackup = isBackup;
         this.filesTransferred = filesTransferred;
         this.filesDeleted = filesDeleted;
     }
-    
+
     @Override
     public MessageType getMessageType() {
         return MessageType.SYNC_END;
     }
-    
+
     // Getters and setters
     public boolean isBackup() {
         return isBackup;
     }
-    
+
     public void setBackup(boolean backup) {
         isBackup = backup;
     }
-    
+
     public int getFilesTransferred() {
         return filesTransferred;
     }
-    
+
     public void setFilesTransferred(int filesTransferred) {
         this.filesTransferred = filesTransferred;
     }
-    
+
     public int getFilesDeleted() {
         return filesDeleted;
     }
-    
+
     public void setFilesDeleted(int filesDeleted) {
         this.filesDeleted = filesDeleted;
     }

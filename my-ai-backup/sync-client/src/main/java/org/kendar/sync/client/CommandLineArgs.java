@@ -5,7 +5,7 @@ import org.kendar.sync.lib.protocol.BackupType;
 /**
  * Class to hold command line arguments.
  */
-public  class CommandLineArgs {
+public class CommandLineArgs {
     private static final int DEFAULT_PORT = 8080;
     private String sourceFolder;
     private String targetFolder;
@@ -17,7 +17,7 @@ public  class CommandLineArgs {
     private boolean dryRun = false;
     private BackupType backupType = BackupType.PRESERVE;
     private boolean help = false;
-    private int maxConnections=0;
+    private int maxConnections = 0;
     private int maxSize;
 
     public String getSourceFolder() {
@@ -100,19 +100,19 @@ public  class CommandLineArgs {
         this.help = help;
     }
 
-    public void setMaxConnections(int maxConnections) {
-        this.maxConnections = maxConnections;
-    }
-
     public int getMaxConnections() {
         return maxConnections;
     }
 
-    public void setMaxSize(int maxSize) {
-        this.maxSize = maxSize;
+    public void setMaxConnections(int maxConnections) {
+        this.maxConnections = maxConnections;
     }
 
     public int getMaxSize() {
         return maxSize;
+    }
+
+    public void setMaxSize(int maxSize) {
+        this.maxSize = maxSize;
     }
 }

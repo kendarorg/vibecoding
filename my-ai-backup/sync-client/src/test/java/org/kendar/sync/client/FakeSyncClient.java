@@ -3,11 +3,10 @@ package org.kendar.sync.client;
 import org.kendar.sync.lib.network.TcpConnection;
 
 import java.io.IOException;
-import java.net.Socket;
 
-public class FakeSyncClient extends SyncClient{
+public class FakeSyncClient extends SyncClient {
     @Override
-    protected TcpConnection getTcpConnection(TcpConnection connection, CommandLineArgs args, int i,int maxPacketSize) throws IOException {
+    protected TcpConnection getTcpConnection(TcpConnection connection, CommandLineArgs args, int i, int maxPacketSize) throws IOException {
         return connection;
     }
 }

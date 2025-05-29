@@ -17,12 +17,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for the MirrorBackupHandler class.
@@ -43,13 +43,13 @@ public class MirrorBackupHandlerTest {
 
     @AfterAll
     public static void cleanup() throws Exception {
-        FileUtils.deleteDirectoryContents(Path.of("target", "tests",  uniqueId));
+        FileUtils.deleteDirectoryContents(Path.of("target", "tests", uniqueId));
     }
 
     @BeforeEach
     void setUp(TestInfo testInfo) throws IOException {
 
-        tempDir = Path.of("target", "tests",  uniqueId, TestUtils.getTestFolder(testInfo)).toFile();
+        tempDir = Path.of("target", "tests", uniqueId, TestUtils.getTestFolder(testInfo)).toFile();
         Files.createDirectories(tempDir.toPath());
 
         // Create mocks
@@ -88,11 +88,11 @@ public class MirrorBackupHandlerTest {
         // Verify that the correct response was sent
         ArgumentCaptor<FileListResponseMessage> captor = ArgumentCaptor.forClass(FileListResponseMessage.class);
         verify(mockConnection).sendMessage(captor.capture());
-        
+
         FileListResponseMessage response = captor.getValue();
         assertTrue(response.isBackup());
         assertEquals(1, response.getFilesToTransfer().size());
-        
+
         // Verify that file2.txt is in the list of files to delete
         List<String> filesToDelete = response.getFilesToDelete();
         assertEquals(0, filesToDelete.size());
@@ -110,11 +110,11 @@ public class MirrorBackupHandlerTest {
         // Verify that the correct response was sent
         ArgumentCaptor<FileDescriptorAckMessage> captor = ArgumentCaptor.forClass(FileDescriptorAckMessage.class);
         verify(mockConnection).sendMessage(captor.capture());
-        
+
         FileDescriptorAckMessage response = captor.getValue();
         assertEquals("test.txt", response.getRelativePath());
         assertTrue(response.isReady());
-        
+
         // Verify that the parent directory was created
         File file = new File(tempDir, "test.txt");
         assertTrue(file.getParentFile().exists());
@@ -132,11 +132,11 @@ public class MirrorBackupHandlerTest {
         // Verify that the correct response was sent
         ArgumentCaptor<FileDescriptorAckMessage> captor = ArgumentCaptor.forClass(FileDescriptorAckMessage.class);
         verify(mockConnection).sendMessage(captor.capture());
-        
+
         FileDescriptorAckMessage response = captor.getValue();
         assertEquals("testdir", response.getRelativePath());
         assertTrue(response.isReady());
-        
+
         // Verify that the directory was created
         File dir = new File(tempDir, "testdir");
         assertFalse(dir.exists());
@@ -161,9 +161,9 @@ public class MirrorBackupHandlerTest {
     void testHandleFileEnd() throws IOException {
         // Create a file end message
         FileEndMessage message = new FileEndMessage("test.txt");
-        var path = Path.of(mockSession.getFolder().getRealPath()+File.separator+"test.txt");
+        var path = Path.of(mockSession.getFolder().getRealPath() + File.separator + "test.txt");
         Files.writeString(path, UUID.randomUUID().toString());
-        FileInfo fileInfo = FileInfo.fromFile(path.toFile(),mockSession.getFolder().getRealPath());
+        FileInfo fileInfo = FileInfo.fromFile(path.toFile(), mockSession.getFolder().getRealPath());
         message.setFileInfo(fileInfo);
 
 
@@ -173,7 +173,7 @@ public class MirrorBackupHandlerTest {
         // Verify that the correct response was sent
         ArgumentCaptor<FileEndAckMessage> captor = ArgumentCaptor.forClass(FileEndAckMessage.class);
         verify(mockConnection).sendMessage(captor.capture());
-        
+
         FileEndAckMessage response = captor.getValue();
         assertEquals("test.txt", response.getRelativePath());
         assertTrue(response.isSuccess());
@@ -190,7 +190,7 @@ public class MirrorBackupHandlerTest {
         // Verify that the correct response was sent
         ArgumentCaptor<SyncEndAckMessage> captor = ArgumentCaptor.forClass(SyncEndAckMessage.class);
         verify(mockConnection).sendMessage(captor.capture());
-        
+
         SyncEndAckMessage response = captor.getValue();
         assertTrue(response.isSuccess());
     }

@@ -3,18 +3,15 @@ package org.kendar.sync.server.server;
 import org.kendar.sync.lib.model.ServerSettings;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
-import org.kendar.sync.server.SyncServerApplication;
 import org.kendar.sync.server.backup.BackupHandler;
 import org.kendar.sync.server.backup.DateSeparatedBackupHandler;
 import org.kendar.sync.server.backup.MirrorBackupHandler;
 import org.kendar.sync.server.backup.PreserveBackupHandler;
 import org.kendar.sync.server.config.ServerConfig;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -29,6 +26,7 @@ public class Server {
     private boolean running = true;
     private boolean dryRun = false;
     private ServerSocket mainSocket;
+    private ServerConfig serverConfig;
 
     public Server(ServerConfig serverConfig, boolean dryRun) {
         this.serverConfig = serverConfig;
@@ -39,7 +37,7 @@ public class Server {
         backupHandlers.put(BackupType.MIRROR, new MirrorBackupHandler());
         backupHandlers.put(BackupType.DATE_SEPARATED, new DateSeparatedBackupHandler());
     }
-    private ServerConfig serverConfig;
+
     /**
      * Starts the TCP server.
      */
@@ -65,7 +63,7 @@ public class Server {
                 }
             }
         } catch (IOException e) {
-            if(running) {
+            if (running) {
                 System.err.println("Error starting TCP server: " + e.getMessage());
             }
         }
@@ -75,7 +73,7 @@ public class Server {
      * Handles a client connection.
      *
      * @param clientSocket The client socket
-     * @param settings The server settings
+     * @param settings     The server settings
      */
     private void handleClient(Socket clientSocket, ServerSettings settings) {
         try {
@@ -90,32 +88,40 @@ public class Server {
 
             // Wait for connect message
             Message message = connection.receiveMessage();
-            if(message.getMessageType()==MessageType.FILE_DESCRIPTOR) {
+            if (message.getMessageType() == MessageType.START_RESTORE) {
+                var session = sessions.get(message.getSessionId());
+                connection.setSessionId(message.getSessionId());
+                connection.setConnectionId(message.getConnectionId());
+                session.setConnection(connection);
+                return;
+            } else if (message.getMessageType() == MessageType.FILE_DESCRIPTOR) {
                 try {
                     var session = sessions.get(message.getSessionId());
-                    while (session!=null) {
+                    while (session != null) {
                         connection.setSessionId(message.getSessionId());
                         connection.setConnectionId(message.getConnectionId());
-                        session.setConnection( connection);
+                        session.setConnection(connection);
                         handleFileDescriptor(connection, session, (FileDescriptorMessage) message);
                         message = connection.receiveMessage();
-                        while(!handleFileData(connection, session, (FileDataMessage) message)){
+                        var lastMessage = message;
+                        while (message.getMessageType() == MessageType.FILE_DATA) {
+                            handleFileData(connection, session, (FileDataMessage) message);
                             message = connection.receiveMessage();
                         }
-                        message = connection.receiveMessage();
+                        //message = connection.receiveMessage();
                         handleFileEnd(connection, session, (FileEndMessage) message);
                         session = sessions.get(message.getSessionId());
                         message = connection.receiveMessage();
                     }
-                    System.out.println("[SERVER] Client disconnected " );
-                }catch (Exception ex){
-                    System.err.println("[SERVER] Client disconnected " +ex.getMessage());
+                    System.out.println("[SERVER] Client disconnected ");
+                } catch (Exception ex) {
+                    System.err.println("[SERVER] Client disconnected " + ex.getMessage());
                     return;
                 }
             }
 
             if (message.getMessageType() != MessageType.CONNECT) {
-                connection.sendMessage(new ErrorMessage("ERR_PROTOCOL", "Expected CONNECT message"));
+                connection.sendMessage(new ErrorMessage("ERR_PROTOCOL", "Expected CONNECT message received: " + message.getMessageType()));
                 connection.close();
                 return;
             }
@@ -167,15 +173,6 @@ public class Server {
                     case FILE_LIST:
                         handleFileList(connection, session, (FileListMessage) message);
                         break;
-                    case FILE_DESCRIPTOR:
-                        handleFileDescriptor(connection, session, (FileDescriptorMessage) message);
-                        break;
-                    case FILE_DATA:
-                        handleFileData(connection, session, (FileDataMessage) message);
-                        break;
-                    case FILE_END:
-                        handleFileEnd(connection, session, (FileEndMessage) message);
-                        break;
                     case SYNC_END:
                         handleSyncEnd(connection, session, (SyncEndMessage) message);
                         // End of session
@@ -201,8 +198,8 @@ public class Server {
      * Handles a file list message.
      *
      * @param connection The TCP connection
-     * @param session The client session
-     * @param message The file list message
+     * @param session    The client session
+     * @param message    The file list message
      * @throws IOException If an I/O error occurs
      */
     private void handleFileList(TcpConnection connection, ClientSession session, FileListMessage message) throws IOException {
@@ -227,8 +224,8 @@ public class Server {
      * Handles a file descriptor message.
      *
      * @param connection The TCP connection
-     * @param session The client session
-     * @param message The file descriptor message
+     * @param session    The client session
+     * @param message    The file descriptor message
      * @throws IOException If an I/O error occurs
      */
     private void handleFileDescriptor(TcpConnection connection, ClientSession session, FileDescriptorMessage message) throws IOException {
@@ -256,8 +253,8 @@ public class Server {
      * Handles a file data message.
      *
      * @param connection The TCP connection
-     * @param session The client session
-     * @param message The file data message
+     * @param session    The client session
+     * @param message    The file data message
      * @throws IOException If an I/O error occurs
      */
     private boolean handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException {
@@ -280,8 +277,8 @@ public class Server {
      * Handles a file end message.
      *
      * @param connection The TCP connection
-     * @param session The client session
-     * @param message The file end message
+     * @param session    The client session
+     * @param message    The file end message
      * @throws IOException If an I/O error occurs
      */
     private void handleFileEnd(TcpConnection connection, ClientSession session, FileEndMessage message) throws IOException {
@@ -301,8 +298,8 @@ public class Server {
      * Handles a sync end message.
      *
      * @param connection The TCP connection
-     * @param session The client session
-     * @param message The sync end message
+     * @param session    The client session
+     * @param message    The sync end message
      * @throws IOException If an I/O error occurs
      */
     private void handleSyncEnd(TcpConnection connection, ClientSession session, SyncEndMessage message) throws IOException {
@@ -321,10 +318,10 @@ public class Server {
     }
 
     public void stop() {
-        running=false;
-        try{
+        running = false;
+        try {
             mainSocket.close();
-        }catch (Exception ex){
+        } catch (Exception ex) {
 
         }
     }

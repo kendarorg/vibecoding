@@ -31,7 +31,7 @@ public class FileUtils {
      * Lists all files in a directory recursively.
      *
      * @param directory The directory to list
-     * @param baseDir The base directory for calculating relative paths
+     * @param baseDir   The base directory for calculating relative paths
      * @return A list of file information
      * @throws IOException If an I/O error occurs
      */
@@ -45,8 +45,8 @@ public class FileUtils {
      * Lists all files in a directory recursively.
      *
      * @param directory The directory to list
-     * @param baseDir The base directory for calculating relative paths
-     * @param files The list to add the files to
+     * @param baseDir   The base directory for calculating relative paths
+     * @param files     The list to add the files to
      * @throws IOException If an I/O error occurs
      */
     private static void listFilesRecursive(File directory, String baseDir, List<FileInfo> files) throws IOException {
@@ -64,25 +64,26 @@ public class FileUtils {
 
             if (file.isDirectory()) {
                 listFilesRecursive(file, baseDir, files);
-            }else{
+            } else {
                 files.add(fileInfo);
             }
         }
     }
 
     public static String makeUniformPath(String path) {
-        var res = path.replaceAll("\\\\","/");
-        if(res.startsWith("/")) {
+        var res = path.replaceAll("\\\\", "/");
+        if (res.startsWith("/")) {
             return res.substring(1);
         }
         return res;
     }
+
     /**
      * Calculates the files that need to be transferred and deleted.
      *
      * @param sourceFiles The source files
      * @param targetFiles The target files
-     * @param backupType The backup type
+     * @param backupType  The backup type
      * @return A map with the files to transfer and delete
      */
     public static Map<String, List<FileInfo>> calculateFileDifferences(
@@ -133,8 +134,8 @@ public class FileUtils {
     /**
      * Gets the target path for a file based on the backup type.
      *
-     * @param file The file
-     * @param targetDir The target directory
+     * @param file       The file
+     * @param targetDir  The target directory
      * @param backupType The backup type
      * @return The target path
      */
@@ -167,8 +168,8 @@ public class FileUtils {
     /**
      * Sets the file times.
      *
-     * @param file The file
-     * @param creationTime The creation time
+     * @param file             The file
+     * @param creationTime     The creation time
      * @param modificationTime The modification time
      * @throws IOException If an I/O error occurs
      */

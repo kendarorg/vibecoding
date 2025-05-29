@@ -54,7 +54,7 @@ public class ClientSession {
      * Stores the current file being transferred for a specific connection.
      *
      * @param connectionId The connection ID
-     * @param fileInfo The file info
+     * @param fileInfo     The file info
      */
     public void setCurrentFile(int connectionId, FileInfo fileInfo) {
         currentFileTransfers.put(connectionId, fileInfo);
@@ -80,15 +80,6 @@ public class ClientSession {
     }
 
     /**
-     * Sets whether this session is in backup mode.
-     *
-     * @param isBackup True if in backup mode, false if in restore mode
-     */
-    public void setBackup(boolean isBackup) {
-        this.isBackup = isBackup;
-    }
-
-    /**
      * Checks if this session is in backup mode.
      *
      * @return True if in backup mode, false if in restore mode
@@ -97,16 +88,25 @@ public class ClientSession {
         return isBackup;
     }
 
-    public void setMainConnection(TcpConnection mainConnection) {
-        this.mainConnection = mainConnection;
+    /**
+     * Sets whether this session is in backup mode.
+     *
+     * @param isBackup True if in backup mode, false if in restore mode
+     */
+    public void setBackup(boolean isBackup) {
+        this.isBackup = isBackup;
     }
 
     public TcpConnection getMainConnection() {
         return mainConnection;
     }
 
+    public void setMainConnection(TcpConnection mainConnection) {
+        this.mainConnection = mainConnection;
+    }
+
     public void setConnection(TcpConnection connection) {
-        this.connections.add( connection);
+        this.connections.add(connection);
     }
 
     public void closeConnections() {
@@ -118,5 +118,9 @@ public class ClientSession {
             }
         }
         connections.clear();
+    }
+
+    public Set<TcpConnection> getConnections() {
+        return connections;
     }
 }

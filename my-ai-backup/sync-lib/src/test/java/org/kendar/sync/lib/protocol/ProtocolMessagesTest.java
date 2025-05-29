@@ -8,7 +8,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -21,13 +20,13 @@ class ProtocolMessagesTest {
     void testConnectMessage() throws IOException {
         // Create a test message
         ConnectMessage originalMessage = new ConnectMessage(
-            "testuser",
-            "password123",
-            "documents",
-            1024 * 1024,
-            5,
-            BackupType.MIRROR,
-            false
+                "testuser",
+                "password123",
+                "documents",
+                1024 * 1024,
+                5,
+                BackupType.MIRROR,
+                false
         );
 
         // Serialize the message
@@ -52,10 +51,10 @@ class ProtocolMessagesTest {
     void testConnectResponseMessage() throws IOException {
         // Create a test message
         ConnectResponseMessage originalMessage = new ConnectResponseMessage(
-            true,
-            null,
-            1024 * 1024,
-            5
+                true,
+                null,
+                1024 * 1024,
+                5
         );
 
         // Serialize the message
@@ -74,10 +73,10 @@ class ProtocolMessagesTest {
 
         // Test with error message
         ConnectResponseMessage errorMessage = new ConnectResponseMessage(
-            false,
-            "Authentication failed",
-            1024 * 1024,
-            5
+                false,
+                "Authentication failed",
+                1024 * 1024,
+                5
         );
 
         byte[] errorSerialized = errorMessage.serialize();
@@ -96,10 +95,10 @@ class ProtocolMessagesTest {
         byte[] data = "Test file content".getBytes();
 
         FileDataMessage originalMessage = new FileDataMessage(
-            relativePath,
-            chunkIndex,
-            totalChunks,
-            data
+                relativePath,
+                chunkIndex,
+                totalChunks,
+                data
         );
 
         // Serialize the message
@@ -121,12 +120,12 @@ class ProtocolMessagesTest {
     void testFileDescriptorMessage() throws IOException {
         // Create a test FileInfo
         FileInfo fileInfo = new FileInfo(
-            "/test/path.txt",
-            "path.txt",
-            100L,
-            Instant.now().minusSeconds(3600),
-            Instant.now(),
-            false
+                "/test/path.txt",
+                "path.txt",
+                100L,
+                Instant.now().minusSeconds(3600),
+                Instant.now(),
+                false
         );
 
         // Create a test message
@@ -183,12 +182,12 @@ class ProtocolMessagesTest {
     void testFileEndMessage() throws IOException {
         // Create a test FileInfo
         FileInfo fileInfo = new FileInfo(
-            "/test/path.txt",
-            "path.txt",
-            100L,
-            Instant.now().minusSeconds(3600),
-            Instant.now(),
-            false
+                "/test/path.txt",
+                "path.txt",
+                100L,
+                Instant.now().minusSeconds(3600),
+                Instant.now(),
+                false
         );
 
         // Create a test message
@@ -287,11 +286,11 @@ class ProtocolMessagesTest {
 
         // Create a test message
         FileListResponseMessage originalMessage = new FileListResponseMessage(
-            filesToTransfer,
-            filesToDelete,
-            true,
-            1,
-            1
+                filesToTransfer,
+                filesToDelete,
+                true,
+                1,
+                1
         );
 
         // Serialize the message

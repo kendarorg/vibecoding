@@ -20,15 +20,15 @@ public class ConnectMessage extends Message {
     /**
      * Creates a new connect message.
      *
-     * @param username The username for authentication
-     * @param password The password for authentication
-     * @param targetFolder The virtual target folder name
-     * @param maxPacketSize The maximum packet size supported by the client
+     * @param username       The username for authentication
+     * @param password       The password for authentication
+     * @param targetFolder   The virtual target folder name
+     * @param maxPacketSize  The maximum packet size supported by the client
      * @param maxConnections The maximum number of parallel connections supported by the client
-     * @param backupType The type of backup operation
-     * @param dryRun Whether this is a dry run (no actual file operations)
+     * @param backupType     The type of backup operation
+     * @param dryRun         Whether this is a dry run (no actual file operations)
      */
-    public ConnectMessage(String username, String password, String targetFolder, 
+    public ConnectMessage(String username, String password, String targetFolder,
                           int maxPacketSize, int maxConnections, BackupType backupType,
                           boolean dryRun) {
         this.username = username;

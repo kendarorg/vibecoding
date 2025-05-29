@@ -15,12 +15,31 @@ import java.util.UUID;
  */
 public class TcpConnection implements AutoCloseable {
     private final Socket socket;
+    private final int packetId;
+    private final int maxPacketSize;
     private InputStream inputStream;
     private OutputStream outputStream;
     private UUID sessionId;
     private int connectionId;
-    private final int packetId;
-    private final int maxPacketSize;
+
+    /**
+     * Creates a new TCP connection.
+     *
+     * @param socket        The socket
+     * @param sessionId     The session ID
+     * @param connectionId  The connection ID
+     * @param maxPacketSize The maximum packet size
+     * @throws IOException If an I/O error occurs
+     */
+    public TcpConnection(Socket socket, UUID sessionId, int connectionId, int maxPacketSize) throws IOException {
+        this.socket = socket;
+        this.inputStream = socket.getInputStream();
+        this.outputStream = socket.getOutputStream();
+        this.sessionId = sessionId;
+        this.connectionId = connectionId;
+        this.packetId = 0;
+        this.maxPacketSize = maxPacketSize;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -34,25 +53,6 @@ public class TcpConnection implements AutoCloseable {
     }
 
     /**
-     * Creates a new TCP connection.
-     *
-     * @param socket The socket
-     * @param sessionId The session ID
-     * @param connectionId The connection ID
-     * @param maxPacketSize The maximum packet size
-     * @throws IOException If an I/O error occurs
-     */
-    public TcpConnection(Socket socket, UUID sessionId, int connectionId, int maxPacketSize) throws IOException {
-        this.socket = socket;
-        this.inputStream = socket.getInputStream();
-        this.outputStream = socket.getOutputStream();
-        this.sessionId = sessionId;
-        this.connectionId = connectionId;
-        this.packetId = 0;
-        this.maxPacketSize = maxPacketSize;
-    }
-    
-    /**
      * Sends a message.
      *
      * @param message The message to send
@@ -60,7 +60,7 @@ public class TcpConnection implements AutoCloseable {
      */
     public void sendMessage(Message message) throws IOException {
         byte[] messageData = message.serialize();
-        
+
         // Create a packet with the message data
         Packet packet = new Packet(
                 connectionId,
@@ -69,13 +69,13 @@ public class TcpConnection implements AutoCloseable {
                 message.getMessageType().getCode(),
                 messageData
         );
-        
+
         // Serialize the packet and send it
         byte[] packetData = packet.serialize();
         outputStream.write(packetData);
         outputStream.flush();
     }
-    
+
     /**
      * Receives a message.
      *
@@ -88,40 +88,43 @@ public class TcpConnection implements AutoCloseable {
         this.inputStream = socket.getInputStream();
         int bytesRead = inputStream.read(lengthBytes);
         if (bytesRead != 4) {
+            if (bytesRead == -1) {
+                return null;
+            }
             throw new IOException("Failed to read packet length");
         }
-        
+
         int packetLength = java.nio.ByteBuffer.wrap(lengthBytes).getInt();
-        if (packetLength <= 0 || packetLength > (maxPacketSize+1024)) {
+        if (packetLength <= 0 || packetLength > (maxPacketSize + 1024)) {
             throw new IOException("Invalid packet length: " + packetLength);
         }
-        
+
         // Read the rest of the packet
         byte[] packetData = new byte[packetLength];
         System.arraycopy(lengthBytes, 0, packetData, 0, 4);
-        
+
         int remaining = packetLength - 4;
         int offset = 4;
-        
+
         while (remaining > 0) {
             bytesRead = inputStream.read(packetData, offset, remaining);
             if (bytesRead == -1) {
                 throw new IOException("End of stream reached");
             }
-            
+
             offset += bytesRead;
             remaining -= bytesRead;
         }
-        
+
         // Deserialize the packet
         Packet packet = Packet.deserialize(packetData);
-        
+
         // Deserialize the message
         var result = Message.deserialize(packet.getDecompressedContent());
         result.initialize(packet.getConnectionId(), packet.getSessionId(), packet.getPacketId());
         return result;
     }
-    
+
     /**
      * Closes the connection.
      *
@@ -133,7 +136,7 @@ public class TcpConnection implements AutoCloseable {
         outputStream.close();
         socket.close();
     }
-    
+
     /**
      * Gets the session ID.
      *
@@ -142,7 +145,11 @@ public class TcpConnection implements AutoCloseable {
     public UUID getSessionId() {
         return sessionId;
     }
-    
+
+    public void setSessionId(UUID sessionId) {
+        this.sessionId = sessionId;
+    }
+
     /**
      * Gets the connection ID.
      *
@@ -151,7 +158,11 @@ public class TcpConnection implements AutoCloseable {
     public int getConnectionId() {
         return connectionId;
     }
-    
+
+    public void setConnectionId(int connectionId) {
+        this.connectionId = connectionId;
+    }
+
     /**
      * Gets the socket.
      *
@@ -160,7 +171,7 @@ public class TcpConnection implements AutoCloseable {
     public Socket getSocket() {
         return socket;
     }
-    
+
     /**
      * Gets the maximum packet size.
      *
@@ -170,11 +181,7 @@ public class TcpConnection implements AutoCloseable {
         return maxPacketSize;
     }
 
-    public void setSessionId(UUID sessionId) {
-        this.sessionId= sessionId;
-    }
-
-    public void setConnectionId(int connectionId) {
-        this.connectionId=connectionId;
+    public boolean isClosed() {
+        return !socket.isConnected() || socket.isClosed() || !socket.isBound();
     }
 }

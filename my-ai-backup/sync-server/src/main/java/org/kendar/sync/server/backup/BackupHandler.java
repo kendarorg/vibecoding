@@ -17,57 +17,56 @@ import java.util.stream.Collectors;
  * Interface for handling backup operations based on backup type.
  */
 public abstract class BackupHandler {
-    
+
     /**
      * Handles a file list message.
      *
      * @param connection The TCP connection
-     * @param session The client session
-     * @param message The file list message
+     * @param session    The client session
+     * @param message    The file list message
      * @throws IOException If an I/O error occurs
      */
     public abstract void handleFileList(TcpConnection connection, ClientSession session, FileListMessage message) throws IOException;
-    
+
     /**
      * Handles a file descriptor message.
      *
      * @param connection The TCP connection
-     * @param session The client session
-     * @param message The file descriptor message
+     * @param session    The client session
+     * @param message    The file descriptor message
      * @throws IOException If an I/O error occurs
      */
     public abstract void handleFileDescriptor(TcpConnection connection, ClientSession session, FileDescriptorMessage message) throws IOException;
-    
+
     /**
      * Handles a file data message.
      *
      * @param connection The TCP connection
-     * @param session The client session
-     * @param message The file data message
+     * @param session    The client session
+     * @param message    The file data message
      * @throws IOException If an I/O error occurs
      */
     public abstract boolean handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException;
-    
+
     /**
      * Handles a file end message.
      *
      * @param connection The TCP connection
-     * @param session The client session
-     * @param message The file end message
+     * @param session    The client session
+     * @param message    The file end message
      * @throws IOException If an I/O error occurs
      */
     public abstract void handleFileEnd(TcpConnection connection, ClientSession session, FileEndMessage message) throws IOException;
-    
+
     /**
      * Handles a sync end message.
      *
      * @param connection The TCP connection
-     * @param session The client session
-     * @param message The sync end message
+     * @param session    The client session
+     * @param message    The sync end message
      * @throws IOException If an I/O error occurs
      */
     public abstract void handleSyncEnd(TcpConnection connection, ClientSession session, SyncEndMessage message) throws IOException;
-
 
 
     protected List<Path> listAllFiles(Path sourcePath) throws IOException {
@@ -90,10 +89,10 @@ public abstract class BackupHandler {
     }
 
     protected boolean shouldUpdate(FileInfo fileInfo, Path file, BasicFileAttributes attr) {
-        if(fileInfo==null)return true;
-        if(fileInfo.getModificationTime().isAfter(attr.lastModifiedTime().toInstant()))return true;
-        if(fileInfo.getCreationTime().isAfter(attr.creationTime().toInstant()))return true;
-        if(fileInfo.getSize()!=attr.size())return true;
+        if (fileInfo == null) return true;
+        if (fileInfo.getModificationTime().isAfter(attr.lastModifiedTime().toInstant())) return true;
+        if (fileInfo.getCreationTime().isAfter(attr.creationTime().toInstant())) return true;
+        if (fileInfo.getSize() != attr.size()) return true;
         return false;
     }
 }

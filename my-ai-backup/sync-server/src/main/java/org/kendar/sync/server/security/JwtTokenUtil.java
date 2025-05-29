@@ -56,9 +56,9 @@ public class JwtTokenUtil {
     /**
      * Retrieves a claim from the token.
      *
-     * @param token The JWT token
+     * @param token          The JWT token
      * @param claimsResolver The claims resolver function
-     * @param <T> The type of the claim
+     * @param <T>            The type of the claim
      * @return The claim
      */
     public <T> T getClaimFromToken(String token, Function<Claims, T> claimsResolver) {
@@ -95,8 +95,8 @@ public class JwtTokenUtil {
      * Generates a token for a user.
      *
      * @param userDetails The user details
-     * @param userId The user ID
-     * @param isAdmin Whether the user is an admin
+     * @param userId      The user ID
+     * @param isAdmin     Whether the user is an admin
      * @return The JWT token
      */
     public String generateToken(UserDetails userDetails, String userId, boolean isAdmin) {
@@ -122,7 +122,7 @@ public class JwtTokenUtil {
     /**
      * Generates a token.
      *
-     * @param claims The claims
+     * @param claims  The claims
      * @param subject The subject (username)
      * @return The JWT token
      */
@@ -139,7 +139,7 @@ public class JwtTokenUtil {
     /**
      * Validates a token.
      *
-     * @param token The JWT token
+     * @param token       The JWT token
      * @param userDetails The user details
      * @return True if the token is valid, false otherwise
      */

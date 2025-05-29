@@ -24,12 +24,12 @@ public class ServerConfig {
      */
     @Bean
     public ServerSettings serverSettings() throws IOException {
-        if(serverSettings==null) {
+        if (serverSettings == null) {
             serverSettings = ServerSettings.load(settingsFile);
         }
         return serverSettings;
     }
-    
+
     /**
      * Reloads the server settings.
      *
@@ -39,7 +39,7 @@ public class ServerConfig {
     public ServerSettings reloadSettings() throws IOException {
         return ServerSettings.load(settingsFile);
     }
-    
+
     /**
      * Gets the settings file path.
      *
