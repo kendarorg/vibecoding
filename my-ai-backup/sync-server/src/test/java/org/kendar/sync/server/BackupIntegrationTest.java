@@ -86,7 +86,7 @@ public class BackupIntegrationTest {
         var serverSettings = new ServerSettings();
         serverSettings.setPort(serverPort);
         serverSettings.setMaxConnections(5);
-        serverSettings.setMaxPacketSize(1024*1024); // 1 MB
+        serverSettings.setMaxPacketSize(1024); // 1 MB
         ServerSettings.User newUser = new ServerSettings.User(UUID.randomUUID().toString(),
                 "user", "password", true);
         serverSettings.getUsers().add(newUser);
@@ -276,6 +276,11 @@ public class BackupIntegrationTest {
                 String date = new java.text.SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new java.util.Date (randomLong));
                 // Create a file with random content
                 String content = "Content for " + name + ": " + UUID.randomUUID();
+                var randomSize =getRandomNumber(0,1024*10);
+                while(randomSize>0){
+                    content += " " + UUID.randomUUID();
+                    randomSize -= 36; // UUID is 36 characters long
+                }
                 var path = file.toPath();
                 var parent = path.getParent().toString();
                 if(parent.equalsIgnoreCase(rootDir.toPath().toString())){

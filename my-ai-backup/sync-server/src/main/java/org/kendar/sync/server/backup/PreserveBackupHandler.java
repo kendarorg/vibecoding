@@ -129,10 +129,10 @@ public class PreserveBackupHandler extends BackupHandler {
     }
 
     @Override
-    public void handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException {
+    public boolean handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException {
         // If this is a dry run, just ignore the data
         if (session.isDryRun()) {
-            return;
+            return true;
         }
 
         int connectionId = connection.getConnectionId();
@@ -143,7 +143,7 @@ public class PreserveBackupHandler extends BackupHandler {
             fileInfo = session.getCurrentFile(connectionId);
             if (fileInfo == null) {
                 System.err.println("[PRESERVE] No file info found for connection " + connectionId);
-                return;
+                return true;
             }
             System.out.println("[PRESERVE] Received FILE_DATA message for " + fileInfo.getRelativePath() + 
                              " on connection " + connectionId + 
@@ -163,6 +163,7 @@ public class PreserveBackupHandler extends BackupHandler {
         try (FileOutputStream fos = new FileOutputStream(file, !message.isFirstBlock())) {
             fos.write(message.getData());
         }
+        return message.isLastBlock();
     }
 
     @Override

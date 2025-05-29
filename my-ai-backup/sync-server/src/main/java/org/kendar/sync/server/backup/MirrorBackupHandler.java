@@ -151,10 +151,10 @@ public class MirrorBackupHandler extends BackupHandler {
     }
 
     @Override
-    public void handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException {
+    public boolean handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException {
         // If this is a dry run, just ignore the data
         if (session.isDryRun()) {
-            return;
+            return false;
         }
 
         int connectionId = connection.getConnectionId();
@@ -165,7 +165,7 @@ public class MirrorBackupHandler extends BackupHandler {
             fileInfo = session.getCurrentFile(connectionId);
             if (fileInfo == null) {
                 System.err.println("[MIRROR] No file info found for connection " + connectionId);
-                return;
+                return true;
             }
             System.out.println("[MIRROR] Received FILE_DATA message for " + fileInfo.getRelativePath() + 
                              " on connection " + connectionId +
@@ -185,6 +185,7 @@ public class MirrorBackupHandler extends BackupHandler {
         try (FileOutputStream fos = new FileOutputStream(file, !message.isFirstBlock())) {
             fos.write(message.getData());
         }
+        return message.isLastBlock();
 
     }
 

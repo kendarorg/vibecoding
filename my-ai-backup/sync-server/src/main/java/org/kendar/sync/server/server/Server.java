@@ -99,7 +99,9 @@ public class Server {
                         session.setConnection( connection);
                         handleFileDescriptor(connection, session, (FileDescriptorMessage) message);
                         message = connection.receiveMessage();
-                        handleFileData(connection, session, (FileDataMessage) message);
+                        while(!handleFileData(connection, session, (FileDataMessage) message)){
+                            message = connection.receiveMessage();
+                        }
                         message = connection.receiveMessage();
                         handleFileEnd(connection, session, (FileEndMessage) message);
                         session = sessions.get(message.getSessionId());
@@ -258,7 +260,7 @@ public class Server {
      * @param message The file data message
      * @throws IOException If an I/O error occurs
      */
-    private void handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException {
+    private boolean handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException {
         int connectionId = connection.getConnectionId();
         //System.out.println("[SERVER] Received FILE_DATA message on connection " + connectionId);
 
@@ -267,11 +269,11 @@ public class Server {
         if (handler == null) {
             System.err.println("No handler found for backup type: " + session.getBackupType());
             connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
-            return;
+            return false;
         }
 
         // Delegate to the backup handler
-        handler.handleFileData(connection, session, message);
+        return handler.handleFileData(connection, session, message);
     }
 
     /**

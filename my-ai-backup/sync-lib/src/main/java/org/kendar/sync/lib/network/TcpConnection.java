@@ -92,7 +92,7 @@ public class TcpConnection implements AutoCloseable {
         }
         
         int packetLength = java.nio.ByteBuffer.wrap(lengthBytes).getInt();
-        if (packetLength <= 0 || packetLength > maxPacketSize) {
+        if (packetLength <= 0 || packetLength > (maxPacketSize+1024)) {
             throw new IOException("Invalid packet length: " + packetLength);
         }
         

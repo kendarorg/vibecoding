@@ -210,6 +210,10 @@ Modify the Server to allow concurrent files sent by SyncClientApp
 
 In the client instead of sending all data in one block, read in blocks of maxPacketSize and send multiple FileDataMessage
 
+### Fix 010
+
+Fixing the backup splitted
+
 
 
 

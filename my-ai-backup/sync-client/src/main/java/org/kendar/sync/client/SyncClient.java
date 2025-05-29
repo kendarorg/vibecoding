@@ -389,6 +389,8 @@ public class SyncClient {
                 connection.setSessionId(connectResponse.getSessionId());
                 var maxConnections = Math.min(commandLineArgs.getMaxConnections(),connectResponse.getMaxConnections());
                 var maxPacketSize = Math.min(commandLineArgs.getMaxSize(), connectResponse.getMaxPacketSize());
+                if(maxConnections==0)maxConnections=connectResponse.getMaxConnections();
+                if(maxPacketSize==0)maxPacketSize=connectResponse.getMaxPacketSize();
 
                 System.out.println("[CLIENT] Connected to server");
 

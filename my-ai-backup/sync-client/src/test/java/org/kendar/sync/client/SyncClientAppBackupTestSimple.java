@@ -127,7 +127,7 @@ class SyncClientAppBackupTestSimple {
         performBackupMethod = SyncClient.class.getDeclaredMethod("performBackup",
             org.kendar.sync.lib.network.TcpConnection.class, 
             Class.forName("org.kendar.sync.client.CommandLineArgs"),
-                int.class);
+                int.class,int.class);
         performBackupMethod.setAccessible(true);
 
         // Create CommandLineArgs object using reflection
@@ -145,6 +145,11 @@ class SyncClientAppBackupTestSimple {
             .invoke(commandLineArgs, BackupType.MIRROR);
         commandLineArgsClass.getDeclaredMethod("setDryRun", boolean.class)
             .invoke(commandLineArgs, false);
+
+        commandLineArgsClass.getDeclaredMethod("setMaxSize", int.class)
+                .invoke(commandLineArgs, 1024);
+        commandLineArgsClass.getDeclaredMethod("setMaxConnections", int.class)
+                .invoke(commandLineArgs, 1);
     }
 
     @AfterEach
@@ -172,7 +177,7 @@ class SyncClientAppBackupTestSimple {
         mockConnection.addMessageToReturn(FileEndAckMessage.success(sourceDir.getName() + "/subdir/testFile2.txt"));
 
         // Call the performBackup method
-        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1);
+        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1,1024);
 
         // Get the sent messages
         List<Message> sentMessages = mockConnection.getSentMessages();
@@ -233,7 +238,7 @@ class SyncClientAppBackupTestSimple {
         mockConnection.addMessageToReturn(FileEndAckMessage.success(sourceDir.getName() + "/subdir/testFile2.txt"));
 
         // Call the performBackup method
-        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1);
+        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1,1024);
 
         // Get the sent messages
         List<Message> sentMessages = mockConnection.getSentMessages();
@@ -275,7 +280,7 @@ class SyncClientAppBackupTestSimple {
         mockConnection.addMessageToReturn(FileEndAckMessage.failure(sourceDir.getName() + "/subdir/testFile2.txt", "Failed to write file"));
 
         // Call the performBackup method
-        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1);
+        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1,1024);
 
         // Get the sent messages
         List<Message> sentMessages = mockConnection.getSentMessages();

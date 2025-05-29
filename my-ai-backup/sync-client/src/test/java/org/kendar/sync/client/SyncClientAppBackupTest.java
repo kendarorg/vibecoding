@@ -72,10 +72,11 @@ class SyncClientAppBackupTest {
 
         // Create a mock TcpConnection
         mockConnection = mock(TcpConnection.class);
+        when(mockConnection.getMaxPacketSize()).thenReturn(1024);
 
         // Get the private performBackup method using reflection
         performBackupMethod = SyncClient.class.getDeclaredMethod("performBackup", TcpConnection.class,
-            Class.forName("org.kendar.sync.client.CommandLineArgs"),int.class);
+            Class.forName("org.kendar.sync.client.CommandLineArgs"),int.class,int.class);
         performBackupMethod.setAccessible(true);
 
         // Create CommandLineArgs object using reflection
@@ -92,7 +93,11 @@ class SyncClientAppBackupTest {
         commandLineArgsClass.getDeclaredMethod("setBackupType", BackupType.class)
             .invoke(commandLineArgs, BackupType.MIRROR);
         commandLineArgsClass.getDeclaredMethod("setDryRun", boolean.class)
-            .invoke(commandLineArgs, false);
+                .invoke(commandLineArgs, false);
+        commandLineArgsClass.getDeclaredMethod("setMaxSize", int.class)
+                .invoke(commandLineArgs, 1024);
+        commandLineArgsClass.getDeclaredMethod("setMaxConnections", int.class)
+                .invoke(commandLineArgs, 1);
     }
 
     @AfterEach
@@ -115,7 +120,7 @@ class SyncClientAppBackupTest {
 
 
         // Call the performBackup method
-        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1);
+        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1,1024);
 
         // Verify that the correct messages were sent
         // 1. FileListMessage
@@ -183,7 +188,7 @@ class SyncClientAppBackupTest {
                 .thenReturn(FileEndAckMessage.success("/subdir/testFile2.txt"));
 
         // Call the performBackup method
-        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1);
+        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1,1024);
 
         // Verify that the correct messages were sent
         // 1. FileListMessage
@@ -228,7 +233,7 @@ class SyncClientAppBackupTest {
             .thenReturn(FileEndAckMessage.failure(sourceDir.getName() + "/subdir/testFile2.txt", "Failed to write file"));
 
         // Call the performBackup method
-        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1);
+        performBackupMethod.invoke(target, mockConnection, commandLineArgs,1,1024);
 
         // Verify output
         String output = outContent.toString()+ errContent.toString();

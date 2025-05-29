@@ -46,7 +46,7 @@ public abstract class BackupHandler {
      * @param message The file data message
      * @throws IOException If an I/O error occurs
      */
-    public abstract void handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException;
+    public abstract boolean handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException;
     
     /**
      * Handles a file end message.

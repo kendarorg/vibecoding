@@ -181,10 +181,10 @@ public class DateSeparatedBackupHandler extends BackupHandler {
     }
 
     @Override
-    public void handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException {
+    public boolean handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException {
         // If this is a dry run, just ignore the data
         if (session.isDryRun()) {
-            return;
+            return true;
         }
 
         System.out.println("[DATE_SEPARATED] Received FILE_DATA message");
@@ -203,6 +203,7 @@ public class DateSeparatedBackupHandler extends BackupHandler {
         try (FileOutputStream fos = new FileOutputStream(targetFile, !message.isFirstBlock())) {
             fos.write(message.getData());
         }
+        return message.isLastBlock();
     }
 
     @Override

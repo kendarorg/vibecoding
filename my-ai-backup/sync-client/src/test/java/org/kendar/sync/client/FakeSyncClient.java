@@ -7,7 +7,7 @@ import java.net.Socket;
 
 public class FakeSyncClient extends SyncClient{
     @Override
-    protected TcpConnection getTcpConnection(TcpConnection connection, CommandLineArgs args, int i) throws IOException {
+    protected TcpConnection getTcpConnection(TcpConnection connection, CommandLineArgs args, int i,int maxPacketSize) throws IOException {
         return connection;
     }
 }
