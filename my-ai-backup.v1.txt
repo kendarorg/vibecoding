@@ -212,7 +212,8 @@ In the client instead of sending all data in one block, read in blocks of maxPac
 
 ### Fix 010
 
-Fixing the backup splitted
+* Fixing the backup splitted
+* Setup the restore splitted
 
 
 

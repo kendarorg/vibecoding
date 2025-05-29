@@ -32,24 +32,6 @@ public class DateSeparatedBackupHandler extends BackupHandler {
     public DateSeparatedBackupHandler() {
     }
 
-    /**
-     * Lists all directories under a source path that match a date pattern (YYYY-MM-DD).
-     *
-     * @param sourcePath The source directory path to search in
-     * @return List of directories matching the date pattern
-     * @throws IOException If an I/O error occurs
-     */
-    private List<Path> listDateDirectories(Path sourcePath) throws IOException {
-        if (!Files.exists(sourcePath) || !Files.isDirectory(sourcePath)) {
-            return new ArrayList<>();
-        }
-
-        return Files.list(sourcePath)
-                .filter(Files::isDirectory)
-                .filter(p -> p.getFileName().toString().matches("\\d{4}-\\d{2}-\\d{2}"))
-                .collect(Collectors.toList());
-    }
-
     @Override
     public void handleFileList(TcpConnection connection, ClientSession session, FileListMessage message) throws IOException {
         System.out.println("[DATE_SEPARATED] Received FILE_LIST message");
@@ -96,6 +78,7 @@ public class DateSeparatedBackupHandler extends BackupHandler {
         }
 
         for (var file : filesToSend) {
+            var connectionId = connection.getConnectionId();
             if(file.isDirectory()){
                 continue;
             }
@@ -126,10 +109,35 @@ public class DateSeparatedBackupHandler extends BackupHandler {
                 }
 
                 File sourceFile =relPath.toFile();
-                byte[] fileData = FileUtils.readFile(sourceFile);
+                long fileSize = sourceFile.length();
+                int maxPacketSize = connection.getMaxPacketSize();
 
-                FileDataMessage fileDataMessage = new FileDataMessage(file.getRelativePath(), 0, 1, fileData);
-                connection.sendMessage(fileDataMessage);
+                // Calculate how many blocks we need to send
+                int totalBlocks = (int) Math.ceil((double) fileSize / maxPacketSize);
+                if (totalBlocks == 0) totalBlocks = 1; // Ensure at least one block for empty files
+
+                System.out.println("[CLIENT-" + connectionId + "] Sending file " + file.getRelativePath() +
+                        " in " + totalBlocks + " blocks (" + fileSize + " bytes)");
+
+                try (java.io.FileInputStream fis = new java.io.FileInputStream(sourceFile)) {
+                    byte[] buffer = new byte[maxPacketSize];
+                    int blockNumber = 0;
+                    int bytesRead;
+
+                    while ((bytesRead = fis.read(buffer)) != -1) {
+                        // If we read less than the buffer size, create a smaller array with just the data
+                        byte[] blockData = bytesRead == buffer.length ? buffer : java.util.Arrays.copyOf(buffer, bytesRead);
+
+                        FileDataMessage fileDataMessage = new FileDataMessage(
+                                file.getRelativePath(), blockNumber, totalBlocks, blockData);
+                        connection.sendMessage(fileDataMessage);
+
+                        System.out.println("[CLIENT-" + connectionId + "] Sent block " + (blockNumber + 1) +
+                                " of " + totalBlocks + " (" + blockData.length + " bytes)");
+
+                        blockNumber++;
+                    }
+                }
             } else {
                 System.out.println("[SERVER] Dry run: Would send file data for " + file.getRelativePath());
             }

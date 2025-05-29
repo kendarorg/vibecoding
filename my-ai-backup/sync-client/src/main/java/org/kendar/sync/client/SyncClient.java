@@ -6,6 +6,7 @@ import org.kendar.sync.lib.protocol.*;
 import org.kendar.sync.lib.utils.FileUtils;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.file.Files;
@@ -78,7 +79,7 @@ public class SyncClient {
             // Wait for file descriptor
             Message message = connection.receiveMessage();
             if (message.getMessageType() != MessageType.FILE_DESCRIPTOR) {
-                System.err.println("[CLIENT] Unexpected message: " + message.getMessageType());
+                System.err.println("[CLIENT] Unexpected message 1: " + message.getMessageType());
                 return;
             }
 
@@ -126,23 +127,40 @@ public class SyncClient {
             // Wait for file data
             message = connection.receiveMessage();
             if (message.getMessageType() != MessageType.FILE_DATA) {
-                System.err.println("[CLIENT] Unexpected message: " + message.getMessageType());
+                System.err.println("[CLIENT] Unexpected message 2: " + message.getMessageType());
                 return;
             }
 
             FileDataMessage fileDataMessage = (FileDataMessage) message;
 
-            // Write file data
-            if (!args.isDryRun()) {
-                FileUtils.writeFile(targetFile, fileDataMessage.getData());
-            } else {
-                System.out.println("[CLIENT] Dry run: Would write file data to " + targetFile.getAbsolutePath());
+            while(true) {
+                // Write file data
+                if (!args.isDryRun()) {
+                    // Create parent directories if needed
+                    targetFile.getParentFile().mkdirs();
+
+                    // Write the data to the file
+                    try (FileOutputStream fos = new FileOutputStream(targetFile, !fileDataMessage.isFirstBlock())) {
+                        fos.write(fileDataMessage.getData());
+                    }
+                } else {
+                    System.out.println("[CLIENT] Dry run: Would write file data to " + targetFile.getAbsolutePath());
+                }
+                message = connection.receiveMessage();
+                if (message.getMessageType() != MessageType.FILE_DATA ) {
+                    if(!fileDataMessage.isLastBlock()) {
+                        System.err.println("[CLIENT] Unexpected message 3: " + message.getMessageType());
+                        return;
+                    }else{
+                        break;
+                    }
+                }
+                fileDataMessage = (FileDataMessage) message;
             }
 
             // Wait for file end
-            message = connection.receiveMessage();
             if (message.getMessageType() != MessageType.FILE_END) {
-                System.err.println("[CLIENT] Unexpected message: " + message.getMessageType());
+                System.err.println("[CLIENT] Unexpected message 4: " + message.getMessageType());
                 return;
             }
 
