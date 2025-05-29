@@ -1,15 +1,20 @@
 package org.kendar.sync.lib.protocol;
 
+import org.kendar.sync.lib.buffer.ByteContainer;
+
 /**
  * Message sent by the server in response to a connection request.
  * Indicates whether the connection was accepted or rejected.
  */
 public class ConnectResponseMessage extends Message {
     private boolean accepted;
-    private String errorMessage;
+    private String errorMessage="";
     private int maxPacketSize;
     private int maxConnections;
 
+    static {
+        Message.registerMessageType(ConnectResponseMessage.class);
+    }
     // Default constructor for Jackson
     public ConnectResponseMessage() {
     }
@@ -51,8 +56,26 @@ public class ConnectResponseMessage extends Message {
     }
 
     @Override
+    protected Message deserialize(ByteContainer buffer) {
+        accepted = buffer.readType(Boolean.class);
+        errorMessage = buffer.readType(String.class);
+        maxPacketSize = buffer.readType(Integer.class);
+        maxConnections = buffer.readType(Integer.class);
+        return this;
+    }
+
+    @Override
     public MessageType getMessageType() {
         return MessageType.CONNECT_RESPONSE;
+    }
+
+    @Override
+    protected void serialize(ByteContainer buffer) {
+        buffer.writeType(accepted);
+        if(errorMessage==null)buffer.writeType("");
+        else buffer.writeType(errorMessage);
+        buffer.writeType(maxPacketSize);
+        buffer.writeType(maxConnections);
     }
 
     // Getters and setters

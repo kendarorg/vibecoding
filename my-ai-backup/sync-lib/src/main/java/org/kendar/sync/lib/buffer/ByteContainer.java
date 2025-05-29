@@ -1,7 +1,7 @@
 package org.kendar.sync.lib.buffer;
 
 
-import org.kendar.sync.lib.buffer.converters.ByteContainerConverter;
+import org.kendar.sync.lib.buffer.converters.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,6 +26,18 @@ public class ByteContainer {
      */
     public ByteContainer() {
 
+    }
+
+    public static ByteContainer create() {
+        return new ByteContainer().withConverters(
+                new IntConverter(),
+                new StringConverter(),
+                new ByteArrayConverter(),
+                new LongConverter(),
+                new UUIDConverter(),
+                new MessageTypeConverter(),
+                new BackupTypeConverter(),
+                new BooleanConverter());
     }
 
     /**

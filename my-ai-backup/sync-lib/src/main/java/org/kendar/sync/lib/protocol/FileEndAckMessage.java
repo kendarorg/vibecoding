@@ -1,5 +1,7 @@
 package org.kendar.sync.lib.protocol;
 
+import org.kendar.sync.lib.buffer.ByteContainer;
+
 /**
  * Message sent in response to a file end message to acknowledge that the file has been successfully received.
  */
@@ -8,6 +10,9 @@ public class FileEndAckMessage extends Message {
     private boolean success;
     private String errorMessage;
 
+    static {
+        Message.registerMessageType(FileEndAckMessage.class);
+    }
     // Default constructor for Jackson
     public FileEndAckMessage() {
     }
@@ -46,9 +51,26 @@ public class FileEndAckMessage extends Message {
         return new FileEndAckMessage(relativePath, false, errorMessage);
     }
 
+
     @Override
     public MessageType getMessageType() {
         return MessageType.FILE_END_ACK;
+    }
+
+    @Override
+    protected Message deserialize(ByteContainer buffer) {
+        relativePath = buffer.readType(String.class);
+        success = buffer.readType(Boolean.class);
+        errorMessage = buffer.readType(String.class);
+        return this;
+    }
+
+    @Override
+    protected void serialize(ByteContainer buffer) {
+        buffer.writeType(relativePath);
+        buffer.writeType(success);
+        if(errorMessage!=null)buffer.writeType(errorMessage);
+        else buffer.writeType("");
     }
 
     // Getters and setters

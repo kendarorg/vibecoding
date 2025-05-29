@@ -1,5 +1,6 @@
 package org.kendar.sync.lib.protocol;
 
+import org.kendar.sync.lib.buffer.ByteContainer;
 import org.kendar.sync.lib.model.FileInfo;
 
 /**
@@ -8,6 +9,9 @@ import org.kendar.sync.lib.model.FileInfo;
 public class FileDescriptorMessage extends Message {
     private FileInfo fileInfo;
 
+    static {
+        Message.registerMessageType(FileDescriptorMessage.class);
+    }
     // Default constructor for Jackson
     public FileDescriptorMessage() {
     }
@@ -24,6 +28,17 @@ public class FileDescriptorMessage extends Message {
     @Override
     public MessageType getMessageType() {
         return MessageType.FILE_DESCRIPTOR;
+    }
+
+    @Override
+    protected Message deserialize(ByteContainer buffer) {
+        fileInfo = FileInfo.fromLine(buffer.readType(String.class));
+        return this;
+    }
+
+    @Override
+    protected void serialize(ByteContainer buffer) {
+        buffer.writeType(fileInfo.toLine());
     }
 
     // Getters and setters

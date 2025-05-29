@@ -189,6 +189,7 @@ public class DateSeparatedBackupHandler extends BackupHandler {
         try {
             completionLatch.await();
             System.out.println("[DATE_SEPARATED] All file transfers completed");
+            connection.close();
         } catch (InterruptedException e) {
             System.err.println("[DATE_SEPARATED] File transfer interrupted: " + e.getMessage());
             Thread.currentThread().interrupt();

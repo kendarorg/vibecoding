@@ -1,5 +1,7 @@
 package org.kendar.sync.lib.protocol;
 
+import org.kendar.sync.lib.buffer.ByteContainer;
+
 /**
  * Message sent by the server to the client in response to a sync end message
  * to acknowledge the end of the synchronization session.
@@ -8,6 +10,9 @@ public class SyncEndAckMessage extends Message {
     private boolean success;
     private String errorMessage;
 
+    static {
+        Message.registerMessageType(SyncEndAckMessage.class);
+    }
     // Default constructor for Jackson
     public SyncEndAckMessage() {
     }
@@ -45,6 +50,19 @@ public class SyncEndAckMessage extends Message {
     @Override
     public MessageType getMessageType() {
         return MessageType.SYNC_END_ACK;
+    }
+
+    @Override
+    protected Message deserialize(ByteContainer buffer) {
+        success = buffer.readType(Boolean.class);
+        errorMessage = buffer.readType(String.class);
+        return this;
+    }
+
+    @Override
+    protected void serialize(ByteContainer buffer) {
+        buffer.writeType(success);
+        buffer.writeType(errorMessage);
     }
 
     // Getters and setters

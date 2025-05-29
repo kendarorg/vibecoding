@@ -1,6 +1,7 @@
 package org.kendar.sync.lib.protocol;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.kendar.sync.lib.buffer.ByteContainer;
 
 /**
  * Message containing a chunk of file data.
@@ -29,10 +30,29 @@ public class FileDataMessage extends Message {
         this.totalBlocks = totalBlocks;
         this.data = data;
     }
-
+    static {
+        Message.registerMessageType(FileDataMessage.class);
+    }
     @Override
     public MessageType getMessageType() {
         return MessageType.FILE_DATA;
+    }
+
+    @Override
+    protected Message deserialize(ByteContainer buffer) {
+        relativePath = buffer.readType(String.class);
+        blockNumber = buffer.readType(Integer.class);
+        totalBlocks = buffer.readType(Integer.class);
+        data = buffer.readType(byte[].class);
+        return this;
+    }
+
+    @Override
+    protected void serialize(ByteContainer buffer) {
+        buffer.writeType(relativePath);
+        buffer.writeType(blockNumber);
+        buffer.writeType(totalBlocks);
+        buffer.writeType(data);
     }
 
     // Getters and setters

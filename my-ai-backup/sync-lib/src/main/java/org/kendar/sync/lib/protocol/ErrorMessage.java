@@ -1,5 +1,7 @@
 package org.kendar.sync.lib.protocol;
 
+import org.kendar.sync.lib.buffer.ByteContainer;
+
 /**
  * Message used to report errors during the synchronization process.
  * Can be sent by either the client or the server.
@@ -8,7 +10,9 @@ public class ErrorMessage extends Message {
     private String errorCode;
     private String errorMessage;
     private String details;
-
+    static {
+        Message.registerMessageType(ErrorMessage.class);
+    }
     // Default constructor for Jackson
     public ErrorMessage() {
     }
@@ -50,6 +54,23 @@ public class ErrorMessage extends Message {
     @Override
     public MessageType getMessageType() {
         return MessageType.ERROR;
+    }
+
+    @Override
+    protected Message deserialize(ByteContainer buffer) {
+        errorCode = buffer.readType(String.class);
+        errorMessage = buffer.readType(String.class);
+        details = buffer.readType(String.class);
+        return this;
+    }
+
+    @Override
+    protected void serialize(ByteContainer buffer) {
+        buffer.writeType(errorCode);
+        if(errorMessage!=null)buffer.writeType(errorMessage);
+        else buffer.writeType("");
+        if(details!=null)buffer.writeType(details);
+        else buffer.writeType("");
     }
 
     // Getters and setters

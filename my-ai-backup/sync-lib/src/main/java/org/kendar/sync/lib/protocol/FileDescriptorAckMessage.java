@@ -1,5 +1,7 @@
 package org.kendar.sync.lib.protocol;
 
+import org.kendar.sync.lib.buffer.ByteContainer;
+
 /**
  * Message sent in response to a file descriptor message to acknowledge that the receiver
  * is ready to receive the file data.
@@ -9,6 +11,9 @@ public class FileDescriptorAckMessage extends Message {
     private boolean ready;
     private String errorMessage;
 
+    static {
+        Message.registerMessageType(FileDescriptorAckMessage.class);
+    }
     // Default constructor for Jackson
     public FileDescriptorAckMessage() {
     }
@@ -50,6 +55,22 @@ public class FileDescriptorAckMessage extends Message {
     @Override
     public MessageType getMessageType() {
         return MessageType.FILE_DESCRIPTOR_ACK;
+    }
+
+    @Override
+    protected Message deserialize(ByteContainer buffer) {
+        relativePath = buffer.readType(String.class);
+        ready = buffer.readType(Boolean.class);
+        errorMessage = buffer.readType(String.class);
+        return this;
+    }
+
+    @Override
+    protected void serialize(ByteContainer buffer) {
+        buffer.writeType(relativePath);
+        buffer.writeType(ready);
+        if(errorMessage!=null)buffer.writeType(errorMessage);
+        else buffer.writeType("");
     }
 
     // Getters and setters

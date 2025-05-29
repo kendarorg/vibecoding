@@ -1,5 +1,6 @@
 package org.kendar.sync.lib.protocol;
 
+import org.kendar.sync.lib.buffer.ByteContainer;
 import org.kendar.sync.lib.model.FileInfo;
 
 import java.util.ArrayList;
@@ -15,7 +16,9 @@ public class FileListResponseMessage extends Message {
     private boolean isBackup;
     private int partNumber;
     private int totalParts;
-
+    static {
+        Message.registerMessageType(FileListResponseMessage.class);
+    }
     // Default constructor for Jackson
     public FileListResponseMessage() {
         this.filesToTransfer = new ArrayList<>();
@@ -43,6 +46,40 @@ public class FileListResponseMessage extends Message {
     @Override
     public MessageType getMessageType() {
         return MessageType.FILE_LIST_RESPONSE;
+    }
+
+    @Override
+    protected Message deserialize(ByteContainer buffer) {
+        var filesLines = buffer.readType(String.class).split("\n");
+        filesToTransfer = new ArrayList<>();
+        for(var fileLine:filesLines){
+            if (!fileLine.isEmpty()) {
+                filesToTransfer.add(FileInfo.fromLine(fileLine));
+            }
+        }
+        var filesToDeleteLine = buffer.readType(String.class);
+        filesToDelete = new ArrayList<>();
+        for(var fileToDeleteLine:filesToDeleteLine.split("\n")){
+            if (!fileToDeleteLine.isEmpty()) {
+                filesToDelete.add(fileToDeleteLine);
+            }
+        }
+        isBackup = buffer.readType(Boolean.class);
+        partNumber = buffer.readType(Integer.class);
+        totalParts = buffer.readType(Integer.class);
+        return this;
+    }
+
+    @Override
+    protected void serialize(ByteContainer buffer) {
+        var filesLines = filesToTransfer.stream()
+                .map(FileInfo::toLine)
+                .toList();
+        buffer.writeType(String.join("\n",filesLines));
+        buffer.writeType(String.join("\n",filesToDelete));
+        buffer.writeType(isBackup);
+        buffer.writeType(partNumber);
+        buffer.writeType(totalParts);
     }
 
     // Getters and setters

@@ -1,5 +1,6 @@
 package org.kendar.sync.lib.protocol;
 
+import org.kendar.sync.lib.buffer.ByteContainer;
 import org.kendar.sync.lib.model.FileInfo;
 
 /**
@@ -8,7 +9,9 @@ import org.kendar.sync.lib.model.FileInfo;
 public class FileEndMessage extends Message {
     private String relativePath;
     private FileInfo fileInfo;
-
+    static {
+        Message.registerMessageType(FileEndMessage.class);
+    }
     // Default constructor for Jackson
     public FileEndMessage() {
     }
@@ -37,6 +40,21 @@ public class FileEndMessage extends Message {
     @Override
     public MessageType getMessageType() {
         return MessageType.FILE_END;
+    }
+
+    @Override
+    protected Message deserialize(ByteContainer buffer) {
+        relativePath = buffer.readType(String.class);
+        var ff=buffer.readType(String.class);
+        if(!ff.isEmpty())fileInfo = FileInfo.fromLine(ff);
+        return this;
+    }
+
+    @Override
+    protected void serialize(ByteContainer buffer) {
+        buffer.writeType(relativePath);
+        if(fileInfo!=null)buffer.writeType(fileInfo.toLine());
+        else buffer.writeType("");
     }
 
     // Getters and setters

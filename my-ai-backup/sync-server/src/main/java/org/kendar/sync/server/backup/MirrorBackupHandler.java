@@ -190,6 +190,7 @@ public class MirrorBackupHandler extends BackupHandler {
         try {
             completionLatch.await();
             System.out.println("[MIRROR] All file transfers completed");
+            connection.close();
         } catch (InterruptedException e) {
             System.err.println("[MIRROR] File transfer interrupted: " + e.getMessage());
             Thread.currentThread().interrupt();

@@ -223,6 +223,18 @@ As you did for the backup, use maxConnections tcp connections to receive the fil
 
 Copy for real
 
+### Manual 012
+
+Added on of my optimized buffers to replace the json serializer
+
+### Prompot 013
+
+Implement the missing method in the open classes extending Message using the ConnectMessage as an Example
+
+### MAnual 013
+
+Adapt the tests and fix the missing serialization of subitems
+
 
 
 

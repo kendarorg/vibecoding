@@ -97,7 +97,8 @@ public class Server {
             } else if (message.getMessageType() == MessageType.FILE_DESCRIPTOR) {
                 try {
                     var session = sessions.get(message.getSessionId());
-                    while (session != null) {
+                    while (session != null ) {
+                        if(message==null)return;
                         connection.setSessionId(message.getSessionId());
                         connection.setConnectionId(message.getConnectionId());
                         session.setConnection(connection);
@@ -185,7 +186,7 @@ public class Server {
                 }
             }
         } catch (IOException e) {
-            System.err.println("Error handling client: " + e.getMessage());
+            System.err.println("[SERVER] Error handling client: " + e.getMessage());
             try {
                 clientSocket.close();
             } catch (IOException ex) {

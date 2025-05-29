@@ -215,6 +215,7 @@ public class SyncClient {
         try {
             completionLatch.await();
             System.out.println("[CLIENT] All file transfers completed 1");
+            connection.close();
         } catch (InterruptedException e) {
             System.err.println("[CLIENT] File transfer interrupted 1: " + e.getMessage());
             Thread.currentThread().interrupt();
@@ -575,6 +576,7 @@ public class SyncClient {
         try {
             completionLatch.await();
             System.out.println("[CLIENT] All file transfers completed 2");
+            connection.close();
         } catch (InterruptedException e) {
             System.err.println("[CLIENT] File transfer interrupted 2: " + e.getMessage());
             Thread.currentThread().interrupt();

@@ -8,7 +8,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.util.Date;
 import java.util.Objects;
 
 /**
@@ -69,6 +71,31 @@ public class FileInfo {
                 attrs.lastModifiedTime().toInstant(),
                 file.isDirectory()
         );
+    }
+
+    public static FileInfo fromLine(String fileLine) {
+        try {
+            String[] parts = fileLine.split("\t");
+            if (parts.length < 5) {
+                throw new IllegalArgumentException("Invalid file line format: " + fileLine);
+            }
+            var dtf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+            String relativePath = parts[0];
+            long size = Long.parseLong(parts[1]);
+            Instant creationTime = dtf.parse(parts[2]).toInstant();
+            Instant modificationTime = dtf.parse(parts[3]).toInstant();
+            boolean isDirectory = Boolean.parseBoolean(parts[4]);
+            return new FileInfo(
+                    null, // path is not needed here
+                    relativePath,
+                    size,
+                    creationTime,
+                    modificationTime,
+                    isDirectory
+            );
+        }catch (Exception ex){
+            throw new RuntimeException(ex);
+        }
     }
 
     /**
@@ -150,5 +177,16 @@ public class FileInfo {
                 ", size=" + size +
                 ", modificationTime=" + modificationTime +
                 '}';
+    }
+
+    public String toLine() {
+        var dtf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        return String.join("\t",
+                relativePath,
+                String.valueOf(size),
+                dtf.format(new Date(creationTime.toEpochMilli())),
+                dtf.format(new Date(modificationTime.toEpochMilli())),
+                String.valueOf(isDirectory)
+        );
     }
 }

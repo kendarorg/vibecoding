@@ -1,5 +1,6 @@
 package org.kendar.sync.lib.protocol;
 
+import org.kendar.sync.lib.buffer.ByteContainer;
 import org.kendar.sync.lib.model.FileInfo;
 
 import java.util.ArrayList;
@@ -14,7 +15,9 @@ public class FileListMessage extends Message {
     private boolean isBackup;
     private int partNumber;
     private int totalParts;
-
+    static {
+        Message.registerMessageType(FileListMessage.class);
+    }
     // Default constructor for Jackson
     public FileListMessage() {
         this.files = new ArrayList<>();
@@ -38,6 +41,32 @@ public class FileListMessage extends Message {
     @Override
     public MessageType getMessageType() {
         return MessageType.FILE_LIST;
+    }
+
+    @Override
+    protected Message deserialize(ByteContainer buffer) {
+        var filesLines = buffer.readType(String.class).split("\n");
+        files = new ArrayList<>();
+        for(var fileLine:filesLines){
+            if (!fileLine.isEmpty()) {
+                files.add(FileInfo.fromLine(fileLine));
+            }
+        }
+        isBackup = buffer.readType(Boolean.class);
+        partNumber = buffer.readType(Integer.class);
+        totalParts = buffer.readType(Integer.class);
+        return this;
+    }
+
+    @Override
+    protected void serialize(ByteContainer buffer) {
+        var filesLines = files.stream()
+                .map(FileInfo::toLine)
+                .toList();
+        buffer.writeType(String.join("\n",filesLines));
+        buffer.writeType(isBackup);
+        buffer.writeType(partNumber);
+        buffer.writeType(totalParts);
     }
 
     // Getters and setters

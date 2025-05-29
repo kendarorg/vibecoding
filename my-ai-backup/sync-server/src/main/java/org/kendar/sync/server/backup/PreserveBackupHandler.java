@@ -167,6 +167,7 @@ public class PreserveBackupHandler extends BackupHandler {
         try {
             completionLatch.await();
             System.out.println("[PRESERVE] All file transfers completed");
+            connection.close();
         } catch (InterruptedException e) {
             System.err.println("[PRESERVE] File transfer interrupted: " + e.getMessage());
             Thread.currentThread().interrupt();
