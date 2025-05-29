@@ -219,6 +219,10 @@ In the client instead of sending all data in one block, read in blocks of maxPac
 
 As you did for the backup, use maxConnections tcp connections to receive the files when restoring
 
+### Fix 011 
+
+Copy for real
+
 
 
 
