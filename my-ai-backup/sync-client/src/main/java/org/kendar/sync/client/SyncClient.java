@@ -118,6 +118,7 @@ public class SyncClient {
                 } else {
                     log.debug("[CLIENT] Dry run: Would write file data to {}", targetFile.getAbsolutePath());
                 }
+                currentConnection.sendMessage(new FileDataAck());
                 message = currentConnection.receiveMessage();
                 if (message.getMessageType() != MessageType.FILE_DATA) {
                     if (!fileDataMessage.isLastBlock()) {
@@ -219,12 +220,24 @@ public class SyncClient {
             startRestoreMessage.initialize(subConnection.getConnectionId(),
                     subConnection.getSessionId(), 0);
             subConnection.sendMessage(startRestoreMessage);
+            var message = subConnection.receiveMessage();
+            if(message.getMessageType() != MessageType.START_RESTORE_ACK){
+                log.error("[CLIENT] Unexpected message 5: {}", message.getMessageType());
+                throw new IOException("Unexpected message 5: " + message.getMessageType());
+            }
         }
-        Sleeper.sleep(1000);
+
+        //Sleeper.sleep(1000);
         Message startRestoreMessage = new StartRestore();
         startRestoreMessage.initialize(connection.getConnectionId(),
                 connection.getSessionId(), 0);
         connection.sendMessage(startRestoreMessage);
+
+        var message = connection.receiveMessage();
+        if(message.getMessageType() != MessageType.START_RESTORE_ACK){
+            log.error("[CLIENT] Unexpected message 6: {}", message.getMessageType());
+            throw new IOException("Unexpected message 6: " + message.getMessageType());
+        }
 
         // Process files to transfer
         while (!mapToTransfer.isEmpty()) {
@@ -394,6 +407,12 @@ public class SyncClient {
                     FileDataMessage fileDataMessage = new FileDataMessage(
                             file.getRelativePath(), blockNumber, totalBlocks, blockData);
                     connection.sendMessage(fileDataMessage);
+
+                    var fileAck = connection.receiveMessage();
+                    if (fileAck.getMessageType() != MessageType.FILE_DATA_ACK) {
+                        log.error("[CLIENT-{}] Unexpected response 9: {}",connectionId, response.getMessageType());
+                        return;
+                    }
 
                     log.debug("[CLIENT-{}] Sent block {} of {} ({} bytes)", connectionId, blockNumber + 1, totalBlocks, blockData.length);
 
@@ -579,12 +598,13 @@ public class SyncClient {
             executorService.submit(() -> {
                 TcpConnection currentConnection = null;
                 try {
-                    log.debug("[CLIENT] transferring file {}", file.getRelativePath());
+
                     //semaphore.acquire();
                     currentConnection = connections.poll();
                     if (currentConnection == null) {
                         throw new RuntimeException("[CLIENT] No connection available");
                     }
+                    log.debug("[CLIENT-"+currentConnection.getConnectionId()+"] transferring file {}", file.getRelativePath());
                     transferFile(file, args, currentConnection);
                 } catch (Exception e) {
                     log.error("[CLIENT] Error transferring file {}: {}", file.getRelativePath(), e.getMessage());

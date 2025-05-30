@@ -33,7 +33,9 @@ Backup client and server with Junie, spring-boot, binary tcp protocol and web-ui
 * I went to implement directly the algorithm for internal synchronization and its tests (plus some small refactoring) because it would had been to long to explain!
 * After this i tried to do the file transfers in parallel for backup and restore. But the results where atrocious, i kept just the main skeleton and cloned around
 * I tried then to add my buffer implementation, for serialization, and the new serialize/deserialize methods where mostly added to the messages classes BUT forgot to implement the conversion for the sub objects. Here the autocomplete was very kind
-* I discovered the #file:filename.ext trick to set the scope and trying a refactor for duplicate code. Plus the fact that the "chat" allows in this case to apply the modification on a per-file basis 
+* I discovered the #file:filename.ext trick to set the scope and trying a refactor for duplicate code. Plus the fact that the "chat" allows in this case to apply the modification on a per-file basis
+* Then some basic refactoring was made by hand (mostly changes for reformatting and code inspection)
+* Running lots of times the system raised a problem with the connection sometimes hanged. 20% of credit spent in analysis with no result. Did by hand
 
 
 ### my-ai-cms according to Claude

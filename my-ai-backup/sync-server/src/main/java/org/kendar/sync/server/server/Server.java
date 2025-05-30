@@ -3,6 +3,7 @@ package org.kendar.sync.server.server;
 import org.kendar.sync.lib.model.ServerSettings;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
+import org.kendar.sync.lib.utils.Sleeper;
 import org.kendar.sync.server.backup.BackupHandler;
 import org.kendar.sync.server.backup.DateSeparatedBackupHandler;
 import org.kendar.sync.server.backup.MirrorBackupHandler;
@@ -16,6 +17,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ServiceLoader;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -101,6 +103,7 @@ public class Server {
                 connection.setSessionId(message.getSessionId());
                 connection.setConnectionId(message.getConnectionId());
                 session.setConnection(connection);
+                connection.sendMessage(new StartRestoreAck());
                 return;
             } else if (message.getMessageType() == MessageType.FILE_DESCRIPTOR) {
                 try {
@@ -116,6 +119,10 @@ public class Server {
                         while (message.getMessageType() == MessageType.FILE_DATA) {
                             handleFileData(connection, session, (FileDataMessage) message);
                             message = connection.receiveMessage();
+                        }
+                        if(message.getMessageType()!=MessageType.FILE_END){
+                            log.error("[SERVER] Unexpected message 1: {}", message.getMessageType());
+                            return;
                         }
                         //message = connection.receiveMessage();
                         handleFileEnd(connection, session, (FileEndMessage) message);
@@ -178,6 +185,9 @@ public class Server {
             // Handle messages
             while (true) {
                 message = connection.receiveMessage();
+                if(message==null){
+                    break;
+                }
                 switch (message.getMessageType()) {
                     case FILE_LIST:
                         handleFileList(connection, session, (FileListMessage) message);
@@ -272,6 +282,7 @@ public class Server {
 
         // Delegate to the backup handler
         handler.handleFileData(connection, session, message);
+        connection.sendMessage(new FileDataAck());
     }
 
     /**

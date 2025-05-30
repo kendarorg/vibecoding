@@ -95,6 +95,7 @@ public abstract class BackupHandler {
             log.error("[SERVER] Unexpected response 1: {}", startRestoreMessage.getMessageType());
             return;
         }
+        connection.sendMessage(new StartRestoreAck());
 
         var connections = new ConcurrentLinkedQueue<>(session.getConnections());
         var maxConnections = connections.size();
@@ -221,6 +222,11 @@ public abstract class BackupHandler {
                 FileDataMessage fileDataMessage = new FileDataMessage(
                         file.getRelativePath(), blockNumber, totalBlocks, blockData);
                 connection.sendMessage(fileDataMessage);
+                var response = connection.receiveMessage();
+                if (response.getMessageType() != MessageType.FILE_DATA_ACK) {
+                    log.error("[SERVER] Unexpected response 9: {}", response.getMessageType());
+                    return;
+                }
 
                 log.debug("[SERVER-{}] Sent block {} of {} ({} bytes)", connectionId, blockNumber + 1, totalBlocks, blockData.length);
 

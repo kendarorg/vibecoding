@@ -13,21 +13,15 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * Utility class for file operations.
  */
 public class FileUtils {
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy/MM/dd");
     private static final Logger log = LoggerFactory.getLogger(FileUtils.class);
 
     /**
@@ -147,9 +141,9 @@ public class FileUtils {
             return targetDir;
         }
 
+        var dtf = new SimpleDateFormat("yyyy-MM-dd");
         // For DATE_SEPARATED, create a directory structure based on the file's modification date
-        LocalDate date = LocalDate.ofInstant(file.getModificationTime(), ZoneId.systemDefault());
-        String dateDir = date.format(DATE_FORMATTER);
+        var dateDir = dtf.format(new Date(file.getModificationTime().toEpochMilli()));
 
         return Paths.get(targetDir, dateDir).toString();
     }

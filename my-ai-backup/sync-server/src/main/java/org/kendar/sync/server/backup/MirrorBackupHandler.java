@@ -113,6 +113,7 @@ public class MirrorBackupHandler extends BackupHandler {
             return;
         }
 
+        log.debug("[SERVER] Received FILE_DATA message");
         int connectionId = connection.getConnectionId();
         FileInfo fileInfo = null;
 
@@ -151,6 +152,8 @@ public class MirrorBackupHandler extends BackupHandler {
 
     @Override
     public void handleFileEnd(TcpConnection connection, ClientSession session, FileEndMessage message) throws IOException {
+        log.debug("[SERVER] Received FILE_END message");
+
         int connectionId = connection.getConnectionId();
         FileInfo fileInfo;
 
