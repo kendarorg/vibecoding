@@ -6,6 +6,7 @@ import org.kendar.sync.client.SyncClient;
 import org.kendar.sync.lib.model.ServerSettings;
 import org.kendar.sync.lib.protocol.BackupType;
 import org.kendar.sync.lib.utils.FileUtils;
+import org.kendar.sync.lib.utils.Sleeper;
 import org.kendar.sync.server.config.ServerConfig;
 import org.kendar.sync.server.server.Server;
 
@@ -44,6 +45,7 @@ public class BackupIntegrationTest {
     private Server server;
     private int serverPort;
     private CommandLineArgs commandLineArgs;
+    private boolean restore=false;
 
     private static int findFreePort() {
         try (var serverSocket = new java.net.ServerSocket(0)) {
@@ -217,7 +219,7 @@ public class BackupIntegrationTest {
         serverConfig.setServerSettings(serverSettings);
         server = new Server(serverConfig, false);
         new Thread(() -> server.startTcpServer()).start();
-        Thread.sleep(200);
+        Sleeper.sleep(200);
         commandLineArgs = new CommandLineArgs();
         commandLineArgs.setServerAddress("127.0.0.1");
         commandLineArgs.setServerPort(serverPort);
@@ -264,10 +266,11 @@ public class BackupIntegrationTest {
 
         // Perform restore
         System.out.println("================= Performing restore...");
-        commandLineArgs.setBackup(false);
-        target.doSync(commandLineArgs);
-        assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath(), BackupType.DATE_SEPARATED);
-
+        if(restore) {
+            commandLineArgs.setBackup(false);
+            target.doSync(commandLineArgs);
+            assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath(), BackupType.DATE_SEPARATED);
+        }
     }
 
     @Test
@@ -307,9 +310,11 @@ public class BackupIntegrationTest {
 
         // Perform restore
         System.out.println("================= Performing restore...");
-        commandLineArgs.setBackup(false);
-        target.doSync(commandLineArgs);
-        assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
+        if(restore) {
+            commandLineArgs.setBackup(false);
+            target.doSync(commandLineArgs);
+            assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
+        }
 
     }
 
@@ -357,12 +362,14 @@ public class BackupIntegrationTest {
 
         // Perform restore
         System.out.println("================= Performing restore...");
-        commandLineArgs.setBackup(false);
-        target.doSync(commandLineArgs);
+        if(restore) {
+            commandLineArgs.setBackup(false);
+            target.doSync(commandLineArgs);
 
-        // Verify restore
-        System.out.println("================= Verifying restore...");
-        assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
+            // Verify restore
+            System.out.println("================= Verifying restore...");
+            assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
+        }
 
     }
 

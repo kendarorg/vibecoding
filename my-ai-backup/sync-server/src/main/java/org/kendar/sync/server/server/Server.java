@@ -88,6 +88,11 @@ public class Server {
 
             // Wait for connect message
             Message message = connection.receiveMessage();
+            if(message==null) {
+                System.err.println("[SERVER] Client disconnected before sending CONNECT message");
+                connection.close();
+                return;
+            }
             if (message.getMessageType() == MessageType.START_RESTORE) {
                 var session = sessions.get(message.getSessionId());
                 connection.setSessionId(message.getSessionId());

@@ -218,7 +218,6 @@ public class SyncClient {
             connection.close();
         } catch (InterruptedException e) {
             System.err.println("[CLIENT] File transfer interrupted 1: " + e.getMessage());
-            Thread.currentThread().interrupt();
         } finally {
             executorService.shutdown();
         }
@@ -579,7 +578,6 @@ public class SyncClient {
             connection.close();
         } catch (InterruptedException e) {
             System.err.println("[CLIENT] File transfer interrupted 2: " + e.getMessage());
-            Thread.currentThread().interrupt();
         } finally {
             executorService.shutdown();
         }

@@ -118,7 +118,6 @@ public abstract class BackupHandler {
             connection.close();
         } catch (InterruptedException e) {
             System.err.println("[" + getHandlerType() + "] File transfer interrupted: " + e.getMessage());
-            Thread.currentThread().interrupt();
         } finally {
             executorService.shutdown();
         }
