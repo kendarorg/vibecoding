@@ -84,6 +84,7 @@ public class MirrorBackupHandler extends BackupHandler {
             }
         }
         var filesToSend = filesOnClient.values().stream().filter(f -> !f.isDirectory()).toList();
+
         connection.sendMessage(new FileListResponseMessage(filesToSend, removedFiles, true, 1, 1));
 
         if (message.isBackup()) {
@@ -141,9 +142,7 @@ public class MirrorBackupHandler extends BackupHandler {
             relativePath = message.getRelativePath();
         }
         File file = new File(session.getFolder().getRealPath(), relativePath);
-        if (!file.getParentFile().exists() && !file.getParentFile().mkdirs()) {
-            throw new IOException("Failed to create directory 6: " + file.getParentFile().getAbsolutePath());
-        }
+        file.getParentFile().mkdirs();
         try (FileOutputStream fos = new FileOutputStream(file, message.isFirstBlock())) {
             fos.write(message.getData());
         }

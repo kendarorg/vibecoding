@@ -65,9 +65,7 @@ public class SyncClient {
 
             if (fileInfo.isDirectory()) {
                 if (!args.isDryRun()) {
-                    if (!targetFile.mkdirs()) {
-                        throw new IOException("Failed to create directory 2: " + targetFile.getAbsolutePath());
-                    }
+                    targetFile.mkdirs();
                 } else {
                     log.debug("[CLIENT] Dry run: Would create directory {}", targetFile.getAbsolutePath());
                 }
@@ -81,10 +79,7 @@ public class SyncClient {
 
             // Create parent directories
             if (!args.isDryRun()) {
-                if (!targetFile.getParentFile().exists() && !targetFile.getParentFile().mkdirs()) {
-                    throw new IOException("Failed to create directory 3: " +
-                            targetFile.getParentFile().getAbsolutePath());
-                }
+                targetFile.getParentFile().mkdirs();
             } else {
                 log.debug("[CLIENT] Dry run: Would create parent directories for {}", targetFile.getAbsolutePath());
             }
@@ -106,10 +101,7 @@ public class SyncClient {
                 // Write file data
                 if (!args.isDryRun()) {
                     // Create parent directories if needed
-                    if (!targetFile.getParentFile().exists() && !targetFile.getParentFile().mkdirs()) {
-                        throw new IOException("Failed to create directory 4: " +
-                                targetFile.getParentFile().getAbsolutePath());
-                    }
+                    targetFile.getParentFile().mkdirs();
 
                     // Write the data to the file
                     try (FileOutputStream fos = new FileOutputStream(targetFile, fileDataMessage.isFirstBlock())) {

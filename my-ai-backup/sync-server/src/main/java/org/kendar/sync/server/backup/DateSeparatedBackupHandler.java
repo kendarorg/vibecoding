@@ -130,9 +130,7 @@ public class DateSeparatedBackupHandler extends BackupHandler {
         String relativePath = message.getRelativePath();
         File targetFile = new File(new File(session.getFolder().getRealPath(), dateDir), relativePath);
 
-        if (!targetFile.getParentFile().exists() && !targetFile.getParentFile().mkdirs()) {
-            throw new IOException("Failed to create directory 1: " + targetFile.getParentFile().getAbsolutePath());
-        }
+        targetFile.getParentFile().mkdirs();
 
         try (FileOutputStream fos = new FileOutputStream(targetFile, message.isFirstBlock())) {
             fos.write(message.getData());

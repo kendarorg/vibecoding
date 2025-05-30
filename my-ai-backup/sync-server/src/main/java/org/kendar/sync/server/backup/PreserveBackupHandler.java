@@ -117,9 +117,7 @@ public class PreserveBackupHandler extends BackupHandler {
             relativePath = message.getRelativePath();
         }
         File file = new File(session.getFolder().getRealPath(), relativePath);
-        if (!file.getParentFile().exists() && !file.getParentFile().mkdirs()) {
-            throw new IOException("Failed to create directory 7: " + file.getParentFile().getAbsolutePath());
-        }
+        file.getParentFile().mkdirs();
         try (FileOutputStream fos = new FileOutputStream(file, message.isFirstBlock())) {
             fos.write(message.getData());
         }

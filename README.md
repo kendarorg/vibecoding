@@ -36,6 +36,8 @@ Backup client and server with Junie, spring-boot, binary tcp protocol and web-ui
 * I discovered the #file:filename.ext trick to set the scope and trying a refactor for duplicate code. Plus the fact that the "chat" allows in this case to apply the modification on a per-file basis
 * Then some basic refactoring was made by hand (mostly changes for reformatting and code inspection)
 * Running lots of times the system raised a problem with the connection sometimes hanged. 20% of credit spent in analysis with no result. Did by hand
+	* First issue, every request needed a response to keep the synchronization
+	* Second issue the return of mkdirs() when uploading the files is not usefule: many files can create it at once, and if the file exists false is returned
 
 
 ### my-ai-cms according to Claude
