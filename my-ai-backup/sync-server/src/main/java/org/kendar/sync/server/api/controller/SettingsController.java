@@ -2,7 +2,6 @@ package org.kendar.sync.server.api.controller;
 
 import org.kendar.sync.lib.model.ServerSettings;
 import org.kendar.sync.server.config.ServerConfig;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -18,11 +17,12 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/settings")
 public class SettingsController {
-    @Autowired
+    private final ServerConfig serverConfig;
     private ServerSettings serverSettings;
-
-    @Autowired
-    private ServerConfig serverConfig;
+    public SettingsController(ServerConfig serverConfig, ServerSettings serverSettings) {
+        this.serverConfig = serverConfig;
+        this.serverSettings = serverSettings;
+    }
 
     /**
      * Gets the server settings.

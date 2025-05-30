@@ -43,7 +43,7 @@ class ServerSettingsTest {
                 "documents",
                 testRoot.resolve("documents").toString(),
                 BackupType.MIRROR,
-                Arrays.asList("user1")
+                List.of("user1")
         );
 
         // Create server settings
@@ -124,7 +124,7 @@ class ServerSettingsTest {
                 "restricted",
                 testRoot.resolve("restricted").toString(),
                 BackupType.MIRROR,
-                Arrays.asList("user2")
+                List.of("user2")
         );
         serverSettings.getBackupFolders().add(restrictedFolder);
 
@@ -151,7 +151,7 @@ class ServerSettingsTest {
         serverSettings.setUsers(newUsers);
 
         List<ServerSettings.BackupFolder> newFolders = new ArrayList<>();
-        newFolders.add(new ServerSettings.BackupFolder("newfolder", "/new/path", BackupType.DATE_SEPARATED, Arrays.asList("user2")));
+        newFolders.add(new ServerSettings.BackupFolder("newfolder", "/new/path", BackupType.DATE_SEPARATED, List.of("user2")));
         serverSettings.setBackupFolders(newFolders);
 
         assertEquals(9090, serverSettings.getPort());

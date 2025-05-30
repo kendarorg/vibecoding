@@ -1,11 +1,6 @@
 package org.kendar.sync.server;
 
-import jakarta.servlet.Servlet;
-import org.kendar.sync.server.config.ServerConfig;
 import org.kendar.sync.server.config.SyncServerRunner;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -14,16 +9,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  */
 @SpringBootApplication
 public class SyncServerApplication {
-
-    private static final Logger log = LoggerFactory.getLogger(SyncServerApplication.class);
-    @Autowired
-    private ServerConfig serverConfig;
-    @Autowired
-    private Servlet servlet;
-    @Autowired
-    private SyncServerRunner runner;
-
-
     /**
      * Main method to start the application.
      *
@@ -39,6 +24,4 @@ public class SyncServerApplication {
         }
         SpringApplication.run(SyncServerApplication.class);
     }
-
-
 }
