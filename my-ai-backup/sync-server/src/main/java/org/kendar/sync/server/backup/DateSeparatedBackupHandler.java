@@ -26,6 +26,8 @@ import java.util.stream.Collectors;
  * Files on the target that don't exist on the source are preserved.
  * Files are organized in directories based on their modification date.
  */
+
+@SuppressWarnings("DuplicatedCode")
 public class DateSeparatedBackupHandler extends BackupHandler {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");

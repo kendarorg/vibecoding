@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
  * Handles backup operations for the PRESERVE backup type.
  * Files on the target that don't exist on the source are preserved.
  */
+@SuppressWarnings("DuplicatedCode")
 public class PreserveBackupHandler extends BackupHandler {
 
     private static final Logger log = LoggerFactory.getLogger(PreserveBackupHandler.class);

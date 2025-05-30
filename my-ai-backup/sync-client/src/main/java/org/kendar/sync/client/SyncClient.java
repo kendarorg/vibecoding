@@ -21,6 +21,7 @@ import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("DuplicatedCode")
 public class SyncClient {
 
     public static final int DEFAULT_MAX_PACKET_SIZE = 1024 * 1024; // 1 MB

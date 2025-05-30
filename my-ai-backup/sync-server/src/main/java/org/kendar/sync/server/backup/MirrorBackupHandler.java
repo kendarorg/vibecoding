@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
  * Handles backup operations for the MIRROR backup type.
  * Files on the target that don't exist on the source are deleted.
  */
+@SuppressWarnings("DuplicatedCode")
 public class MirrorBackupHandler extends BackupHandler {
 
     private static final Logger log = LoggerFactory.getLogger(MirrorBackupHandler.class);

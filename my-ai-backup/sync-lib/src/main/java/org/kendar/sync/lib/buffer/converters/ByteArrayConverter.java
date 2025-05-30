@@ -2,6 +2,8 @@ package org.kendar.sync.lib.buffer.converters;
 
 import org.kendar.sync.lib.buffer.ByteContainer;
 
+
+@SuppressWarnings("DuplicatedCode")
 public class ByteArrayConverter extends ByteContainerConverter<byte[]> {
     private static final IntConverter intConverter = new IntConverter();
 

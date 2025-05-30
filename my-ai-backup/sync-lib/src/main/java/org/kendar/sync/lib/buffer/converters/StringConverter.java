@@ -4,6 +4,7 @@ import org.kendar.sync.lib.buffer.ByteContainer;
 
 import java.nio.charset.StandardCharsets;
 
+@SuppressWarnings("DuplicatedCode")
 public class StringConverter extends ByteContainerConverter<String> {
     private static final IntConverter intConverter = new IntConverter();
 
