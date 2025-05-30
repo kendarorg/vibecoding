@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Represents a client session.
@@ -19,18 +20,22 @@ public class ClientSession {
     private final ServerSettings.BackupFolder folder;
     private final BackupType backupType;
     private final boolean dryRun;
+    private final int secondsTimeout;
     private final Map<Integer, FileInfo> currentFileTransfers = new HashMap<>();
     private final Set<TcpConnection> connections = new HashSet<>();
     private boolean isBackup = false;
     private TcpConnection mainConnection;
+    private final AtomicLong lastOperationTimestamp = new AtomicLong(0);
 
     public ClientSession(UUID sessionId, ServerSettings.User user, ServerSettings.BackupFolder folder,
-                         BackupType backupType, boolean dryRun) {
+                         BackupType backupType, boolean dryRun,
+                         int secondsTimeout) {
         this.sessionId = sessionId;
         this.user = user;
         this.folder = folder;
         this.backupType = backupType;
         this.dryRun = dryRun;
+        this.secondsTimeout = secondsTimeout;
     }
 
     public UUID getSessionId() {
@@ -125,5 +130,23 @@ public class ClientSession {
 
     public Set<TcpConnection> getConnections() {
         return connections;
+    }
+
+    /**
+     * Updates the last operation timestamp to the current time plus the specified timeout.
+     */
+    public void touch() {
+        lastOperationTimestamp.set(System.currentTimeMillis() +
+                secondsTimeout*1000);
+    }
+
+    /**
+     * Checks if the session has expired based on the last operation timestamp.
+     * 
+     * @return true if the current time is greater than or equal to the last operation timestamp,
+     *         false otherwise
+     */
+    public boolean isExpired() {
+        return System.currentTimeMillis() >= lastOperationTimestamp.get();
     }
 }

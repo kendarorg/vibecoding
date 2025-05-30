@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -21,6 +22,7 @@ public class TcpConnection implements AutoCloseable {
     private InputStream inputStream;
     private UUID sessionId;
     private int connectionId;
+    private Runnable sessionTouch;
 
     /**
      * Creates a new TCP connection.
@@ -74,6 +76,11 @@ public class TcpConnection implements AutoCloseable {
         byte[] packetData = packet.serialize();
         outputStream.write(packetData);
         outputStream.flush();
+
+        // Touch the session to indicate activity
+        if (sessionTouch != null) {
+            sessionTouch.run(); // 30 second timeout
+        }
     }
 
     /**
@@ -83,6 +90,11 @@ public class TcpConnection implements AutoCloseable {
      * @throws IOException If an I/O error occurs
      */
     public Message receiveMessage() throws IOException {
+        // Touch the session before reading to indicate activity
+        if (sessionTouch != null) {
+            sessionTouch.run(); // 30 second timeout
+        }
+
         // Read the packet length
         byte[] lengthBytes = new byte[4];
         this.inputStream = socket.getInputStream();
@@ -94,7 +106,7 @@ public class TcpConnection implements AutoCloseable {
             throw new IOException("Failed to read packet length");
         }
 
-        int packetLength = java.nio.ByteBuffer.wrap(lengthBytes).getInt();
+        int packetLength = ByteBuffer.wrap(lengthBytes).getInt();
         if (packetLength <= 0 || packetLength > (maxPacketSize + 1024)) {
             throw new IOException("Invalid packet length: " + packetLength);
         }
@@ -183,5 +195,12 @@ public class TcpConnection implements AutoCloseable {
 
     public boolean isClosed() {
         return !socket.isConnected() || socket.isClosed() || !socket.isBound();
+    }
+
+    /**
+     * Sets the client session associated with this connection.
+     */
+    public void setSession(Runnable sessionTouch) {
+        this.sessionTouch = sessionTouch;
     }
 }

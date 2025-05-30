@@ -32,6 +32,8 @@ public class Server {
     private final ServerConfig serverConfig;
     private boolean running = true;
     private ServerSocket mainSocket;
+    private final SessionMonitor sessionMonitor;
+    private final long sessionTimeoutMillis = 30000; // 30 seconds by default
 
     public Server(ServerConfig serverConfig, boolean dryRun) {
         this.serverConfig = serverConfig;
@@ -41,6 +43,9 @@ public class Server {
         backupHandlers.put(BackupType.PRESERVE, new PreserveBackupHandler());
         backupHandlers.put(BackupType.MIRROR, new MirrorBackupHandler());
         backupHandlers.put(BackupType.DATE_SEPARATED, new DateSeparatedBackupHandler());
+
+        // Initialize session monitor to check for hung sessions every 10 seconds
+        this.sessionMonitor = new SessionMonitor(sessions, 10);
     }
 
     /**
@@ -52,6 +57,9 @@ public class Server {
             int port = settings.getPort();
 
             log.info("Starting TCP server on port {}", port);
+
+            // Start the session monitor
+            sessionMonitor.start();
 
             try (ServerSocket serverSocket = new ServerSocket(port)) {
                 mainSocket = serverSocket;
@@ -102,7 +110,9 @@ public class Server {
                 var session = sessions.get(message.getSessionId());
                 connection.setSessionId(message.getSessionId());
                 connection.setConnectionId(message.getConnectionId());
+                connection.setSession(session);
                 session.setConnection(connection);
+                session.touch(sessionTimeoutMillis);
                 connection.sendMessage(new StartRestoreAck());
                 return;
             } else if (message.getMessageType() == MessageType.FILE_DESCRIPTOR) {
@@ -112,7 +122,9 @@ public class Server {
                         if (message == null) return;
                         connection.setSessionId(message.getSessionId());
                         connection.setConnectionId(message.getConnectionId());
+                        connection.setSession(session);
                         session.setConnection(connection);
+                        session.touch(sessionTimeoutMillis);
                         handleFileDescriptor(connection, session, (FileDescriptorMessage) message);
                         message = connection.receiveMessage();
                         var lastMessage = message;
@@ -178,6 +190,10 @@ public class Server {
             );
             sessions.put(sessionId, session);
             session.setMainConnection(connection);
+
+            // Set the session in the connection and touch it
+            connection.setSession(session);
+            session.touch(sessionTimeoutMillis);
 
             // Send connect response
             connection.sendMessage(new ConnectResponseMessage(true, null, settings.getMaxPacketSize(), settings.getMaxConnections()));
@@ -333,6 +349,12 @@ public class Server {
             mainSocket.close();
         } catch (Exception ex) {
             //NOOP
+        }
+
+        try {
+            sessionMonitor.close();
+        } catch (Exception ex) {
+            log.error("Error closing session monitor: {}", ex.getMessage());
         }
     }
 }
