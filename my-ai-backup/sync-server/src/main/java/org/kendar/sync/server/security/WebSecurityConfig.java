@@ -35,6 +35,7 @@ public class WebSecurityConfig {
                 // Don't authenticate this particular request
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers("/api/status").permitAll()
                         // All other requests need to be authenticated
                         .anyRequest().authenticated())
                 // Make sure we use stateless session; session won't be used to store user's state

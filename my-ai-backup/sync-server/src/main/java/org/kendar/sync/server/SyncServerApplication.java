@@ -2,26 +2,32 @@ package org.kendar.sync.server;
 
 import jakarta.servlet.Servlet;
 import org.kendar.sync.server.config.ServerConfig;
+import org.kendar.sync.server.config.TcpServerRunner;
 import org.kendar.sync.server.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
 
 /**
  * Main class for the sync server application.
  */
 @SpringBootApplication
-public class SyncServerApplication implements CommandLineRunner {
+public class SyncServerApplication  {
 
     private static final Logger log = LoggerFactory.getLogger(SyncServerApplication.class);
     @Autowired
     private ServerConfig serverConfig;
     @Autowired
     private Servlet servlet;
-    private boolean dryRun = false;
+    @Autowired
+    private TcpServerRunner runner;
+
 
     /**
      * Main method to start the application.
@@ -29,28 +35,15 @@ public class SyncServerApplication implements CommandLineRunner {
      * @param args Command line arguments
      */
     public static void main(String[] args) {
-
-        SpringApplication.run(SyncServerApplication.class, args);
-    }
-
-    /**
-     * Command line runner that starts the TCP server.
-     *
-     * @param args Command line arguments
-     */
-    @Override
-    public void run(String... args) {
         // Parse command line arguments
         for (String arg : args) {
             if (arg.equals("--dry-run")) {
-                dryRun = true;
+                TcpServerRunner.setDryRun(true);
                 System.out.println("Running in dry-run mode. No actual file operations will be performed.");
             }
         }
-
-        new Thread(() -> {
-            var server = new Server(serverConfig, dryRun);
-            server.startTcpServer();
-        }).start();
+        SpringApplication.run(SyncServerApplication.class);
     }
+
+
 }

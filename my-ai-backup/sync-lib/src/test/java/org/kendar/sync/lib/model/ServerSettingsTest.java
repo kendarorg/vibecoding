@@ -53,7 +53,7 @@ class ServerSettingsTest {
         List<ServerSettings.BackupFolder> folders = new ArrayList<>();
         folders.add(testFolder);
 
-        serverSettings = new ServerSettings(8080, 1024, 10, users, folders);
+        serverSettings = new ServerSettings(8090,8089, 1024, 10, users, folders);
     }
 
     @Test

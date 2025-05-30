@@ -1,5 +1,6 @@
 {
   "port" : 8090,
+  "webPort": 8089,
   "maxPacketSize" : 1048576,
   "maxConnections" : 5,
   "users" : [ {

@@ -33,7 +33,7 @@ public class Server {
 
     public Server(ServerConfig serverConfig, boolean dryRun) {
         this.serverConfig = serverConfig;
-        this.dryRun = dryRun;
+        this.dryRun = false;
 
         // Initialize backup handlers
         backupHandlers.put(BackupType.PRESERVE, new PreserveBackupHandler());
@@ -49,7 +49,7 @@ public class Server {
             ServerSettings settings = serverConfig.serverSettings();
             int port = settings.getPort();
 
-            log.debug("Starting TCP server on port {}", port);
+            log.info("Starting TCP server on port {}", port);
 
             try (ServerSocket serverSocket = new ServerSocket(port)) {
                 mainSocket = serverSocket;

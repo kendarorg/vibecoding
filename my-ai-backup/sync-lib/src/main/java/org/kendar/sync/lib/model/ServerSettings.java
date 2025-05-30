@@ -19,6 +19,7 @@ import java.util.UUID;
  */
 public class ServerSettings {
     private int port;
+    private int webPort;
     private int maxPacketSize;
     private int maxConnections;
     private List<User> users;
@@ -39,8 +40,9 @@ public class ServerSettings {
      * @param users          The list of users
      * @param backupFolders  The list of backup folders
      */
-    public ServerSettings(int port, int maxPacketSize, int maxConnections, List<User> users, List<BackupFolder> backupFolders) {
+    public ServerSettings(int port,int webPort, int maxPacketSize, int maxConnections, List<User> users, List<BackupFolder> backupFolders) {
         this.port = port;
+        this.webPort = webPort;
         this.maxPacketSize = maxPacketSize;
         this.maxConnections = maxConnections;
         this.users = users;
@@ -62,6 +64,7 @@ public class ServerSettings {
             // Create default settings
             ServerSettings settings = new ServerSettings();
             settings.setPort(8090);
+            settings.setWebPort(8089);
             settings.setMaxPacketSize(1024 * 1024); // 1 MB
             settings.setMaxConnections(5);
 
@@ -125,6 +128,14 @@ public class ServerSettings {
     }
 
     // Getters and setters
+    public int getWebPort() {
+        return webPort;
+    }
+
+    public void setWebPort(int webPort) {
+        this.webPort = webPort;
+    }
+
     public int getPort() {
         return port;
     }
