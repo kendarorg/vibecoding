@@ -6,7 +6,7 @@ import org.kendar.sync.lib.protocol.BackupType;
  * Class to hold command line arguments.
  */
 public class CommandLineArgs {
-    private static final int DEFAULT_PORT = 8080;
+    private static final int DEFAULT_PORT = 8090;
     private String sourceFolder;
     private String targetFolder;
     private boolean backup = true;

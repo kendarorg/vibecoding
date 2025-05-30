@@ -61,7 +61,7 @@ public class ServerSettings {
         if (!Files.exists(path)) {
             // Create default settings
             ServerSettings settings = new ServerSettings();
-            settings.setPort(8080);
+            settings.setPort(8090);
             settings.setMaxPacketSize(1024 * 1024); // 1 MB
             settings.setMaxConnections(5);
 
@@ -89,7 +89,9 @@ public class ServerSettings {
         File file = new File(filePath);
 
         // Create parent directories if they don't exist
-        file.getParentFile().mkdirs();
+        if (file.getParentFile() != null) {
+            file.getParentFile().mkdirs();
+        }
 
         mapper.writerWithDefaultPrettyPrinter().writeValue(file, this);
     }

@@ -135,7 +135,7 @@ class ServerSettingsTest {
     @Test
     void testGettersAndSetters() {
         // Test getters
-        assertEquals(8080, serverSettings.getPort());
+        assertEquals(8090, serverSettings.getPort());
         assertEquals(1024, serverSettings.getMaxPacketSize());
         assertEquals(10, serverSettings.getMaxConnections());
         assertEquals(1, serverSettings.getUsers().size());
@@ -204,7 +204,7 @@ class ServerSettingsTest {
 
         // Verify default settings are returned
         assertNotNull(defaultSettings);
-        assertEquals(8080, defaultSettings.getPort()); // Default port
+        assertEquals(8090, defaultSettings.getPort()); // Default port
         assertEquals(1, defaultSettings.getUsers().size());
         assertEquals(0, defaultSettings.getBackupFolders().size());
     }

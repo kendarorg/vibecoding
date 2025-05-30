@@ -140,7 +140,7 @@ public class SyncClientApp {
         System.out.println("  --conn, -c                  Max connections");
         System.out.println("  --size, -z                  Max packet size in bytes");
         System.out.println("  --server <address>          Server address");
-        System.out.println("  --port, -p <port>           Server port (default: 8080)");
+        System.out.println("  --port, -p <port>           Server port (default: 8090)");
         System.out.println("  --username, -u <username>   Username for authentication");
         System.out.println("  --password, -pw <password>  Password for authentication");
         System.out.println("  --dry-run, -d               Perform a dry run (no actual file operations)");
