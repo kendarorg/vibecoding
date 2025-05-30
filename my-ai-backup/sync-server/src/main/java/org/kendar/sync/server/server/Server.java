@@ -24,6 +24,8 @@ import java.util.concurrent.Executors;
 
 public class Server {
 
+    public static final int TIMEOUT_SECONDS = 30;  // 30 seconds by default
+
     private static final Logger log = LoggerFactory.getLogger(Server.class);
     private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final Map<UUID, ClientSession> sessions = new HashMap<>();
@@ -33,7 +35,6 @@ public class Server {
     private boolean running = true;
     private ServerSocket mainSocket;
     private final SessionMonitor sessionMonitor;
-    private final long sessionTimeoutMillis = 30000; // 30 seconds by default
 
     public Server(ServerConfig serverConfig, boolean dryRun) {
         this.serverConfig = serverConfig;
@@ -110,9 +111,8 @@ public class Server {
                 var session = sessions.get(message.getSessionId());
                 connection.setSessionId(message.getSessionId());
                 connection.setConnectionId(message.getConnectionId());
-                connection.setSession(session);
+                connection.setSession(()->session.touch());
                 session.setConnection(connection);
-                session.touch(sessionTimeoutMillis);
                 connection.sendMessage(new StartRestoreAck());
                 return;
             } else if (message.getMessageType() == MessageType.FILE_DESCRIPTOR) {
@@ -122,9 +122,9 @@ public class Server {
                         if (message == null) return;
                         connection.setSessionId(message.getSessionId());
                         connection.setConnectionId(message.getConnectionId());
-                        connection.setSession(session);
+                        var sess= session;
+                        connection.setSession(()->sess.touch());
                         session.setConnection(connection);
-                        session.touch(sessionTimeoutMillis);
                         handleFileDescriptor(connection, session, (FileDescriptorMessage) message);
                         message = connection.receiveMessage();
                         var lastMessage = message;
@@ -186,14 +186,14 @@ public class Server {
                     user,
                     folder,
                     folder.getBackupType(),
-                    connectMessage.isDryRun() || dryRun
+                    connectMessage.isDryRun() || dryRun,
+                    TIMEOUT_SECONDS
             );
             sessions.put(sessionId, session);
             session.setMainConnection(connection);
 
             // Set the session in the connection and touch it
-            connection.setSession(session);
-            session.touch(sessionTimeoutMillis);
+            connection.setSession(()->session.touch());
 
             // Send connect response
             connection.sendMessage(new ConnectResponseMessage(true, null, settings.getMaxPacketSize(), settings.getMaxConnections()));

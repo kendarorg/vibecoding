@@ -243,6 +243,24 @@ given these files refactor them to reduce duplication. Here some info
 * Inside the handleFileList the sending of the files when doing restore (!isBackup) is very similar. Could do a common function in BackupHandler handling the common parts receiving a lambda with the specific operations 
 * Preparing and sending the FileDataMessage should be a common part too.
 
+### Fix 014
+
+All tentative useless, the error is not recognized
+Made with human reasoning :)
+
+### Prompt 017
+
+Should add on sync-server module a way to handle hung transfers
+* On session 
+	* set an AtomicLong lastOperationTimestamp set to 0
+	* expose two public function
+		* touch() that set the lastOperationTimestamp to now milliseconds+timeout milliseconds
+		* isExpired() verify that now < lastOperationTimestamp
+* When creating a TcpConnection it will need a session
+	* Writing or starting reading from a connection will "touch" the session
+* Parallel to the listening thread there will be another thread that will monitor every 10 seconds all the session
+	* When the session is expired disconnect it
+
 
 
 

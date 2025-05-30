@@ -38,7 +38,7 @@ public class SessionMonitor implements AutoCloseable {
                 monitorIntervalSeconds, 
                 monitorIntervalSeconds, 
                 TimeUnit.SECONDS);
-        log.info("Session monitor started, checking sessions every {} seconds", monitorIntervalSeconds);
+        log.debug("Session monitor started, checking sessions every {} seconds", monitorIntervalSeconds);
     }
 
     /**
@@ -78,6 +78,6 @@ public class SessionMonitor implements AutoCloseable {
             scheduler.shutdownNow();
             Thread.currentThread().interrupt();
         }
-        log.info("Session monitor stopped");
+        log.debug("Session monitor stopped");
     }
 }
