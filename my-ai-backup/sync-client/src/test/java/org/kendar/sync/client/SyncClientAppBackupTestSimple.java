@@ -121,10 +121,10 @@ class SyncClientAppBackupTestSimple {
 
         // Add FileDescriptorAck responses for each file
         mockConnection.addMessageToReturn(FileDescriptorAckMessage.ready(sourceDir.getName() + "/testFile1.txt"));
-        // Add FileEndAck responses for each file
+        mockConnection.addMessageToReturn(new FileDataAck());
         mockConnection.addMessageToReturn(FileEndAckMessage.success(sourceDir.getName() + "/testFile1.txt"));
         mockConnection.addMessageToReturn(FileDescriptorAckMessage.ready(sourceDir.getName() + "/subdir/testFile2.txt"));
-
+        mockConnection.addMessageToReturn(new FileDataAck());
         mockConnection.addMessageToReturn(FileEndAckMessage.success(sourceDir.getName() + "/subdir/testFile2.txt"));
 
         // Call the performBackup method

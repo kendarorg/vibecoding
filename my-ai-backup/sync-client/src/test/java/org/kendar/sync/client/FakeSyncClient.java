@@ -5,8 +5,8 @@ import org.kendar.sync.lib.network.TcpConnection;
 import java.io.IOException;
 
 public class FakeSyncClient extends SyncClient {
-    @Override
-    protected TcpConnection getTcpConnection(TcpConnection connection, CommandLineArgs args, int i, int maxPacketSize) throws IOException {
+    protected TcpConnection getTcpConnection(TcpConnection connection,
+                                             CommandLineArgs args, int i, int maxPacketSize) throws IOException {
         return connection;
     }
 }

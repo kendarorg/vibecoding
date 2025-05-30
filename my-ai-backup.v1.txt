@@ -260,6 +260,11 @@ Should add on sync-server module a way to handle hung transfers
 	* Writing or starting reading from a connection will "touch" the session
 * Parallel to the listening thread there will be another thread that will monitor every 10 seconds all the session
 	* When the session is expired disconnect it
+	
+### Peompt 018
+
+#file:SyncClientAppBackupTest.java #file:SyncClientAppBackupTestSimple.java 
+Fix the failing tests aligning them with the modifications on client
 
 
 
