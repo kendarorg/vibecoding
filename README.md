@@ -38,6 +38,7 @@ Backup client and server with Junie, spring-boot, binary tcp protocol and web-ui
 * Running lots of times the system raised a problem with the connection sometimes hanged. 20% of credit spent in analysis with no result. Did by hand
 	* First issue, every request needed a response to keep the synchronization
 	* Second issue the return of mkdirs() when uploading the files is not usefule: many files can create it at once, and if the file exists false is returned
+* Will now leave to the AI the fix of Client tests (changed due to the new messages)
 
 
 ### my-ai-cms according to Claude
