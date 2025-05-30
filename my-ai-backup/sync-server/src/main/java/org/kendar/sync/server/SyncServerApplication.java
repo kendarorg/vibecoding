@@ -13,7 +13,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * Main class for the sync server application.
  */
 @SpringBootApplication
-public class SyncServerApplication  {
+public class SyncServerApplication {
 
     private static final Logger log = LoggerFactory.getLogger(SyncServerApplication.class);
     @Autowired

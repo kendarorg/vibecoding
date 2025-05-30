@@ -27,18 +27,13 @@ public class PreserveBackupHandler extends BackupHandler {
     private static final Logger log = LoggerFactory.getLogger(PreserveBackupHandler.class);
 
     @Override
-    protected String getHandlerType() {
-        return "PRESERVE";
-    }
-
-    @Override
     protected Path getSourceFilePath(ClientSession session, FileInfo fileInfo) {
         return Path.of(session.getFolder().getRealPath(), fileInfo.getRelativePath());
     }
 
     @Override
     public void handleFileList(TcpConnection connection, ClientSession session, FileListMessage message) throws IOException {
-        log.debug("[PRESERVE] Received FILE_LIST message");
+        log.debug("[SERVER] Received FILE_LIST message");
 
         var filesOnClient = message.getFiles().stream().collect(Collectors.toMap(
                 FileInfo::getRelativePath,
@@ -77,10 +72,10 @@ public class PreserveBackupHandler extends BackupHandler {
     @Override
     public void handleFileDescriptor(TcpConnection connection, ClientSession session, FileDescriptorMessage message) throws IOException {
         int connectionId = connection.getConnectionId();
-        log.debug("[PRESERVE] Received FILE_DESCRIPTOR message: {} on connection {}", message.getFileInfo().getRelativePath(), connectionId);
+        log.debug("[SERVER] Received FILE_DESCRIPTOR message: {} on connection {}", message.getFileInfo().getRelativePath(), connectionId);
 
         if (session.isDryRun()) {
-            log.debug("[PRESERVE] Dry run: Would create file {}", message.getFileInfo().getRelativePath());
+            log.debug("[SERVER] Dry run: Would create file {}", message.getFileInfo().getRelativePath());
             connection.sendMessage(FileDescriptorAckMessage.ready(message.getFileInfo().getRelativePath()));
             return;
         }
@@ -100,12 +95,12 @@ public class PreserveBackupHandler extends BackupHandler {
         if (session.isBackup()) {
             fileInfo = session.getCurrentFile(connectionId);
             if (fileInfo == null) {
-                log.error("[PRESERVE] 1 No file info found for connection {}", connectionId);
+                log.error("[SERVER] 1 No file info found for connection {}", connectionId);
                 return;
             }
-            log.debug("[PRESERVE] Received FILE_DATA message for {} on connection {} (block {} of {}, {} bytes)", fileInfo.getRelativePath(), connectionId, message.getBlockNumber() + 1, message.getTotalBlocks(), message.getData().length);
+            log.debug("[SERVER] Received FILE_DATA message for {} on connection {} (block {} of {}, {} bytes)", fileInfo.getRelativePath(), connectionId, message.getBlockNumber() + 1, message.getTotalBlocks(), message.getData().length);
         } else {
-            log.debug("[PRESERVE] Received FILE_DATA message for {} on connection {} (block {} of {}, {} bytes)", message.getRelativePath(), connectionId, message.getBlockNumber() + 1, message.getTotalBlocks(), message.getData().length);
+            log.debug("[SERVER] Received FILE_DATA message for {} on connection {} (block {} of {}, {} bytes)", message.getRelativePath(), connectionId, message.getBlockNumber() + 1, message.getTotalBlocks(), message.getData().length);
         }
 
         String relativePath = session.isBackup() ? fileInfo.getRelativePath() : message.getRelativePath();
@@ -125,14 +120,14 @@ public class PreserveBackupHandler extends BackupHandler {
         if (session.isBackup()) {
             fileInfo = message.getFileInfo() != null ? message.getFileInfo() : session.getCurrentFile(connectionId);
             if (fileInfo == null) {
-                log.error("[PRESERVE] 2 No file info found for connection {}", connectionId);
+                log.error("[SERVER] 2 No file info found for connection {}", connectionId);
                 connection.sendMessage(FileEndAckMessage.failure(message.getRelativePath(), "No file info found"));
                 return;
             }
-            log.debug("[PRESERVE] 3 Received FILE_END message for {} on connection {}", fileInfo.getRelativePath(), connectionId);
+            log.debug("[SERVER] 3 Received FILE_END message for {} on connection {}", fileInfo.getRelativePath(), connectionId);
         } else {
             fileInfo = message.getFileInfo();
-            log.debug("[PRESERVE] 4 Received FILE_END message for {} on connection {}", message.getRelativePath(), connectionId);
+            log.debug("[SERVER] 4 Received FILE_END message for {} on connection {}", message.getRelativePath(), connectionId);
         }
 
         var realPath = Path.of(session.getFolder().getRealPath() + File.separator + fileInfo.getRelativePath());
@@ -140,11 +135,5 @@ public class PreserveBackupHandler extends BackupHandler {
         Files.setLastModifiedTime(realPath, FileTime.fromMillis(fileInfo.getModificationTime().toEpochMilli()));
 
         connection.sendMessage(FileEndAckMessage.success(fileInfo.getRelativePath()));
-    }
-
-    @Override
-    public void handleSyncEnd(TcpConnection connection, ClientSession session, SyncEndMessage message) throws IOException {
-        log.debug("[PRESERVE] Received SYNC_END message");
-        connection.sendMessage(new SyncEndAckMessage(true, "Sync completed"));
     }
 }

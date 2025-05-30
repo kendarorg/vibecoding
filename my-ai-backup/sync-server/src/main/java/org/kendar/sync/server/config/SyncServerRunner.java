@@ -29,7 +29,7 @@ public class SyncServerRunner {
 
     @PreDestroy
     public void destroy() {
-        if(server != null) {
+        if (server != null) {
             server.stop();
         }
     }

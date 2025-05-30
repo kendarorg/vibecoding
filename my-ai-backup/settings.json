@@ -1,13 +1,15 @@
 {
-  "port" : 8090,
+  "port": 8090,
   "webPort": 8089,
-  "maxPacketSize" : 1048576,
-  "maxConnections" : 5,
-  "users" : [ {
-    "id" : "6acf1fe9-dac4-4859-8a30-7595b4cfe118",
-    "username" : "admin",
-    "password" : "admin",
-    "admin" : true
-  } ],
-  "backupFolders" : [ ]
+  "maxPacketSize": 1048576,
+  "maxConnections": 5,
+  "users": [
+    {
+      "id": "6acf1fe9-dac4-4859-8a30-7595b4cfe118",
+      "username": "admin",
+      "password": "admin",
+      "admin": true
+    }
+  ],
+  "backupFolders": []
 }

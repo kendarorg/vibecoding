@@ -1,10 +1,5 @@
 package org.kendar.sync.lib.protocol;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.kendar.sync.lib.buffer.ByteContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,49 +9,15 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Base class for all messages in the sync protocol.
- * Messages are serialized to JSON and then compressed before being sent in a packet.
  */
-@JsonTypeInfo(
-        use = JsonTypeInfo.Id.NAME,
-        include = JsonTypeInfo.As.PROPERTY,
-        property = "type"
-)
-@JsonSubTypes({
-        // Connection messages
-        @JsonSubTypes.Type(value = ConnectMessage.class, name = "CONNECT"),
-        @JsonSubTypes.Type(value = ConnectResponseMessage.class, name = "CONNECT_RESPONSE"),
-
-        // File listing messages
-        @JsonSubTypes.Type(value = FileListMessage.class, name = "FILE_LIST"),
-        @JsonSubTypes.Type(value = FileListResponseMessage.class, name = "FILE_LIST_RESPONSE"),
-
-        // File transfer messages
-        @JsonSubTypes.Type(value = FileDescriptorMessage.class, name = "FILE_DESCRIPTOR"),
-        @JsonSubTypes.Type(value = FileDescriptorAckMessage.class, name = "FILE_DESCRIPTOR_ACK"),
-        @JsonSubTypes.Type(value = FileDataMessage.class, name = "FILE_DATA"),
-        @JsonSubTypes.Type(value = FileEndMessage.class, name = "FILE_END"),
-        @JsonSubTypes.Type(value = FileEndAckMessage.class, name = "FILE_END_ACK"),
-
-        // Synchronization control messages
-        @JsonSubTypes.Type(value = SyncEndMessage.class, name = "SYNC_END"),
-        @JsonSubTypes.Type(value = SyncEndAckMessage.class, name = "SYNC_END_ACK"),
-
-        // Error messages
-        @JsonSubTypes.Type(value = ErrorMessage.class, name = "ERROR"),
-
-        @JsonSubTypes.Type(value = StartRestore.class, name = "START_RESTORE")
-
-})
 public abstract class Message {
     private static final ConcurrentHashMap<String, Class<? extends Message>> messageTypeMap = new ConcurrentHashMap<>();
-    private static final ObjectMapper objectMapper = new ObjectMapper()
-            .registerModule(new JavaTimeModule());
     private static final Logger log = LoggerFactory.getLogger(Message.class);
-    @JsonIgnore
+
     private int connectionId;
-    @JsonIgnore
+
     private UUID sessionId;
-    @JsonIgnore
+
     private int packetId;
 
     public static void registerMessageType(Class<? extends Message> clazz) {
@@ -132,7 +93,7 @@ public abstract class Message {
      *
      * @return The message type
      */
-    @JsonIgnore
+
     public abstract MessageType getMessageType();
 
     /**

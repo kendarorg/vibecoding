@@ -16,7 +16,7 @@ public class LongConverter extends ByteContainerConverter<Long> {
                 ((long) (buffer[4] & 255) << 24) +
                 ((buffer[5] & 255) << 16) +
                 ((buffer[6] & 255) << 8) +
-                ((buffer[7] & 255) << 0));
+                ((buffer[7] & 255))); //((buffer[7] & 255) << 0));
     }
 
     @Override
@@ -29,7 +29,7 @@ public class LongConverter extends ByteContainerConverter<Long> {
         writeBuffer[4] = (byte) (value >>> 24);
         writeBuffer[5] = (byte) (value >>> 16);
         writeBuffer[6] = (byte) (value >>> 8);
-        writeBuffer[7] = (byte) (value >>> 0);
+        writeBuffer[7] = (byte) value.longValue(); //writeBuffer[7] = (byte) (value >>> 0);
         return writeBuffer;
     }
 

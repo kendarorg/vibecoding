@@ -1,6 +1,5 @@
 package org.kendar.sync.lib.protocol;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.kendar.sync.lib.buffer.ByteContainer;
 
 /**
@@ -95,7 +94,7 @@ public class FileDataMessage extends Message {
      *
      * @return True if this is the first block, false otherwise
      */
-    @JsonIgnore
+
     public boolean isFirstBlock() {
         return blockNumber == 0;
     }
@@ -105,7 +104,7 @@ public class FileDataMessage extends Message {
      *
      * @return True if this is the last block, false otherwise
      */
-    @JsonIgnore
+
     public boolean isLastBlock() {
         return blockNumber == totalBlocks - 1;
     }

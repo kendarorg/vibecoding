@@ -15,6 +15,7 @@ public class WebServerPortCustomizer implements WebServerFactoryCustomizer<Confi
     public WebServerPortCustomizer(ServerSettings serverSettings) {
         this.serverSettings = serverSettings;
     }
+
     @Override
     public void customize(ConfigurableWebServerFactory factory) {
         log.info("Starting Web server on port {}", serverSettings.getWebPort());

@@ -212,8 +212,6 @@ public class Server {
      * @throws IOException If an I/O error occurs
      */
     private void handleFileList(TcpConnection connection, ClientSession session, FileListMessage message) throws IOException {
-        //log.debug("[SERVER] Received FILE_LIST message");
-
         // Set whether this is a backup or restore operation
         session.setBackup(message.isBackup());
 
@@ -238,9 +236,6 @@ public class Server {
      * @throws IOException If an I/O error occurs
      */
     private void handleFileDescriptor(TcpConnection connection, ClientSession session, FileDescriptorMessage message) throws IOException {
-        //log.debug("[SERVER] Received FILE_DESCRIPTOR message: " + message.getFileInfo().getRelativePath() +
-        //                 " on connection " + connection.getConnectionId());
-
         // Store the current file info in the session using connection ID as index
         if (session.isBackup()) {
             session.setCurrentFile(connection.getConnectionId(), message.getFileInfo());
@@ -267,9 +262,6 @@ public class Server {
      * @throws IOException If an I/O error occurs
      */
     private void handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException {
-        int connectionId = connection.getConnectionId();
-        //log.debug("[SERVER] Received FILE_DATA message on connection " + connectionId);
-
         // Get the appropriate backup handler for the session's backup type
         BackupHandler handler = backupHandlers.get(session.getBackupType());
         if (handler == null) {
@@ -312,8 +304,6 @@ public class Server {
      * @throws IOException If an I/O error occurs
      */
     private void handleSyncEnd(TcpConnection connection, ClientSession session, SyncEndMessage message) throws IOException {
-        //log.debug("[SERVER] Received SYNC_END message");
-
         // Get the appropriate backup handler for the session's backup type
         BackupHandler handler = backupHandlers.get(session.getBackupType());
         if (handler == null) {
