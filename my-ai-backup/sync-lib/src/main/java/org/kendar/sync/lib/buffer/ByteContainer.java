@@ -141,7 +141,7 @@ public class ByteContainer {
     }
 
     /**
-     * Writes a single byte to the container at the current write cursor position.
+     * Writes a single byte to the container at the current write-cursor position.
      *
      * @param data the byte to write.
      */
@@ -191,16 +191,16 @@ public class ByteContainer {
     }
 
     /**
-     * Returns the current write cursor position.
+     * Returns the current write-cursor position.
      *
-     * @return the write cursor position.
+     * @return the write-cursor position.
      */
     public int getWriteCursor() {
         return writeCursor;
     }
 
     /**
-     * Resets the write cursor to the beginning.
+     * Resets the write-cursor to the beginning.
      */
     public void resetWriteCursor() {
         writeCursor = 0;
@@ -317,7 +317,7 @@ public class ByteContainer {
     }
 
     /**
-     * Writes a byte array to the container at the current write cursor position.
+     * Writes a byte array to the container at the current write-cursor position.
      *
      * @param data the byte array to write.
      */
@@ -421,8 +421,7 @@ public class ByteContainer {
         if (changed && data.size() > 1) {
             var result = new byte[size];
             var offset = 0;
-            for (var i = 0; i < data.size(); i++) {
-                var b = data.get(i);
+            for (byte[] b : data) {
                 System.arraycopy(b, 0, result, offset, b.length);
                 offset += b.length;
             }

@@ -4,6 +4,8 @@ import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.model.ServerSettings;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.BackupType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -19,7 +21,7 @@ public class ClientSession {
     private final Map<Integer, FileInfo> currentFileTransfers = new HashMap<>();
     private boolean isBackup = false;
     private TcpConnection mainConnection;
-    private Set<TcpConnection> connections = new HashSet<>();
+    private final Set<TcpConnection> connections = new HashSet<>();
 
     public ClientSession(UUID sessionId, ServerSettings.User user, ServerSettings.BackupFolder folder,
                          BackupType backupType, boolean dryRun) {
@@ -114,11 +116,12 @@ public class ClientSession {
             try {
                 connection.close();
             } catch (Exception e) {
-                System.err.println("Error closing connection: " + e.getMessage());
+                log.error("Error closing connection: " + e.getMessage());
             }
         }
         connections.clear();
     }
+    private static final Logger log = LoggerFactory.getLogger(ClientSession.class);
 
     public Set<TcpConnection> getConnections() {
         return connections;

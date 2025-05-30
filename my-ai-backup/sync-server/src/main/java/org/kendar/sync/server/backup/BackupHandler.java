@@ -4,6 +4,8 @@ import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
 import org.kendar.sync.server.server.ClientSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -14,11 +16,10 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Base class for handling backup operations based on backup type.
+ * Base class for handling backup operations based on the backup type.
  */
 public abstract class BackupHandler {
 
@@ -50,7 +51,7 @@ public abstract class BackupHandler {
      * @param message    The file data message
      * @throws IOException If an I/O error occurs
      */
-    public abstract boolean handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException;
+    public abstract void handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException;
 
     /**
      * Handles a file end message.
@@ -83,6 +84,7 @@ public abstract class BackupHandler {
      */
     protected abstract Path getSourceFilePath(ClientSession session, FileInfo fileInfo);
 
+    private static final Logger log = LoggerFactory.getLogger(BackupHandler.class);
     /**
      * Common implementation for handling file restore operations.
      * This method handles the common workflow of sending files to the client during restore.
@@ -90,7 +92,7 @@ public abstract class BackupHandler {
     protected void handleFileRestore(TcpConnection connection, ClientSession session, List<FileInfo> filesToSend) throws IOException {
         var startRestoreMessage = connection.receiveMessage();
         if (startRestoreMessage.getMessageType() != MessageType.START_RESTORE) {
-            System.err.println("[" + getHandlerType() + "] Unexpected response: " + startRestoreMessage.getMessageType());
+            log.error("[" + getHandlerType() + "] Unexpected response: " + startRestoreMessage.getMessageType());
             return;
         }
 
@@ -114,10 +116,10 @@ public abstract class BackupHandler {
 
         try {
             completionLatch.await();
-            System.out.println("[" + getHandlerType() + "] All file transfers completed");
+            log.debug("[" + getHandlerType() + "] All file transfers completed");
             connection.close();
         } catch (InterruptedException e) {
-            System.err.println("[" + getHandlerType() + "] File transfer interrupted: " + e.getMessage());
+            log.error("[" + getHandlerType() + "] File transfer interrupted: " + e.getMessage());
         } finally {
             executorService.shutdown();
         }
@@ -126,11 +128,15 @@ public abstract class BackupHandler {
     /**
      * Transfers a single file to the client.
      */
-    private void transferFile(ConcurrentLinkedQueue<TcpConnection> connections, ClientSession session, 
-                             FileInfo file, CountDownLatch completionLatch) {
+    private void transferFile(ConcurrentLinkedQueue<TcpConnection> connections, ClientSession session,
+                              FileInfo file, CountDownLatch completionLatch) {
         TcpConnection currentConnection = null;
         try {
             currentConnection = connections.poll();
+            if(currentConnection == null) {
+                log.error("[" + getHandlerType() + "] No available connections to transfer file: " + file.getRelativePath());
+                return;
+            }
             var connectionId = currentConnection.getConnectionId();
 
             // Send file descriptor
@@ -139,18 +145,18 @@ public abstract class BackupHandler {
 
             var response = currentConnection.receiveMessage();
             if (response.getMessageType() != MessageType.FILE_DESCRIPTOR_ACK) {
-                System.err.println("[" + getHandlerType() + "] Unexpected response: " + response.getMessageType());
+                log.error("[" + getHandlerType() + "] Unexpected response: " + response.getMessageType());
                 return;
             }
 
             FileDescriptorAckMessage fileDescriptorAck = (FileDescriptorAckMessage) response;
             if (!fileDescriptorAck.isReady()) {
-                System.err.println("[" + getHandlerType() + "] Server not ready to receive file: " + fileDescriptorAck.getErrorMessage());
+                log.error("[" + getHandlerType() + "] Server not ready to receive file: " + fileDescriptorAck.getErrorMessage());
                 return;
             }
 
             if (file.isDirectory()) {
-                System.out.println("[" + getHandlerType() + "] Created directory: " + file.getRelativePath());
+                log.debug("[" + getHandlerType() + "] Created directory: " + file.getRelativePath());
                 return;
             }
 
@@ -158,29 +164,29 @@ public abstract class BackupHandler {
             if (!session.isDryRun()) {
                 sendFileData(currentConnection, session, file, connectionId);
             } else {
-                System.out.println("[" + getHandlerType() + "] Dry run: Would send file data for " + file.getRelativePath());
+                log.debug("[" + getHandlerType() + "] Dry run: Would send file data for " + file.getRelativePath());
             }
 
-            // Send file end
+            // Send the file termination message
             FileEndMessage fileEndMessage = new FileEndMessage(file.getRelativePath(), file);
             currentConnection.sendMessage(fileEndMessage);
 
             // Wait for file end ack
             response = currentConnection.receiveMessage();
             if (response.getMessageType() != MessageType.FILE_END_ACK) {
-                System.err.println("[" + getHandlerType() + "] Unexpected response: " + response.getMessageType());
+                log.error("[" + getHandlerType() + "] Unexpected response: " + response.getMessageType());
                 return;
             }
 
             FileEndAckMessage fileEndAck = (FileEndAckMessage) response;
             if (!fileEndAck.isSuccess()) {
-                System.err.println("[" + getHandlerType() + "] File transfer failed: " + fileEndAck.getErrorMessage());
+                log.error("[" + getHandlerType() + "] File transfer failed: " + fileEndAck.getErrorMessage());
                 return;
             }
 
-            System.out.println("[" + getHandlerType() + "] Transferred file: " + file.getRelativePath());
+            log.debug("[" + getHandlerType() + "] Transferred file: " + file.getRelativePath());
         } catch (Exception e) {
-            System.err.println("[" + getHandlerType() + "] Error transferring file: " + file.getRelativePath() + " - " + e.getMessage());
+            log.error("[" + getHandlerType() + "] Error transferring file: " + file.getRelativePath() + " - " + e.getMessage());
         } finally {
             if (currentConnection != null) connections.add(currentConnection);
             completionLatch.countDown();
@@ -201,7 +207,7 @@ public abstract class BackupHandler {
         int totalBlocks = (int) Math.ceil((double) fileSize / maxPacketSize);
         if (totalBlocks == 0) totalBlocks = 1; // Ensure at least one block for empty files
 
-        System.out.println("[" + getHandlerType() + "-" + connectionId + "] Sending file " + file.getRelativePath() +
+        log.debug("[" + getHandlerType() + "-" + connectionId + "] Sending file " + file.getRelativePath() +
                 " in " + totalBlocks + " blocks (" + fileSize + " bytes)");
 
         try (FileInputStream fis = new FileInputStream(sourceFile)) {
@@ -217,7 +223,7 @@ public abstract class BackupHandler {
                         file.getRelativePath(), blockNumber, totalBlocks, blockData);
                 connection.sendMessage(fileDataMessage);
 
-                System.out.println("[" + getHandlerType() + "-" + connectionId + "] Sent block " + (blockNumber + 1) +
+                log.debug("[" + getHandlerType() + "-" + connectionId + "] Sent block " + (blockNumber + 1) +
                         " of " + totalBlocks + " (" + blockData.length + " bytes)");
 
                 blockNumber++;
@@ -248,7 +254,6 @@ public abstract class BackupHandler {
         if (fileInfo == null) return true;
         if (fileInfo.getModificationTime().isAfter(attr.lastModifiedTime().toInstant())) return true;
         if (fileInfo.getCreationTime().isAfter(attr.creationTime().toInstant())) return true;
-        if (fileInfo.getSize() != attr.size()) return true;
-        return false;
+        return fileInfo.getSize() != attr.size();
     }
 }

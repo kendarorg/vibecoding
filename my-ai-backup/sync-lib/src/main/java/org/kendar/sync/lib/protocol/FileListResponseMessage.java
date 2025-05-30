@@ -33,7 +33,7 @@ public class FileListResponseMessage extends Message {
      * @param filesToTransfer The list of files that need to be transferred
      * @param filesToDelete   The list of files that need to be deleted
      * @param isBackup        Whether this is a backup operation (true) or restore operation (false)
-     * @param partNumber      The part number of this message (for multi-part messages)
+     * @param partNumber      The part number of this message (for multipart messages)
      * @param totalParts      The total number of parts
      */
     public FileListResponseMessage(List<FileInfo> filesToTransfer, List<String> filesToDelete,

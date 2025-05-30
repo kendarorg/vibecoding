@@ -5,6 +5,8 @@ import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
 import org.kendar.sync.lib.utils.FileUtils;
 import org.kendar.sync.server.server.ClientSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -32,17 +34,18 @@ public class MirrorBackupHandler extends BackupHandler {
         return Path.of(session.getFolder().getRealPath(), fileInfo.getRelativePath());
     }
 
+    private static final Logger log = LoggerFactory.getLogger(MirrorBackupHandler.class);
     @Override
     public void handleFileList(TcpConnection connection, ClientSession session, FileListMessage message) throws IOException {
-        System.out.println("[MIRROR] Received FILE_LIST message");
+        log.debug("[MIRROR] Received FILE_LIST message");
 
         var filesOnClient = message.getFiles().stream().collect(Collectors.toMap(
-                key -> key.getRelativePath(),
+                FileInfo::getRelativePath,
                 value -> value
         ));
 
         var filesToRemove = message.getFiles().stream()
-                .map(key -> key.getRelativePath())
+                .map(FileInfo::getRelativePath)
                 .collect(Collectors.toSet());
 
         var allFiles = listAllFilesAndDirs(Path.of(session.getFolder().getRealPath()));
@@ -51,7 +54,8 @@ public class MirrorBackupHandler extends BackupHandler {
         for (var file : allFiles) {
             var fts = FileUtils.makeUniformPath(file.toString().replace(session.getFolder().getRealPath(), ""));
             var filePath = session.getFolder().getRealPath() + "/" + fts;
-            BasicFileAttributes attr = Files.readAttributes(Path.of(filePath), BasicFileAttributes.class);
+            var fp = Path.of(filePath);
+            BasicFileAttributes attr = Files.readAttributes(fp, BasicFileAttributes.class);
 
             if (file.toFile().isDirectory()) {
                 filesOnClient.remove(fts);
@@ -59,7 +63,7 @@ public class MirrorBackupHandler extends BackupHandler {
                 continue;
             }
             if (message.isBackup() && !filesOnClient.containsKey(fts)) {
-                Files.delete(Path.of(filePath));
+                Files.delete(fp);
                 continue;
             } else if (!message.isBackup()) {
                 filesToRemove.remove(fts);
@@ -84,22 +88,22 @@ public class MirrorBackupHandler extends BackupHandler {
         }
         var filesToSend = filesOnClient.values().stream().filter(f -> !f.isDirectory()).toList();
         connection.sendMessage(new FileListResponseMessage(filesToSend, removedFiles, true, 1, 1));
-        
+
         if (message.isBackup()) {
             return;
         }
-        
+
         handleFileRestore(connection, session, filesToSend);
     }
 
     @Override
     public void handleFileDescriptor(TcpConnection connection, ClientSession session, FileDescriptorMessage message) throws IOException {
         int connectionId = connection.getConnectionId();
-        System.out.println("[MIRROR] Received FILE_DESCRIPTOR message: " + message.getFileInfo().getRelativePath() +
+        log.debug("[MIRROR] Received FILE_DESCRIPTOR message: " + message.getFileInfo().getRelativePath() +
                 " on connection " + connectionId);
 
         if (session.isDryRun()) {
-            System.out.println("[MIRROR] Dry run: Would create file " + message.getFileInfo().getRelativePath());
+            log.debug("[MIRROR] Dry run: Would create file " + message.getFileInfo().getRelativePath());
             connection.sendMessage(FileDescriptorAckMessage.ready(message.getFileInfo().getRelativePath()));
             return;
         }
@@ -108,9 +112,9 @@ public class MirrorBackupHandler extends BackupHandler {
     }
 
     @Override
-    public boolean handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException {
+    public void handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException {
         if (session.isDryRun()) {
-            return true;
+            return;
         }
 
         int connectionId = connection.getConnectionId();
@@ -119,15 +123,15 @@ public class MirrorBackupHandler extends BackupHandler {
         if (session.isBackup()) {
             fileInfo = session.getCurrentFile(connectionId);
             if (fileInfo == null) {
-                System.err.println("[MIRROR] No file info found for connection " + connectionId);
-                return true;
+                log.error("[MIRROR] No file info found for connection " + connectionId);
+                return;
             }
-            System.out.println("[MIRROR] Received FILE_DATA message for " + fileInfo.getRelativePath() +
+            log.debug("[MIRROR] Received FILE_DATA message for " + fileInfo.getRelativePath() +
                     " on connection " + connectionId +
                     " (block " + (message.getBlockNumber() + 1) + " of " + message.getTotalBlocks() +
                     ", " + message.getData().length + " bytes)");
         } else {
-            System.out.println("[MIRROR] Received FILE_DATA message for " + message.getRelativePath() +
+            log.debug("[MIRROR] Received FILE_DATA message for " + message.getRelativePath() +
                     " on connection " + connectionId +
                     " (block " + (message.getBlockNumber() + 1) + " of " + message.getTotalBlocks() +
                     ", " + message.getData().length + " bytes)");
@@ -139,26 +143,26 @@ public class MirrorBackupHandler extends BackupHandler {
         try (FileOutputStream fos = new FileOutputStream(file, !message.isFirstBlock())) {
             fos.write(message.getData());
         }
-        return message.isLastBlock();
+        message.isLastBlock();
     }
 
     @Override
     public void handleFileEnd(TcpConnection connection, ClientSession session, FileEndMessage message) throws IOException {
         int connectionId = connection.getConnectionId();
-        FileInfo fileInfo = null;
+        FileInfo fileInfo;
 
         if (session.isBackup()) {
             fileInfo = message.getFileInfo() != null ? message.getFileInfo() : session.getCurrentFile(connectionId);
             if (fileInfo == null) {
-                System.err.println("[MIRROR] No file info found for connection " + connectionId);
+                log.error("[MIRROR] No file info found for connection " + connectionId);
                 connection.sendMessage(FileEndAckMessage.failure(message.getRelativePath(), "No file info found"));
                 return;
             }
-            System.out.println("[MIRROR] Received FILE_END message for " + fileInfo.getRelativePath() +
+            log.debug("[MIRROR] Received FILE_END message for " + fileInfo.getRelativePath() +
                     " on connection " + connectionId);
         } else {
             fileInfo = message.getFileInfo();
-            System.out.println("[MIRROR] Received FILE_END message for " + message.getRelativePath() +
+            log.debug("[MIRROR] Received FILE_END message for " + message.getRelativePath() +
                     " on connection " + connectionId);
         }
 
@@ -171,7 +175,7 @@ public class MirrorBackupHandler extends BackupHandler {
 
     @Override
     public void handleSyncEnd(TcpConnection connection, ClientSession session, SyncEndMessage message) throws IOException {
-        System.out.println("[MIRROR] Received SYNC_END message");
+        log.debug("[MIRROR] Received SYNC_END message");
         connection.sendMessage(new SyncEndAckMessage(true, "Sync completed"));
     }
 }

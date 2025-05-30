@@ -1,11 +1,14 @@
 package org.kendar.sync.client;
 
 import org.kendar.sync.lib.protocol.BackupType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Main class for the sync client application.
  */
 public class SyncClientApp {
+    private static final Logger log = LoggerFactory.getLogger(SyncClientApp.class);
     /**
      * Main method to start the application.
      *
@@ -85,7 +88,7 @@ public class SyncClientApp {
                         try {
                             commandLineArgs.setServerPort(Integer.parseInt(args[++i]));
                         } catch (NumberFormatException e) {
-                            System.err.println("[CLIENT] Invalid port number: " + args[i]);
+                            log.error("[CLIENT] Invalid port number: " + args[i]);
                         }
                     }
                     break;
@@ -111,8 +114,8 @@ public class SyncClientApp {
                         try {
                             commandLineArgs.setBackupType(BackupType.valueOf(typeArg));
                         } catch (IllegalArgumentException e) {
-                            System.err.println("[CLIENT] Invalid backup type: " + typeArg);
-                            System.err.println("[CLIENT] Valid types are: PRESERVE, MIRROR, DATE_SEPARATED");
+                            log.error("[CLIENT] Invalid backup type: " + typeArg);
+                            log.error("[CLIENT] Valid types are: PRESERVE, MIRROR, DATE_SEPARATED");
                         }
                     }
                     break;

@@ -2,6 +2,8 @@ package org.kendar.sync.lib.utils;
 
 import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.protocol.BackupType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -278,7 +280,7 @@ public class FileUtils {
                     Files.delete(path);
                 } catch (IOException e) {
                     success = false;
-                    System.err.println("Failed to delete: " + path + " - " + e.getMessage());
+                    log.error("Failed to delete: " + path + " - " + e.getMessage());
                 }
             }
         }
@@ -286,4 +288,5 @@ public class FileUtils {
 
         return success;
     }
+    private static final Logger log = LoggerFactory.getLogger(FileUtils.class);
 }

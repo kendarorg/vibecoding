@@ -8,6 +8,8 @@ import org.kendar.sync.server.backup.DateSeparatedBackupHandler;
 import org.kendar.sync.server.backup.MirrorBackupHandler;
 import org.kendar.sync.server.backup.PreserveBackupHandler;
 import org.kendar.sync.server.config.ServerConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -24,9 +26,9 @@ public class Server {
     private final Map<UUID, ClientSession> sessions = new HashMap<>();
     private final Map<BackupType, BackupHandler> backupHandlers = new HashMap<>();
     private boolean running = true;
-    private boolean dryRun = false;
+    private final boolean dryRun;
     private ServerSocket mainSocket;
-    private ServerConfig serverConfig;
+    private final ServerConfig serverConfig;
 
     public Server(ServerConfig serverConfig, boolean dryRun) {
         this.serverConfig = serverConfig;
@@ -38,6 +40,8 @@ public class Server {
         backupHandlers.put(BackupType.DATE_SEPARATED, new DateSeparatedBackupHandler());
     }
 
+    private static final Logger log = LoggerFactory.getLogger(Server.class);
+
     /**
      * Starts the TCP server.
      */
@@ -46,25 +50,25 @@ public class Server {
             ServerSettings settings = serverConfig.serverSettings();
             int port = settings.getPort();
 
-            System.out.println("Starting TCP server on port " + port);
+            log.debug("Starting TCP server on port " + port);
 
             try (ServerSocket serverSocket = new ServerSocket(port)) {
                 mainSocket = serverSocket;
                 while (running) {
                     try {
                         Socket clientSocket = serverSocket.accept();
-                        System.out.println("[SERVER] Client connected: " + clientSocket.getInetAddress());
+                        log.debug("[SERVER] Client connected: " + clientSocket.getInetAddress());
 
                         // Handle client connection in a separate thread
                         executorService.submit(() -> handleClient(clientSocket, settings));
                     } catch (IOException e) {
-                        //TODO System.err.println("[SERVER] Error accepting client connection: " + e.getMessage());
+                        //TODO log.error("[SERVER] Error accepting client connection: " + e.getMessage());
                     }
                 }
             }
         } catch (IOException e) {
             if (running) {
-                System.err.println("Error starting TCP server: " + e.getMessage());
+                log.error("Error starting TCP server: " + e.getMessage());
             }
         }
     }
@@ -86,10 +90,10 @@ public class Server {
                     settings.getMaxPacketSize()
             );
 
-            // Wait for connect message
+            // Wait for the connection message
             Message message = connection.receiveMessage();
-            if(message==null) {
-                System.err.println("[SERVER] Client disconnected before sending CONNECT message");
+            if (message == null) {
+                log.error("[SERVER] Client disconnected before sending CONNECT message");
                 connection.close();
                 return;
             }
@@ -119,9 +123,9 @@ public class Server {
                         session = sessions.get(message.getSessionId());
                         message = connection.receiveMessage();
                     }
-                    System.out.println("[SERVER] Client disconnected ");
+                    log.debug("[SERVER] Client disconnected ");
                 } catch (Exception ex) {
-                    System.err.println("[SERVER] Client disconnected " + ex.getMessage());
+                    log.error("[SERVER] Client disconnected " + ex.getMessage());
                     return;
                 }
             }
@@ -147,7 +151,7 @@ public class Server {
 
             var user = userOpt.get();
 
-            // Check if user has access to the requested folder
+            // Check if the user has access to the requested folder
             String targetFolder = connectMessage.getTargetFolder();
             var folderOpt = settings.getUserFolder(user.getId(), targetFolder);
             if (folderOpt.isEmpty()) {
@@ -191,7 +195,7 @@ public class Server {
                 }
             }
         } catch (IOException e) {
-            //TODO System.err.println("[SERVER] Error handling client: " + e.getMessage());
+            //TODO log.error("[SERVER] Error handling client: " + e.getMessage());
             try {
                 clientSocket.close();
             } catch (IOException ex) {
@@ -209,7 +213,7 @@ public class Server {
      * @throws IOException If an I/O error occurs
      */
     private void handleFileList(TcpConnection connection, ClientSession session, FileListMessage message) throws IOException {
-        //System.out.println("[SERVER] Received FILE_LIST message");
+        //log.debug("[SERVER] Received FILE_LIST message");
 
         // Set whether this is a backup or restore operation
         session.setBackup(message.isBackup());
@@ -217,7 +221,7 @@ public class Server {
         // Get the appropriate backup handler for the session's backup type
         BackupHandler handler = backupHandlers.get(session.getBackupType());
         if (handler == null) {
-            System.err.println("No handler found for backup type: " + session.getBackupType());
+            log.error("No handler found for backup type: " + session.getBackupType());
             connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
             return;
         }
@@ -235,7 +239,7 @@ public class Server {
      * @throws IOException If an I/O error occurs
      */
     private void handleFileDescriptor(TcpConnection connection, ClientSession session, FileDescriptorMessage message) throws IOException {
-        //System.out.println("[SERVER] Received FILE_DESCRIPTOR message: " + message.getFileInfo().getRelativePath() +
+        //log.debug("[SERVER] Received FILE_DESCRIPTOR message: " + message.getFileInfo().getRelativePath() +
         //                 " on connection " + connection.getConnectionId());
 
         // Store the current file info in the session using connection ID as index
@@ -246,7 +250,7 @@ public class Server {
         // Get the appropriate backup handler for the session's backup type
         BackupHandler handler = backupHandlers.get(session.getBackupType());
         if (handler == null) {
-            System.err.println("No handler found for backup type: " + session.getBackupType());
+            log.error("No handler found for backup type: " + session.getBackupType());
             connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
             return;
         }
@@ -263,20 +267,20 @@ public class Server {
      * @param message    The file data message
      * @throws IOException If an I/O error occurs
      */
-    private boolean handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException {
+    private void handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException {
         int connectionId = connection.getConnectionId();
-        //System.out.println("[SERVER] Received FILE_DATA message on connection " + connectionId);
+        //log.debug("[SERVER] Received FILE_DATA message on connection " + connectionId);
 
         // Get the appropriate backup handler for the session's backup type
         BackupHandler handler = backupHandlers.get(session.getBackupType());
         if (handler == null) {
-            System.err.println("No handler found for backup type: " + session.getBackupType());
+            log.error("No handler found for backup type: " + session.getBackupType());
             connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
-            return false;
+            return;
         }
 
         // Delegate to the backup handler
-        return handler.handleFileData(connection, session, message);
+        handler.handleFileData(connection, session, message);
     }
 
     /**
@@ -291,7 +295,7 @@ public class Server {
 
         BackupHandler handler = backupHandlers.get(session.getBackupType());
         if (handler == null) {
-            System.err.println("No handler found for backup type: " + session.getBackupType());
+            log.error("No handler found for backup type: " + session.getBackupType());
             connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
             return;
         }
@@ -309,12 +313,12 @@ public class Server {
      * @throws IOException If an I/O error occurs
      */
     private void handleSyncEnd(TcpConnection connection, ClientSession session, SyncEndMessage message) throws IOException {
-        //System.out.println("[SERVER] Received SYNC_END message");
+        //log.debug("[SERVER] Received SYNC_END message");
 
         // Get the appropriate backup handler for the session's backup type
         BackupHandler handler = backupHandlers.get(session.getBackupType());
         if (handler == null) {
-            System.err.println("No handler found for backup type: " + session.getBackupType());
+            log.error("No handler found for backup type: " + session.getBackupType());
             connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
             return;
         }
@@ -328,7 +332,7 @@ public class Server {
         try {
             mainSocket.close();
         } catch (Exception ex) {
-
+            //NOOP
         }
     }
 }

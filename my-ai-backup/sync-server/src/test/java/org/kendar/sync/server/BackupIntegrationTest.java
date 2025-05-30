@@ -45,7 +45,7 @@ public class BackupIntegrationTest {
     private Server server;
     private int serverPort;
     private CommandLineArgs commandLineArgs;
-    private boolean restore=true;
+    private boolean restore = true;
 
     private static int findFreePort() {
         try (var serverSocket = new java.net.ServerSocket(0)) {
@@ -266,7 +266,7 @@ public class BackupIntegrationTest {
 
         // Perform restore
         System.out.println("================= Performing restore...");
-        if(restore) {
+        if (restore) {
             commandLineArgs.setBackup(false);
             target.doSync(commandLineArgs);
             assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath(), BackupType.DATE_SEPARATED);
@@ -310,7 +310,7 @@ public class BackupIntegrationTest {
 
         // Perform restore
         System.out.println("================= Performing restore...");
-        if(restore) {
+        if (restore) {
             commandLineArgs.setBackup(false);
             target.doSync(commandLineArgs);
             assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
@@ -362,7 +362,7 @@ public class BackupIntegrationTest {
 
         // Perform restore
         System.out.println("================= Performing restore...");
-        if(restore) {
+        if (restore) {
             commandLineArgs.setBackup(false);
             target.doSync(commandLineArgs);
 

@@ -3,6 +3,8 @@ package org.kendar.sync.server;
 import jakarta.servlet.Servlet;
 import org.kendar.sync.server.config.ServerConfig;
 import org.kendar.sync.server.server.Server;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -52,4 +54,5 @@ public class SyncServerApplication implements CommandLineRunner {
             server.startTcpServer();
         }).start();
     }
+    private static final Logger log = LoggerFactory.getLogger(SyncServerApplication.class);
 }

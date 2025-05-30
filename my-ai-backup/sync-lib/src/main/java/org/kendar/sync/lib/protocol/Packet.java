@@ -83,7 +83,7 @@ public class Packet {
         // Read the message type
         char c1 = buffer.getChar();
         char c2 = buffer.getChar();
-        packet.messageType = String.valueOf(c1) + String.valueOf(c2);
+        packet.messageType = c1 + String.valueOf(c2);
 
         // Read the content
         packet.content = new byte[packet.length - (4 + 4 + 32 + 4 + 2)];

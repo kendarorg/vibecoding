@@ -18,7 +18,7 @@ public class TcpConnection implements AutoCloseable {
     private final int packetId;
     private final int maxPacketSize;
     private InputStream inputStream;
-    private OutputStream outputStream;
+    private final OutputStream outputStream;
     private UUID sessionId;
     private int connectionId;
 

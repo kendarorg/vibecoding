@@ -5,6 +5,8 @@ import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
 import org.kendar.sync.lib.utils.FileUtils;
 import org.kendar.sync.server.server.ClientSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -45,12 +47,13 @@ public class DateSeparatedBackupHandler extends BackupHandler {
         return relPath;
     }
 
+    private static final Logger log = LoggerFactory.getLogger(DateSeparatedBackupHandler.class);
     @Override
     public void handleFileList(TcpConnection connection, ClientSession session, FileListMessage message) throws IOException {
-        System.out.println("[DATE_SEPARATED] Received FILE_LIST message");
+        log.debug("[DATE_SEPARATED] Received FILE_LIST message");
 
         var filesOnClient = message.getFiles().stream().collect(Collectors.toMap(
-                key -> key.getRelativePath(),
+                FileInfo::getRelativePath,
                 value -> value
         ));
 
@@ -59,7 +62,7 @@ public class DateSeparatedBackupHandler extends BackupHandler {
             var fts = FileUtils.makeUniformPath(file.toString().replace(session.getFolder().getRealPath(), ""));
             var filePath = session.getFolder().getRealPath() + File.separator + fts;
             BasicFileAttributes attr = Files.readAttributes(Path.of(filePath), BasicFileAttributes.class);
-            
+
             if (!fts.matches(".*\\d{4}-\\d{2}-\\d{2}.*")) {
                 if (!shouldUpdate(filesOnClient.get(fts), file, attr)) {
                     filesOnClient.remove(fts);
@@ -83,25 +86,25 @@ public class DateSeparatedBackupHandler extends BackupHandler {
                 }
             }
         }
-        
+
         var filesToSend = filesOnClient.values().stream().filter(f -> !f.isDirectory()).toList();
         connection.sendMessage(new FileListResponseMessage(filesToSend, new ArrayList<>(), true, 1, 1));
-        
+
         if (message.isBackup()) {
             return;
         }
-        
+
         handleFileRestore(connection, session, filesToSend);
     }
 
     @Override
     public void handleFileDescriptor(TcpConnection connection, ClientSession session, FileDescriptorMessage message) throws IOException {
         int connectionId = connection.getConnectionId();
-        System.out.println("[DATE_SEPARATED] Received FILE_DESCRIPTOR message: " + message.getFileInfo().getRelativePath() +
+        log.debug("[DATE_SEPARATED] Received FILE_DESCRIPTOR message: " + message.getFileInfo().getRelativePath() +
                 " on connection " + connectionId);
 
         if (session.isDryRun()) {
-            System.out.println("Dry run: Would create file " + message.getFileInfo().getRelativePath());
+            log.debug("Dry run: Would create file " + message.getFileInfo().getRelativePath());
             connection.sendMessage(FileDescriptorAckMessage.ready(message.getFileInfo().getRelativePath()));
             return;
         }
@@ -117,12 +120,12 @@ public class DateSeparatedBackupHandler extends BackupHandler {
     }
 
     @Override
-    public boolean handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException {
+    public void handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException {
         if (session.isDryRun()) {
-            return true;
+            return;
         }
 
-        System.out.println("[DATE_SEPARATED] Received FILE_DATA message");
+        log.debug("[DATE_SEPARATED] Received FILE_DATA message");
         var fileInfo = filesOnClient.get(message.getRelativePath());
         String dateDir = new java.text.SimpleDateFormat("yyyy-MM-dd").format(
                 new java.util.Date(fileInfo.getCreationTime().toEpochMilli()));
@@ -135,12 +138,12 @@ public class DateSeparatedBackupHandler extends BackupHandler {
         try (FileOutputStream fos = new FileOutputStream(targetFile, !message.isFirstBlock())) {
             fos.write(message.getData());
         }
-        return message.isLastBlock();
+        message.isLastBlock();
     }
 
     @Override
     public void handleFileEnd(TcpConnection connection, ClientSession session, FileEndMessage message) throws IOException {
-        System.out.println("[DATE_SEPARATED] Received FILE_END message");
+        log.debug("[DATE_SEPARATED] Received FILE_END message");
 
         var fileInfo = message.getFileInfo();
 
@@ -155,7 +158,7 @@ public class DateSeparatedBackupHandler extends BackupHandler {
 
     @Override
     public void handleSyncEnd(TcpConnection connection, ClientSession session, SyncEndMessage message) throws IOException {
-        System.out.println("[DATE_SEPARATED] Received SYNC_END message");
+        log.debug("[DATE_SEPARATED] Received SYNC_END message");
         connection.sendMessage(new SyncEndAckMessage(true, "Sync completed"));
     }
 }

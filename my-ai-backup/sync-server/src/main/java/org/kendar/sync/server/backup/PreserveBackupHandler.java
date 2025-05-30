@@ -5,6 +5,8 @@ import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
 import org.kendar.sync.lib.utils.FileUtils;
 import org.kendar.sync.server.server.ClientSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -32,12 +34,13 @@ public class PreserveBackupHandler extends BackupHandler {
         return Path.of(session.getFolder().getRealPath(), fileInfo.getRelativePath());
     }
 
+    private static final Logger log = LoggerFactory.getLogger(PreserveBackupHandler.class);
     @Override
     public void handleFileList(TcpConnection connection, ClientSession session, FileListMessage message) throws IOException {
-        System.out.println("[PRESERVE] Received FILE_LIST message");
+        log.debug("[PRESERVE] Received FILE_LIST message");
 
         var filesOnClient = message.getFiles().stream().collect(Collectors.toMap(
-                key -> key.getRelativePath(),
+                FileInfo::getRelativePath,
                 value -> value
         ));
 
@@ -59,25 +62,25 @@ public class PreserveBackupHandler extends BackupHandler {
                 }
             }
         }
-        
+
         var filesToSend = filesOnClient.values().stream().filter(f -> !f.isDirectory()).toList();
         connection.sendMessage(new FileListResponseMessage(filesToSend, new ArrayList<>(), true, 1, 1));
-        
+
         if (message.isBackup()) {
             return;
         }
-        
+
         handleFileRestore(connection, session, filesToSend);
     }
 
     @Override
     public void handleFileDescriptor(TcpConnection connection, ClientSession session, FileDescriptorMessage message) throws IOException {
         int connectionId = connection.getConnectionId();
-        System.out.println("[PRESERVE] Received FILE_DESCRIPTOR message: " + message.getFileInfo().getRelativePath() +
+        log.debug("[PRESERVE] Received FILE_DESCRIPTOR message: " + message.getFileInfo().getRelativePath() +
                 " on connection " + connectionId);
 
         if (session.isDryRun()) {
-            System.out.println("[PRESERVE] Dry run: Would create file " + message.getFileInfo().getRelativePath());
+            log.debug("[PRESERVE] Dry run: Would create file " + message.getFileInfo().getRelativePath());
             connection.sendMessage(FileDescriptorAckMessage.ready(message.getFileInfo().getRelativePath()));
             return;
         }
@@ -86,9 +89,9 @@ public class PreserveBackupHandler extends BackupHandler {
     }
 
     @Override
-    public boolean handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException {
+    public void handleFileData(TcpConnection connection, ClientSession session, FileDataMessage message) throws IOException {
         if (session.isDryRun()) {
-            return true;
+            return;
         }
 
         int connectionId = connection.getConnectionId();
@@ -97,15 +100,15 @@ public class PreserveBackupHandler extends BackupHandler {
         if (session.isBackup()) {
             fileInfo = session.getCurrentFile(connectionId);
             if (fileInfo == null) {
-                System.err.println("[PRESERVE] No file info found for connection " + connectionId);
-                return true;
+                log.error("[PRESERVE] No file info found for connection " + connectionId);
+                return;
             }
-            System.out.println("[PRESERVE] Received FILE_DATA message for " + fileInfo.getRelativePath() +
+            log.debug("[PRESERVE] Received FILE_DATA message for " + fileInfo.getRelativePath() +
                     " on connection " + connectionId +
                     " (block " + (message.getBlockNumber() + 1) + " of " + message.getTotalBlocks() +
                     ", " + message.getData().length + " bytes)");
         } else {
-            System.out.println("[PRESERVE] Received FILE_DATA message for " + message.getRelativePath() +
+            log.debug("[PRESERVE] Received FILE_DATA message for " + message.getRelativePath() +
                     " on connection " + connectionId +
                     " (block " + (message.getBlockNumber() + 1) + " of " + message.getTotalBlocks() +
                     ", " + message.getData().length + " bytes)");
@@ -117,26 +120,26 @@ public class PreserveBackupHandler extends BackupHandler {
         try (FileOutputStream fos = new FileOutputStream(file, !message.isFirstBlock())) {
             fos.write(message.getData());
         }
-        return message.isLastBlock();
+        message.isLastBlock();
     }
 
     @Override
     public void handleFileEnd(TcpConnection connection, ClientSession session, FileEndMessage message) throws IOException {
         int connectionId = connection.getConnectionId();
-        FileInfo fileInfo = null;
+        FileInfo fileInfo;
 
         if (session.isBackup()) {
             fileInfo = message.getFileInfo() != null ? message.getFileInfo() : session.getCurrentFile(connectionId);
             if (fileInfo == null) {
-                System.err.println("[PRESERVE] No file info found for connection " + connectionId);
+                log.error("[PRESERVE] No file info found for connection " + connectionId);
                 connection.sendMessage(FileEndAckMessage.failure(message.getRelativePath(), "No file info found"));
                 return;
             }
-            System.out.println("[PRESERVE] Received FILE_END message for " + fileInfo.getRelativePath() +
+            log.debug("[PRESERVE] Received FILE_END message for " + fileInfo.getRelativePath() +
                     " on connection " + connectionId);
         } else {
             fileInfo = message.getFileInfo();
-            System.out.println("[PRESERVE] Received FILE_END message for " + message.getRelativePath() +
+            log.debug("[PRESERVE] Received FILE_END message for " + message.getRelativePath() +
                     " on connection " + connectionId);
         }
 
@@ -149,7 +152,7 @@ public class PreserveBackupHandler extends BackupHandler {
 
     @Override
     public void handleSyncEnd(TcpConnection connection, ClientSession session, SyncEndMessage message) throws IOException {
-        System.out.println("[PRESERVE] Received SYNC_END message");
+        log.debug("[PRESERVE] Received SYNC_END message");
         connection.sendMessage(new SyncEndAckMessage(true, "Sync completed"));
     }
 }

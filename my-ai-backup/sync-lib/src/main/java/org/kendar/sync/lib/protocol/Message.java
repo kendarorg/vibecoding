@@ -6,8 +6,9 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.kendar.sync.lib.buffer.ByteContainer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -57,6 +58,9 @@ public abstract class Message {
     @JsonIgnore
     private int packetId;
 
+
+    private static final Logger log = LoggerFactory.getLogger(Message.class);
+
     public static void registerMessageType(Class<? extends Message> clazz) {
         if (clazz == null) {
             throw new IllegalArgumentException("Type and class must not be null or empty");
@@ -71,22 +75,21 @@ public abstract class Message {
      * @param clazz The class of the message
      * @param <T>   The type of the message
      * @return The deserialized message
-     * @throws IOException If deserialization fails
      */
-    public static <T extends Message> T deserialize(byte[] data, Class<T> clazz) throws IOException {
+    @SuppressWarnings("unchecked")
+    public static <T extends Message> T deserialize(byte[] data, Class<T> clazz)  {
         var buffer = ByteContainer.create();
         buffer.write(data);
         buffer.resetReadCursor();
         buffer.resetWriteCursor();
         String type = buffer.readType(String.class);
         try {
-            var instance = (Message) clazz.newInstance();
+            var instance = (Message) clazz.getDeclaredConstructor().newInstance();
             return (T) instance.deserialize(buffer);
         } catch (Exception e) {
-            System.err.println("Error 1 deserializing message of type: " + type);
+            log.error("Error 1 deserializing message of type: " + type);
             throw new RuntimeException(e);
         }
-        //return objectMapper.readValue(data, clazz);
     }
 
     /**
@@ -94,9 +97,8 @@ public abstract class Message {
      *
      * @param data The serialized message
      * @return The deserialized message
-     * @throws IOException If deserialization fails
      */
-    public static Message deserialize(byte[] data) throws IOException {
+    public static Message deserialize(byte[] data)  {
         var buffer = ByteContainer.create();
         buffer.write(data);
         buffer.resetReadCursor();
@@ -104,10 +106,10 @@ public abstract class Message {
         String type = buffer.readType(String.class);
         var clazz = messageTypeMap.get(type);
         try {
-            var instance = (Message) clazz.newInstance();
+            var instance = (Message) clazz.getDeclaredConstructor().newInstance();
             return instance.deserialize(buffer);
         } catch (Exception e) {
-            System.err.println("Error 2 deserializing message of type: " + type);
+            log.error("Error 2 deserializing message of type: " + type);
             throw new RuntimeException(e);
         }
         // return objectMapper.readValue(data, Message.class);
@@ -139,16 +141,15 @@ public abstract class Message {
      * Serializes this message to a JSON byte array.
      *
      * @return The serialized message
-     * @throws IOException If serialization fails
      */
-    public byte[] serialize() throws IOException {
+    public byte[] serialize() {
         try {
             var buffer = ByteContainer.create();
             buffer.writeType(this.getClass().getSimpleName());
             this.serialize(buffer);
             return buffer.getBytes();
         } catch (Exception e) {
-            System.err.println("Error 3 serializing " + this.getClass().getSimpleName());
+            log.error("Error 3 serializing " + this.getClass().getSimpleName());
             throw new RuntimeException(e);
         }
         //return objectMapper.writeValueAsBytes(this);

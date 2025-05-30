@@ -1,11 +1,13 @@
 package org.kendar.sync.server.api.model;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 /**
  * Response model for JWT authentication.
  */
 public class JwtResponse implements Serializable {
+    @Serial
     private static final long serialVersionUID = -8091879091924046844L;
 
     private final String token;

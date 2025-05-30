@@ -6,7 +6,7 @@
 
     <groupId>org.kendar.sync</groupId>
     <artifactId>my-ai-backup</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>${revision}</version>
     <packaging>pom</packaging>
 
     <modules>
@@ -16,14 +16,20 @@
     </modules>
 
     <properties>
+        <revision>1.0-SNAPSHOT</revision>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.plugin.version>3.11.0</maven.compiler.plugin.version>
+        <maven.assembly.plugin.version>3.4.0</maven.assembly.plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jackson.version>2.15.2</jackson.version>
         <junit.version>5.9.2</junit.version>
         <spring.boot.version>3.1.0</spring.boot.version>
-
+        <logback.version>1.5.12</logback.version>
+        <sl4j.version>2.0.17</sl4j.version>
         <mockito.version>5.12.0</mockito.version>
+        <byte.buddy.version>1.14.4</byte.buddy.version>
+        <jjwt.version>0.11.5</jjwt.version>
     </properties>
 
     <dependencyManagement>
@@ -57,7 +63,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.11.0</version>
+                    <version>${maven.compiler.plugin.version}</version>
                     <configuration>
                         <source>${maven.compiler.source}</source>
                         <target>${maven.compiler.target}</target>

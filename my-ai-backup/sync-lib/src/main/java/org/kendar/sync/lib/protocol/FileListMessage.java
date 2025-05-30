@@ -30,7 +30,7 @@ public class FileListMessage extends Message {
      *
      * @param files      The list of files
      * @param isBackup   Whether this is a backup operation (true) or restore operation (false)
-     * @param partNumber The part number of this message (for multi-part messages)
+     * @param partNumber The part number of this message (for multipart messages)
      * @param totalParts The total number of parts
      */
     public FileListMessage(List<FileInfo> files, boolean isBackup, int partNumber, int totalParts) {

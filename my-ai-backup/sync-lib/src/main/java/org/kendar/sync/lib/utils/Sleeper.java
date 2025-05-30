@@ -1,6 +1,9 @@
 package org.kendar.sync.lib.utils;
 
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.function.BooleanSupplier;
 
 /**
@@ -9,7 +12,7 @@ import java.util.function.BooleanSupplier;
 @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
 public class Sleeper {
     /**
-     * Runs a synchronized based wait mechanism instead of sleep
+     * Runs a synchronized-based wait mechanism instead of sleep
      *
      * @param timeoutMillis Timeout in ms
      */
@@ -71,13 +74,14 @@ public class Sleeper {
             }
 
         } catch (Exception ex) {
-
+            //NOOP
         }
         if (!silent) {
-            System.out.println("Sleeper sleep timed out with no answer");
+            log.debug("Sleeper sleep timed out with no answer");
         }
     }
 
+    private static final Logger log = LoggerFactory.getLogger(Sleeper.class);
     /**
      * Give control to other threads
      */
