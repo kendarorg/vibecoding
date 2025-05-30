@@ -8,11 +8,11 @@ import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ServerPortCustomizer implements WebServerFactoryCustomizer<ConfigurableWebServerFactory> {
-    private static final Logger log = LoggerFactory.getLogger(ServerPortCustomizer.class);
+public class WebServerPortCustomizer implements WebServerFactoryCustomizer<ConfigurableWebServerFactory> {
+    private static final Logger log = LoggerFactory.getLogger(WebServerPortCustomizer.class);
     private final ServerSettings serverSettings;
 
-    public ServerPortCustomizer(ServerSettings serverSettings) {
+    public WebServerPortCustomizer(ServerSettings serverSettings) {
         this.serverSettings = serverSettings;
     }
     @Override

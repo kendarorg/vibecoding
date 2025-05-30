@@ -2,17 +2,12 @@ package org.kendar.sync.server;
 
 import jakarta.servlet.Servlet;
 import org.kendar.sync.server.config.ServerConfig;
-import org.kendar.sync.server.config.TcpServerRunner;
-import org.kendar.sync.server.server.Server;
+import org.kendar.sync.server.config.SyncServerRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Bean;
 
 /**
  * Main class for the sync server application.
@@ -26,7 +21,7 @@ public class SyncServerApplication  {
     @Autowired
     private Servlet servlet;
     @Autowired
-    private TcpServerRunner runner;
+    private SyncServerRunner runner;
 
 
     /**
@@ -38,7 +33,7 @@ public class SyncServerApplication  {
         // Parse command line arguments
         for (String arg : args) {
             if (arg.equals("--dry-run")) {
-                TcpServerRunner.setDryRun(true);
+                SyncServerRunner.setDryRun(true);
                 System.out.println("Running in dry-run mode. No actual file operations will be performed.");
             }
         }
