@@ -163,7 +163,7 @@ public class FileUtils {
     public static void createDirectoryIfNotExists(File directory) throws IOException {
         if (!directory.exists()) {
             if (!directory.mkdirs()) {
-                throw new IOException("Failed to create directory 6: " + directory);
+                throw new IOException("Failed to create directory 8: " + directory);
             }
         }
     }

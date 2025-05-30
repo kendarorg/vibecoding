@@ -234,7 +234,7 @@ public abstract class BackupHandler {
             return new ArrayList<>();
         }
 
-        try(var result = Files.walk(sourcePath)) {
+        try (var result = Files.walk(sourcePath)) {
             return result.filter(path -> !Files.isDirectory(path))
                     .collect(Collectors.toList());
         }
@@ -245,7 +245,7 @@ public abstract class BackupHandler {
             return new ArrayList<>();
         }
 
-        try(var result = Files.walk(sourcePath)) {
+        try (var result = Files.walk(sourcePath)) {
             return result.collect(Collectors.toList());
         }
     }

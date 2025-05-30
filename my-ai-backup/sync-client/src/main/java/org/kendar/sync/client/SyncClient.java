@@ -80,7 +80,7 @@ public class SyncClient {
 
             // Create parent directories
             if (!args.isDryRun()) {
-                if (!targetFile.getParentFile().mkdirs()) {
+                if (!targetFile.getParentFile().exists() && !targetFile.getParentFile().mkdirs()) {
                     throw new IOException("Failed to create directory 3: " +
                             targetFile.getParentFile().getAbsolutePath());
                 }
@@ -105,7 +105,7 @@ public class SyncClient {
                 // Write file data
                 if (!args.isDryRun()) {
                     // Create parent directories if needed
-                    if (!targetFile.getParentFile().mkdirs()) {
+                    if (!targetFile.getParentFile().exists() && !targetFile.getParentFile().mkdirs()) {
                         throw new IOException("Failed to create directory 4: " +
                                 targetFile.getParentFile().getAbsolutePath());
                     }

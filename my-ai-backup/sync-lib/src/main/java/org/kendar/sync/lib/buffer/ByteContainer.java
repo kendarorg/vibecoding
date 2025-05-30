@@ -400,7 +400,6 @@ public class ByteContainer {
             System.arraycopy(data, length, trailing, 0, trailing.length);
             clear();
             write(trailing);
-            return result;
         } else {
             var lastLen = data.length - offset - length;
             var prefix = new byte[offset + lastLen];
@@ -408,8 +407,8 @@ public class ByteContainer {
             System.arraycopy(data, length + offset, prefix, offset, lastLen);
             clear();
             write(prefix);
-            return result;
         }
+        return result;
     }
 
     /**

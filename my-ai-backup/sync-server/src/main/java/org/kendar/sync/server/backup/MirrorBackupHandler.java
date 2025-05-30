@@ -139,7 +139,7 @@ public class MirrorBackupHandler extends BackupHandler {
             relativePath = message.getRelativePath();
         }
         File file = new File(session.getFolder().getRealPath(), relativePath);
-        if (!file.getParentFile().mkdirs()) {
+        if (!file.getParentFile().exists() && !file.getParentFile().mkdirs()) {
             throw new IOException("Failed to create directory 6: " + file.getParentFile().getAbsolutePath());
         }
         try (FileOutputStream fos = new FileOutputStream(file, message.isFirstBlock())) {
