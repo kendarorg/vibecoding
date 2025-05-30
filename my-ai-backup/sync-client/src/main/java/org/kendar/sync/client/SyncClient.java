@@ -4,6 +4,7 @@ import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
 import org.kendar.sync.lib.utils.FileUtils;
+import org.kendar.sync.lib.utils.Sleeper;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -70,10 +71,11 @@ public class SyncClient {
 
         FileListResponseMessage fileListResponse = (FileListResponseMessage) response;
 
-        var mapToTransfer = fileListResponse.getFilesToTransfer().stream()
+        var mapToTransferInital = fileListResponse.getFilesToTransfer().stream()
                 .collect(Collectors.toMap(fileInfo -> {
                     return FileUtils.makeUniformPath(fileInfo.getRelativePath());
                 }, fileInfo -> fileInfo));
+        var mapToTransfer = new ConcurrentHashMap<>(mapToTransferInital);
 
         // Use a fixed pool of 10 threads for parallel file transfers
         ExecutorService executorService = new ThreadPoolExecutor(maxConnections, maxConnections,
@@ -90,6 +92,7 @@ public class SyncClient {
                     subConnection.getSessionId(), 0);
             subConnection.sendMessage(startRestoreMessage);
         }
+        Sleeper.sleep(1000);
         Message startRestoreMessage = new StartRestore();
         startRestoreMessage.initialize(connection.getConnectionId(),
                 connection.getSessionId(), 0);
@@ -97,6 +100,11 @@ public class SyncClient {
 
         // Process files to transfer
         while (!mapToTransfer.isEmpty()) {
+            try {
+                semaphore.acquire();
+            } catch (InterruptedException e) {
+
+            }
             executorService.submit(() -> {
                 Message fileName = null;
                 TcpConnection currentConnection = null;
@@ -123,7 +131,7 @@ public class SyncClient {
                         return;
                     }
                     mapToTransfer.remove(FileUtils.makeUniformPath(fileInfo.getRelativePath()));
-
+                    semaphore.release();
                     System.out.println("[CLIENT] Receiving file: " + fileInfo.getRelativePath());
 
                     // Create the file or directory
@@ -209,6 +217,7 @@ public class SyncClient {
                 } finally {
                     if (currentConnection != null) connections.add(currentConnection);
                     completionLatch.countDown();
+                    semaphore.release();
                 }
             });
         }
@@ -484,7 +493,7 @@ public class SyncClient {
                 System.out.println("[CLIENT] Sync completed successfully");
             }
         } catch (IOException e) {
-            System.err.println("[CLIENT] Error: " + e.getMessage());
+            //TODO System.err.println("[CLIENT] Error: " + e.getMessage());
         }
     }
 

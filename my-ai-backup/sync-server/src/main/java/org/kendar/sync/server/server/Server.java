@@ -58,7 +58,7 @@ public class Server {
                         // Handle client connection in a separate thread
                         executorService.submit(() -> handleClient(clientSocket, settings));
                     } catch (IOException e) {
-                        System.err.println("[SERVER] Error accepting client connection: " + e.getMessage());
+                        //TODO System.err.println("[SERVER] Error accepting client connection: " + e.getMessage());
                     }
                 }
             }
@@ -191,7 +191,7 @@ public class Server {
                 }
             }
         } catch (IOException e) {
-            System.err.println("[SERVER] Error handling client: " + e.getMessage());
+            //TODO System.err.println("[SERVER] Error handling client: " + e.getMessage());
             try {
                 clientSocket.close();
             } catch (IOException ex) {

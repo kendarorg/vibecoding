@@ -45,7 +45,7 @@ public class BackupIntegrationTest {
     private Server server;
     private int serverPort;
     private CommandLineArgs commandLineArgs;
-    private boolean restore=false;
+    private boolean restore=true;
 
     private static int findFreePort() {
         try (var serverSocket = new java.net.ServerSocket(0)) {
