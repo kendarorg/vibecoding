@@ -52,7 +52,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             logger.debug("No auth token found");
         }
 
-        // Once we get the token validate it.
+        // Once we get the token, validate it.
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             // Create a UserDetails object with the username and roles
             List<SimpleGrantedAuthority> authorities = new ArrayList<>();

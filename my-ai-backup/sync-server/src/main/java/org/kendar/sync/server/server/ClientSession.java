@@ -13,15 +13,16 @@ import java.util.*;
  * Represents a client session.
  */
 public class ClientSession {
+    private static final Logger log = LoggerFactory.getLogger(ClientSession.class);
     private final UUID sessionId;
     private final ServerSettings.User user;
     private final ServerSettings.BackupFolder folder;
     private final BackupType backupType;
     private final boolean dryRun;
     private final Map<Integer, FileInfo> currentFileTransfers = new HashMap<>();
+    private final Set<TcpConnection> connections = new HashSet<>();
     private boolean isBackup = false;
     private TcpConnection mainConnection;
-    private final Set<TcpConnection> connections = new HashSet<>();
 
     public ClientSession(UUID sessionId, ServerSettings.User user, ServerSettings.BackupFolder folder,
                          BackupType backupType, boolean dryRun) {
@@ -116,12 +117,11 @@ public class ClientSession {
             try {
                 connection.close();
             } catch (Exception e) {
-                log.error("Error closing connection: " + e.getMessage());
+                log.error("Error closing connection: {}", e.getMessage());
             }
         }
         connections.clear();
     }
-    private static final Logger log = LoggerFactory.getLogger(ClientSession.class);
 
     public Set<TcpConnection> getConnections() {
         return connections;

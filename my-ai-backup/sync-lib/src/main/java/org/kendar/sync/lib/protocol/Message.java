@@ -51,15 +51,13 @@ public abstract class Message {
     private static final ConcurrentHashMap<String, Class<? extends Message>> messageTypeMap = new ConcurrentHashMap<>();
     private static final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule());
+    private static final Logger log = LoggerFactory.getLogger(Message.class);
     @JsonIgnore
     private int connectionId;
     @JsonIgnore
     private UUID sessionId;
     @JsonIgnore
     private int packetId;
-
-
-    private static final Logger log = LoggerFactory.getLogger(Message.class);
 
     public static void registerMessageType(Class<? extends Message> clazz) {
         if (clazz == null) {
@@ -77,7 +75,7 @@ public abstract class Message {
      * @return The deserialized message
      */
     @SuppressWarnings("unchecked")
-    public static <T extends Message> T deserialize(byte[] data, Class<T> clazz)  {
+    public static <T extends Message> T deserialize(byte[] data, Class<T> clazz) {
         var buffer = ByteContainer.create();
         buffer.write(data);
         buffer.resetReadCursor();
@@ -87,7 +85,7 @@ public abstract class Message {
             var instance = (Message) clazz.getDeclaredConstructor().newInstance();
             return (T) instance.deserialize(buffer);
         } catch (Exception e) {
-            log.error("Error 1 deserializing message of type: " + type);
+            log.error("Error 1 deserializing message of type: {}", type);
             throw new RuntimeException(e);
         }
     }
@@ -98,7 +96,7 @@ public abstract class Message {
      * @param data The serialized message
      * @return The deserialized message
      */
-    public static Message deserialize(byte[] data)  {
+    public static Message deserialize(byte[] data) {
         var buffer = ByteContainer.create();
         buffer.write(data);
         buffer.resetReadCursor();
@@ -109,7 +107,7 @@ public abstract class Message {
             var instance = (Message) clazz.getDeclaredConstructor().newInstance();
             return instance.deserialize(buffer);
         } catch (Exception e) {
-            log.error("Error 2 deserializing message of type: " + type);
+            log.error("Error 2 deserializing message of type: {}", type);
             throw new RuntimeException(e);
         }
         // return objectMapper.readValue(data, Message.class);
@@ -149,7 +147,7 @@ public abstract class Message {
             this.serialize(buffer);
             return buffer.getBytes();
         } catch (Exception e) {
-            log.error("Error 3 serializing " + this.getClass().getSimpleName());
+            log.error("Error 3 serializing {}", this.getClass().getSimpleName());
             throw new RuntimeException(e);
         }
         //return objectMapper.writeValueAsBytes(this);

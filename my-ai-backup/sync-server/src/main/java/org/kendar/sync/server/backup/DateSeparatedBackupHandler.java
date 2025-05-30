@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 public class DateSeparatedBackupHandler extends BackupHandler {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final Logger log = LoggerFactory.getLogger(DateSeparatedBackupHandler.class);
     private final ConcurrentHashMap<String, FileInfo> filesOnClient = new ConcurrentHashMap<>();
 
     @Override
@@ -47,7 +48,6 @@ public class DateSeparatedBackupHandler extends BackupHandler {
         return relPath;
     }
 
-    private static final Logger log = LoggerFactory.getLogger(DateSeparatedBackupHandler.class);
     @Override
     public void handleFileList(TcpConnection connection, ClientSession session, FileListMessage message) throws IOException {
         log.debug("[DATE_SEPARATED] Received FILE_LIST message");
@@ -100,11 +100,10 @@ public class DateSeparatedBackupHandler extends BackupHandler {
     @Override
     public void handleFileDescriptor(TcpConnection connection, ClientSession session, FileDescriptorMessage message) throws IOException {
         int connectionId = connection.getConnectionId();
-        log.debug("[DATE_SEPARATED] Received FILE_DESCRIPTOR message: " + message.getFileInfo().getRelativePath() +
-                " on connection " + connectionId);
+        log.debug("[DATE_SEPARATED] Received FILE_DESCRIPTOR message: {} on connection {}", message.getFileInfo().getRelativePath(), connectionId);
 
         if (session.isDryRun()) {
-            log.debug("Dry run: Would create file " + message.getFileInfo().getRelativePath());
+            log.debug("Dry run: Would create file {}", message.getFileInfo().getRelativePath());
             connection.sendMessage(FileDescriptorAckMessage.ready(message.getFileInfo().getRelativePath()));
             return;
         }

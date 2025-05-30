@@ -1,9 +1,9 @@
 package org.kendar.sync.lib.buffer;
 
 class ByteContainerStructure {
-    public int length;
     public final int dataIndex;
     public final int internalIndex;
+    public int length;
 
     public ByteContainerStructure(int dataIndex, int internalIndex) {
         this.dataIndex = dataIndex;

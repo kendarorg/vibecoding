@@ -24,6 +24,8 @@ import java.util.stream.Collectors;
  */
 public class MirrorBackupHandler extends BackupHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(MirrorBackupHandler.class);
+
     @Override
     protected String getHandlerType() {
         return "MIRROR";
@@ -34,7 +36,6 @@ public class MirrorBackupHandler extends BackupHandler {
         return Path.of(session.getFolder().getRealPath(), fileInfo.getRelativePath());
     }
 
-    private static final Logger log = LoggerFactory.getLogger(MirrorBackupHandler.class);
     @Override
     public void handleFileList(TcpConnection connection, ClientSession session, FileListMessage message) throws IOException {
         log.debug("[MIRROR] Received FILE_LIST message");
@@ -99,11 +100,10 @@ public class MirrorBackupHandler extends BackupHandler {
     @Override
     public void handleFileDescriptor(TcpConnection connection, ClientSession session, FileDescriptorMessage message) throws IOException {
         int connectionId = connection.getConnectionId();
-        log.debug("[MIRROR] Received FILE_DESCRIPTOR message: " + message.getFileInfo().getRelativePath() +
-                " on connection " + connectionId);
+        log.debug("[MIRROR] Received FILE_DESCRIPTOR message: {} on connection {}", message.getFileInfo().getRelativePath(), connectionId);
 
         if (session.isDryRun()) {
-            log.debug("[MIRROR] Dry run: Would create file " + message.getFileInfo().getRelativePath());
+            log.debug("[MIRROR] Dry run: Would create file {}", message.getFileInfo().getRelativePath());
             connection.sendMessage(FileDescriptorAckMessage.ready(message.getFileInfo().getRelativePath()));
             return;
         }
@@ -123,18 +123,12 @@ public class MirrorBackupHandler extends BackupHandler {
         if (session.isBackup()) {
             fileInfo = session.getCurrentFile(connectionId);
             if (fileInfo == null) {
-                log.error("[MIRROR] No file info found for connection " + connectionId);
+                log.error("[MIRROR] 1 No file info found for connection {}", connectionId);
                 return;
             }
-            log.debug("[MIRROR] Received FILE_DATA message for " + fileInfo.getRelativePath() +
-                    " on connection " + connectionId +
-                    " (block " + (message.getBlockNumber() + 1) + " of " + message.getTotalBlocks() +
-                    ", " + message.getData().length + " bytes)");
+            log.debug("[MIRROR] Received FILE_DATA message for {} on connection {} (block {} of {}, {} bytes)", fileInfo.getRelativePath(), connectionId, message.getBlockNumber() + 1, message.getTotalBlocks(), message.getData().length);
         } else {
-            log.debug("[MIRROR] Received FILE_DATA message for " + message.getRelativePath() +
-                    " on connection " + connectionId +
-                    " (block " + (message.getBlockNumber() + 1) + " of " + message.getTotalBlocks() +
-                    ", " + message.getData().length + " bytes)");
+            log.debug("[MIRROR] Received FILE_DATA message for {} on connection {} (block {} of {}, {} bytes)", message.getRelativePath(), connectionId, message.getBlockNumber() + 1, message.getTotalBlocks(), message.getData().length);
         }
 
         String relativePath = session.isBackup() ? fileInfo.getRelativePath() : message.getRelativePath();
@@ -154,16 +148,14 @@ public class MirrorBackupHandler extends BackupHandler {
         if (session.isBackup()) {
             fileInfo = message.getFileInfo() != null ? message.getFileInfo() : session.getCurrentFile(connectionId);
             if (fileInfo == null) {
-                log.error("[MIRROR] No file info found for connection " + connectionId);
+                log.error("[MIRROR] 2 No file info found for connection {}", connectionId);
                 connection.sendMessage(FileEndAckMessage.failure(message.getRelativePath(), "No file info found"));
                 return;
             }
-            log.debug("[MIRROR] Received FILE_END message for " + fileInfo.getRelativePath() +
-                    " on connection " + connectionId);
+            log.debug("[MIRROR] 3 Received FILE_END message for {} on connection {}", fileInfo.getRelativePath(), connectionId);
         } else {
             fileInfo = message.getFileInfo();
-            log.debug("[MIRROR] Received FILE_END message for " + message.getRelativePath() +
-                    " on connection " + connectionId);
+            log.debug("[MIRROR] 4 Received FILE_END message for {} on connection {}", message.getRelativePath(), connectionId);
         }
 
         var realPath = Path.of(session.getFolder().getRealPath() + File.separator + fileInfo.getRelativePath());

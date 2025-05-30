@@ -27,11 +27,12 @@ public class SyncClient {
     private static final int DEFAULT_MAX_CONNECTIONS = 5;
 
     private static final Logger log = LoggerFactory.getLogger(SyncClient.class);
+
     private static void performSingleFileRestore(CommandLineArgs args, ConcurrentLinkedQueue<TcpConnection> connections, ConcurrentHashMap<String, FileInfo> mapToTransfer, Semaphore semaphore, CountDownLatch completionLatch) {
         TcpConnection currentConnection = null;
         try {
             currentConnection = connections.poll();
-            if(currentConnection == null) {
+            if (currentConnection == null) {
                 log.error("[CLIENT] No available connections for file transfer");
                 return;
             }
@@ -41,14 +42,14 @@ public class SyncClient {
                 return;
             }
             if (message.getMessageType() != MessageType.FILE_DESCRIPTOR) {
-                log.error("[CLIENT] Unexpected message 1: " + message.getMessageType());
+                log.error("[CLIENT] Unexpected message 1: {}", message.getMessageType());
                 return;
             }
 
             FileDescriptorMessage fileDescriptorMessage = (FileDescriptorMessage) message;
             FileInfo fileInfo = fileDescriptorMessage.getFileInfo();
             if (!mapToTransfer.containsKey(FileUtils.makeUniformPath(fileInfo.getRelativePath()))) {
-                log.debug("[CLIENT] Skipping file not in transfer list: " + fileInfo.getRelativePath());
+                log.debug("[CLIENT] Skipping file not in transfer list: {}", fileInfo.getRelativePath());
                 // Send file descriptor ack
                 FileDescriptorAckMessage fileDescriptorAck = FileDescriptorAckMessage.ready(fileInfo.getRelativePath());
                 currentConnection.sendMessage(fileDescriptorAck);
@@ -56,7 +57,7 @@ public class SyncClient {
             }
             mapToTransfer.remove(FileUtils.makeUniformPath(fileInfo.getRelativePath()));
             semaphore.release();
-            log.debug("[CLIENT] Receiving file: " + fileInfo.getRelativePath());
+            log.debug("[CLIENT] Receiving file: {}", fileInfo.getRelativePath());
 
             // Create the file or directory
             File targetFile = new File(args.getSourceFolder(), fileInfo.getRelativePath());
@@ -65,7 +66,7 @@ public class SyncClient {
                 if (!args.isDryRun()) {
                     targetFile.mkdirs();
                 } else {
-                    log.debug("[CLIENT] Dry run: Would create directory " + targetFile.getAbsolutePath());
+                    log.debug("[CLIENT] Dry run: Would create directory {}", targetFile.getAbsolutePath());
                 }
 
                 // Send file descriptor ack
@@ -79,7 +80,7 @@ public class SyncClient {
             if (!args.isDryRun()) {
                 targetFile.getParentFile().mkdirs();
             } else {
-                log.debug("[CLIENT] Dry run: Would create parent directories for " + targetFile.getAbsolutePath());
+                log.debug("[CLIENT] Dry run: Would create parent directories for {}", targetFile.getAbsolutePath());
             }
 
             // Send file descriptor ack
@@ -89,7 +90,7 @@ public class SyncClient {
             // Wait for file data
             message = currentConnection.receiveMessage();
             if (message.getMessageType() != MessageType.FILE_DATA) {
-                log.error("[CLIENT] Unexpected message 2: " + message.getMessageType());
+                log.error("[CLIENT] Unexpected message 2: {}", message.getMessageType());
                 return;
             }
 
@@ -106,12 +107,12 @@ public class SyncClient {
                         fos.write(fileDataMessage.getData());
                     }
                 } else {
-                    log.debug("[CLIENT] Dry run: Would write file data to " + targetFile.getAbsolutePath());
+                    log.debug("[CLIENT] Dry run: Would write file data to {}", targetFile.getAbsolutePath());
                 }
                 message = currentConnection.receiveMessage();
                 if (message.getMessageType() != MessageType.FILE_DATA) {
                     if (!fileDataMessage.isLastBlock()) {
-                        log.error("[CLIENT] Unexpected message 3: " + message.getMessageType());
+                        log.error("[CLIENT] Unexpected message 3: {}", message.getMessageType());
                         return;
                     } else {
                         break;
@@ -122,7 +123,7 @@ public class SyncClient {
 
             // Wait for the file end message
             if (message.getMessageType() != MessageType.FILE_END) {
-                log.error("[CLIENT] Unexpected message 4: " + message.getMessageType());
+                log.error("[CLIENT] Unexpected message 4: {}", message.getMessageType());
                 return;
             }
 
@@ -135,9 +136,9 @@ public class SyncClient {
             Files.setLastModifiedTime(realPath, FileTime.fromMillis(fileInfo.getModificationTime().toEpochMilli()));
 
 
-            log.debug("[CLIENT] Received file: " + fileInfo.getRelativePath());
+            log.debug("[CLIENT] Received file: {}", fileInfo.getRelativePath());
         } catch (Exception e) {
-            log.error("[CLIENT] Error receiving file: " + e.getMessage());
+            log.error("[CLIENT] Error receiving file: {}", e.getMessage());
         } finally {
             if (currentConnection != null) connections.add(currentConnection);
             completionLatch.countDown();
@@ -162,21 +163,21 @@ public class SyncClient {
      * @throws IOException If an I/O error occurs
      */
     private void performRestore(TcpConnection connection, CommandLineArgs args, int maxConnections, int maxPacketSize) throws IOException {
-        log.debug("[CLIENT] Starting restore from " + args.getTargetFolder() + " to " + args.getSourceFolder());
+        log.debug("[CLIENT] Starting restore from {} to {}", args.getTargetFolder(), args.getSourceFolder());
 
         // Get the list of files to back up
         List<FileInfo> files = new ArrayList<>();
         File sourceDir = new File(args.getSourceFolder());
 
         if (!sourceDir.exists() || !sourceDir.isDirectory()) {
-            log.error("[CLIENT] Source folder does not exist or is not a directory");
+            log.error("[CLIENT] 1 Source folder does not exist or is not a directory");
             return;
         }
 
         // Recursively scan the source directory
         scanDirectory(sourceDir, sourceDir.getAbsolutePath(), files);
 
-        log.debug("[CLIENT] Found " + files.size() + " files to backup");
+        log.debug("[CLIENT] 2 Found {} files to backup", files.size());
 
         // Send the file list message
         FileListMessage fileListMessage = new FileListMessage(files, args.isBackup(), 1, 1);
@@ -185,7 +186,7 @@ public class SyncClient {
         // Wait for file list response
         Message response = connection.receiveMessage();
         if (response.getMessageType() != MessageType.FILE_LIST_RESPONSE) {
-            log.error("[CLIENT] Unexpected response 6: " + response.getMessageType());
+            log.error("[CLIENT] Unexpected response 6: {}", response.getMessageType());
             return;
         }
 
@@ -230,7 +231,7 @@ public class SyncClient {
             log.debug("[CLIENT] All file transfers completed 1");
             connection.close();
         } catch (InterruptedException e) {
-            log.error("[CLIENT] File transfer interrupted 1: " + e.getMessage());
+            log.error("[CLIENT] File transfer interrupted 1: {}", e.getMessage());
         } finally {
             executorService.shutdown();
         }
@@ -244,10 +245,10 @@ public class SyncClient {
                     fileToDelete.delete();
                 }
             } else {
-                log.debug("[CLIENT] Dry run: Would delete file " + fileToDelete.getAbsolutePath());
+                log.debug("[CLIENT] Dry run: Would delete file {}", fileToDelete.getAbsolutePath());
             }
 
-            log.debug("[CLIENT] Deleted file: " + relativePath);
+            log.debug("[CLIENT] Deleted file: {}", relativePath);
         }
     }
 
@@ -331,7 +332,7 @@ public class SyncClient {
     private void transferFile(FileInfo file, CommandLineArgs args, TcpConnection connection) throws IOException {
         String threadName = Thread.currentThread().getName();
         var connectionId = connection.getConnectionId();
-        log.debug("[CLIENT-" + connectionId + "] Starting transfer of " + file.getRelativePath());
+        log.debug("[CLIENT-{}] Starting transfer of {}", connectionId, file.getRelativePath());
 
         // Create the new connection to the server
 
@@ -341,19 +342,19 @@ public class SyncClient {
         // Wait for file descriptor ack
         Message response = connection.receiveMessage();
         if (response.getMessageType() != MessageType.FILE_DESCRIPTOR_ACK) {
-            log.error("[CLIENT-" + connectionId + "] Unexpected response: " + response.getMessageType());
+            log.error("[CLIENT-{}] Unexpected response: {}", connectionId, response.getMessageType());
             return;
         }
 
         FileDescriptorAckMessage fileDescriptorAck = (FileDescriptorAckMessage) response;
         if (!fileDescriptorAck.isReady()) {
-            log.error("[CLIENT-" + connectionId + "] Server not ready to receive file: " + fileDescriptorAck.getErrorMessage());
+            log.error("[CLIENT-{}] Server not ready to receive file: {}", connectionId, fileDescriptorAck.getErrorMessage());
             return;
         }
 
         // If it's a directory, no need to send data
         if (file.isDirectory()) {
-            log.debug("[CLIENT-" + connectionId + "] Created directory: " + file.getRelativePath());
+            log.debug("[CLIENT-{}] Created directory: {}", connectionId, file.getRelativePath());
             return;
         }
 
@@ -367,8 +368,7 @@ public class SyncClient {
             int totalBlocks = (int) Math.ceil((double) fileSize / maxPacketSize);
             if (totalBlocks == 0) totalBlocks = 1; // Ensure at least one block for empty files
 
-            log.debug("[CLIENT-" + connectionId + "] Sending file " + file.getRelativePath() +
-                    " in " + totalBlocks + " blocks (" + fileSize + " bytes)");
+            log.debug("[CLIENT-{}] Sending file {} in {} blocks ({} bytes)", connectionId, file.getRelativePath(), totalBlocks, fileSize);
 
             try (java.io.FileInputStream fis = new java.io.FileInputStream(sourceFile)) {
                 byte[] buffer = new byte[maxPacketSize];
@@ -383,35 +383,34 @@ public class SyncClient {
                             file.getRelativePath(), blockNumber, totalBlocks, blockData);
                     connection.sendMessage(fileDataMessage);
 
-                    log.debug("[CLIENT-" + connectionId + "] Sent block " + (blockNumber + 1) +
-                            " of " + totalBlocks + " (" + blockData.length + " bytes)");
+                    log.debug("[CLIENT-{}] Sent block {} of {} ({} bytes)", connectionId, blockNumber + 1, totalBlocks, blockData.length);
 
                     blockNumber++;
                 }
             }
         } else {
-            log.debug("[CLIENT-" + connectionId + "] Dry run: Would send file data for " + file.getRelativePath());
+            log.debug("[CLIENT-{}] Dry run: Would send file data for {}", connectionId, file.getRelativePath());
         }
 
         // Send the file end message
-        log.debug("[CLIENT-" + connectionId + "] Send end: " + file.getRelativePath());
+        log.debug("[CLIENT-{}] Send end: {}", connectionId, file.getRelativePath());
         FileEndMessage fileEndMessage = new FileEndMessage(file.getRelativePath(), file);
         connection.sendMessage(fileEndMessage);
 
         // Wait for file end ack
         response = connection.receiveMessage();
         if (response.getMessageType() != MessageType.FILE_END_ACK) {
-            log.error("[CLIENT-" + connectionId + "] Unexpected response: " + response.getMessageType());
+            log.error("[CLIENT-{}] Unexpected response: {}", connectionId, response.getMessageType());
             return;
         }
 
         FileEndAckMessage fileEndAck = (FileEndAckMessage) response;
         if (!fileEndAck.isSuccess()) {
-            log.error("[CLIENT-" + connectionId + "] File transfer failed: " + fileEndAck.getErrorMessage());
+            log.error("[CLIENT-{}] File transfer failed: {}", connectionId, fileEndAck.getErrorMessage());
             return;
         }
 
-        log.debug("[CLIENT-" + connectionId + "] Transferred file: " + file.getRelativePath());
+        log.debug("[CLIENT-{}] Transferred file: {}", connectionId, file.getRelativePath());
 
     }
 
@@ -423,7 +422,7 @@ public class SyncClient {
 
         try {
             // Connect to server
-            log.debug("[CLIENT] Connecting to server " + commandLineArgs.getServerAddress() + ":" + commandLineArgs.getServerPort());
+            log.debug("[CLIENT] Connecting to server {}:{}", commandLineArgs.getServerAddress(), commandLineArgs.getServerPort());
 
             if (commandLineArgs.isDryRun()) {
                 log.debug("[CLIENT] Running in dry-run mode. No actual file operations will be performed.");
@@ -454,13 +453,13 @@ public class SyncClient {
                 // Wait for the connection response
                 Message response = connection.receiveMessage();
                 if (response.getMessageType() != MessageType.CONNECT_RESPONSE) {
-                    log.error("[CLIENT] Unexpected response 1: " + response.getMessageType());
+                    log.error("[CLIENT] Unexpected response 1: {}", response.getMessageType());
                     return;
                 }
 
                 ConnectResponseMessage connectResponse = (ConnectResponseMessage) response;
                 if (!connectResponse.isAccepted()) {
-                    log.error("[CLIENT] Connection rejected: " + connectResponse.getErrorMessage());
+                    log.error("[CLIENT] Connection rejected: {}", connectResponse.getErrorMessage());
                     return;
                 }
                 connection.setSessionId(connectResponse.getSessionId());
@@ -484,13 +483,13 @@ public class SyncClient {
                 // Wait for sync end ack
                 response = connection.receiveMessage();
                 if (response.getMessageType() != MessageType.SYNC_END_ACK) {
-                    log.error("[CLIENT] Unexpected response 2: " + response.getMessageType());
+                    log.error("[CLIENT] Unexpected response 2: {}", response.getMessageType());
                     return;
                 }
 
                 SyncEndAckMessage syncEndAck = (SyncEndAckMessage) response;
                 if (!syncEndAck.isSuccess()) {
-                    log.error("[CLIENT] Sync failed: " + syncEndAck.getErrorMessage());
+                    log.error("[CLIENT] Sync failed: {}", syncEndAck.getErrorMessage());
                     return;
                 }
 
@@ -511,21 +510,21 @@ public class SyncClient {
      * @throws IOException If an I/O error occurs
      */
     private void performBackup(TcpConnection connection, CommandLineArgs args, int maxConnections, int maxPacketSize) throws IOException {
-        log.debug("[CLIENT] Starting backup from " + args.getSourceFolder() + " to " + args.getTargetFolder());
+        log.debug("[CLIENT] Starting backup from {} to {}", args.getSourceFolder(), args.getTargetFolder());
 
         // Get the list of files to back up
         List<FileInfo> files = new ArrayList<>();
         File sourceDir = new File(args.getSourceFolder());
 
         if (!sourceDir.exists() || !sourceDir.isDirectory()) {
-            log.error("[CLIENT] Source folder does not exist or is not a directory");
+            log.error("[CLIENT] 3 Source folder does not exist or is not a directory");
             return;
         }
 
         // Recursively scan the source directory
         scanDirectory(sourceDir, sourceDir.getAbsolutePath(), files);
 
-        log.debug("[CLIENT] Found " + files.size() + " files to backup");
+        log.debug("[CLIENT] 4 Found {} files to backup", files.size());
 
         // Send the file list message
         FileListMessage fileListMessage = new FileListMessage(files, args.isBackup(), 1, 1);
@@ -534,7 +533,7 @@ public class SyncClient {
         // Wait for file list response
         Message response = connection.receiveMessage();
         if (response.getMessageType() != MessageType.FILE_LIST_RESPONSE) {
-            log.error("[CLIENT] Unexpected response 3: " + response.getMessageType());
+            log.error("[CLIENT] Unexpected response 3: {}", response.getMessageType());
             return;
         }
 
@@ -549,7 +548,7 @@ public class SyncClient {
                 .toList();
 
 
-        log.debug("[CLIENT] Transferring " + filesToTransfer.size() + " files with 10 parallel connections");
+        log.debug("[CLIENT] Transferring {} files with 10 parallel connections", filesToTransfer.size());
 
         // Use a fixed pool of 10 threads for parallel file transfers
         ExecutorService executorService = new ThreadPoolExecutor(maxConnections, maxConnections,
@@ -568,12 +567,12 @@ public class SyncClient {
             executorService.submit(() -> {
                 TcpConnection currentConnection = null;
                 try {
-                    log.debug("[CLIENT] transferring file " + file.getRelativePath());
+                    log.debug("[CLIENT] transferring file {}", file.getRelativePath());
                     //semaphore.acquire();
                     currentConnection = connections.poll();
                     transferFile(file, args, currentConnection);
                 } catch (Exception e) {
-                    log.error("[CLIENT] Error transferring file " + file.getRelativePath() + ": " + e.getMessage());
+                    log.error("[CLIENT] Error transferring file {}: {}", file.getRelativePath(), e.getMessage());
                 } finally {
                     if (currentConnection != null) connections.add(currentConnection);
                     //semaphore.release();
@@ -588,7 +587,7 @@ public class SyncClient {
             log.debug("[CLIENT] All file transfers completed 2");
             connection.close();
         } catch (InterruptedException e) {
-            log.error("[CLIENT] File transfer interrupted 2: " + e.getMessage());
+            log.error("[CLIENT] File transfer interrupted 2: {}", e.getMessage());
         } finally {
             executorService.shutdown();
         }

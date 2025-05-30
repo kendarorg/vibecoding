@@ -21,7 +21,7 @@ public class ConnectResponseMessage extends Message {
     }
 
     /**
-     * Creates a new connect response message.
+     * Creates a new connection response message.
      *
      * @param accepted       Whether the connection was accepted
      * @param errorMessage   Error message if the connection was rejected
@@ -36,21 +36,21 @@ public class ConnectResponseMessage extends Message {
     }
 
     /**
-     * Creates a new connect response message for a successful connection.
+     * Creates a new connection response message for a successful connection.
      *
      * @param maxPacketSize  The maximum packet size negotiated for the session
      * @param maxConnections The maximum number of parallel connections negotiated for the session
-     * @return A new connect response message
+     * @return A new connection response message
      */
     public static ConnectResponseMessage accepted(int maxPacketSize, int maxConnections) {
         return new ConnectResponseMessage(true, null, maxPacketSize, maxConnections);
     }
 
     /**
-     * Creates a new connect response message for a rejected connection.
+     * Creates a new connection response message for a rejected connection.
      *
      * @param errorMessage The reason for the rejection
-     * @return A new connect response message
+     * @return A new connection response message
      */
     public static ConnectResponseMessage rejected(String errorMessage) {
         return new ConnectResponseMessage(false, errorMessage, 0, 0);

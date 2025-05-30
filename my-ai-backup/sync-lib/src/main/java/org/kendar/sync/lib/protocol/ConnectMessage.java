@@ -24,7 +24,7 @@ public class ConnectMessage extends Message {
     }
 
     /**
-     * Creates a new connect message.
+     * Creates a new connection message.
      *
      * @param username       The username for authentication
      * @param password       The password for authentication

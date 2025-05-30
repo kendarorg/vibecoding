@@ -86,7 +86,7 @@ public class FileInfo {
             Instant modificationTime = dtf.parse(parts[3]).toInstant();
             boolean isDirectory = Boolean.parseBoolean(parts[4]);
             return new FileInfo(
-                    null, // path is not needed here
+                    null, // the path is not needed here
                     relativePath,
                     size,
                     creationTime,

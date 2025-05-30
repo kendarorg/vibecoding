@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
  */
 public class FileUtils {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+    private static final Logger log = LoggerFactory.getLogger(FileUtils.class);
 
     /**
      * Lists all files in a directory recursively.
@@ -92,7 +93,7 @@ public class FileUtils {
             List<FileInfo> sourceFiles, List<FileInfo> targetFiles, BackupType backupType) {
         Map<String, List<FileInfo>> result = new HashMap<>();
 
-        // Create maps for faster lookup
+        // Create maps for a faster lookup
         Map<String, FileInfo> sourceMap = sourceFiles.stream()
                 .collect(Collectors.toMap(FileInfo::getRelativePath, f -> f));
 
@@ -280,7 +281,7 @@ public class FileUtils {
                     Files.delete(path);
                 } catch (IOException e) {
                     success = false;
-                    log.error("Failed to delete: " + path + " - " + e.getMessage());
+                    log.error("Failed to delete: {} - {}", path, e.getMessage());
                 }
             }
         }
@@ -288,5 +289,4 @@ public class FileUtils {
 
         return success;
     }
-    private static final Logger log = LoggerFactory.getLogger(FileUtils.class);
 }

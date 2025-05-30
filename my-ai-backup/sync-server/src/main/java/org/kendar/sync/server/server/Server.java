@@ -22,13 +22,14 @@ import java.util.concurrent.Executors;
 
 public class Server {
 
+    private static final Logger log = LoggerFactory.getLogger(Server.class);
     private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final Map<UUID, ClientSession> sessions = new HashMap<>();
     private final Map<BackupType, BackupHandler> backupHandlers = new HashMap<>();
-    private boolean running = true;
     private final boolean dryRun;
-    private ServerSocket mainSocket;
     private final ServerConfig serverConfig;
+    private boolean running = true;
+    private ServerSocket mainSocket;
 
     public Server(ServerConfig serverConfig, boolean dryRun) {
         this.serverConfig = serverConfig;
@@ -40,8 +41,6 @@ public class Server {
         backupHandlers.put(BackupType.DATE_SEPARATED, new DateSeparatedBackupHandler());
     }
 
-    private static final Logger log = LoggerFactory.getLogger(Server.class);
-
     /**
      * Starts the TCP server.
      */
@@ -50,14 +49,14 @@ public class Server {
             ServerSettings settings = serverConfig.serverSettings();
             int port = settings.getPort();
 
-            log.debug("Starting TCP server on port " + port);
+            log.debug("Starting TCP server on port {}", port);
 
             try (ServerSocket serverSocket = new ServerSocket(port)) {
                 mainSocket = serverSocket;
                 while (running) {
                     try {
                         Socket clientSocket = serverSocket.accept();
-                        log.debug("[SERVER] Client connected: " + clientSocket.getInetAddress());
+                        log.debug("[SERVER] Client connected: {}", clientSocket.getInetAddress());
 
                         // Handle client connection in a separate thread
                         executorService.submit(() -> handleClient(clientSocket, settings));
@@ -68,7 +67,7 @@ public class Server {
             }
         } catch (IOException e) {
             if (running) {
-                log.error("Error starting TCP server: " + e.getMessage());
+                log.error("Error starting TCP server: {}", e.getMessage());
             }
         }
     }
@@ -125,7 +124,7 @@ public class Server {
                     }
                     log.debug("[SERVER] Client disconnected ");
                 } catch (Exception ex) {
-                    log.error("[SERVER] Client disconnected " + ex.getMessage());
+                    log.error("[SERVER] Client disconnected {}", ex.getMessage());
                     return;
                 }
             }
@@ -221,7 +220,7 @@ public class Server {
         // Get the appropriate backup handler for the session's backup type
         BackupHandler handler = backupHandlers.get(session.getBackupType());
         if (handler == null) {
-            log.error("No handler found for backup type: " + session.getBackupType());
+            log.error("No handler found for backup type 1: {}", session.getBackupType());
             connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
             return;
         }
@@ -250,7 +249,7 @@ public class Server {
         // Get the appropriate backup handler for the session's backup type
         BackupHandler handler = backupHandlers.get(session.getBackupType());
         if (handler == null) {
-            log.error("No handler found for backup type: " + session.getBackupType());
+            log.error("No handler found for backup type 2: {}", session.getBackupType());
             connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
             return;
         }
@@ -274,7 +273,7 @@ public class Server {
         // Get the appropriate backup handler for the session's backup type
         BackupHandler handler = backupHandlers.get(session.getBackupType());
         if (handler == null) {
-            log.error("No handler found for backup type: " + session.getBackupType());
+            log.error("No handler found for backup type 3: {}", session.getBackupType());
             connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
             return;
         }
@@ -295,7 +294,7 @@ public class Server {
 
         BackupHandler handler = backupHandlers.get(session.getBackupType());
         if (handler == null) {
-            log.error("No handler found for backup type: " + session.getBackupType());
+            log.error("No handler found for backup type 4: {}", session.getBackupType());
             connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
             return;
         }
@@ -318,7 +317,7 @@ public class Server {
         // Get the appropriate backup handler for the session's backup type
         BackupHandler handler = backupHandlers.get(session.getBackupType());
         if (handler == null) {
-            log.error("No handler found for backup type: " + session.getBackupType());
+            log.error("No handler found for backup type 5: {}", session.getBackupType());
             connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
             return;
         }

@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
  */
 public class SyncClientApp {
     private static final Logger log = LoggerFactory.getLogger(SyncClientApp.class);
+
     /**
      * Main method to start the application.
      *
@@ -88,7 +89,7 @@ public class SyncClientApp {
                         try {
                             commandLineArgs.setServerPort(Integer.parseInt(args[++i]));
                         } catch (NumberFormatException e) {
-                            log.error("[CLIENT] Invalid port number: " + args[i]);
+                            log.error("[CLIENT] Invalid port number: {}", args[i]);
                         }
                     }
                     break;
@@ -114,7 +115,7 @@ public class SyncClientApp {
                         try {
                             commandLineArgs.setBackupType(BackupType.valueOf(typeArg));
                         } catch (IllegalArgumentException e) {
-                            log.error("[CLIENT] Invalid backup type: " + typeArg);
+                            log.error("[CLIENT] Invalid backup type: {}", typeArg);
                             log.error("[CLIENT] Valid types are: PRESERVE, MIRROR, DATE_SEPARATED");
                         }
                     }

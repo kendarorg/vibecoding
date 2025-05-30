@@ -11,13 +11,13 @@ public enum BackupType {
     PRESERVE,
 
     /**
-     * Backup/Restore deleting the files not present on source.
+     * Backup/Restore deleting the files not present on the source.
      * Files on the target that don't exist on the source are deleted.
      */
     MIRROR,
 
     /**
-     * Backup/Restore without deleting old files with "date separated structure" on backup.
+     * Backup/Restore without deleting old files with "date separated structure" on the backup.
      * Files are organized in directories based on their modification date.
      * During restore, the date structure is ignored and files are placed directly in the target directory.
      */

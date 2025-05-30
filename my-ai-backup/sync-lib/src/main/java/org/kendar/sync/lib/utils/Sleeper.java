@@ -11,6 +11,8 @@ import java.util.function.BooleanSupplier;
  */
 @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
 public class Sleeper {
+    private static final Logger log = LoggerFactory.getLogger(Sleeper.class);
+
     /**
      * Runs a synchronized-based wait mechanism instead of sleep
      *
@@ -81,7 +83,6 @@ public class Sleeper {
         }
     }
 
-    private static final Logger log = LoggerFactory.getLogger(Sleeper.class);
     /**
      * Give control to other threads
      */

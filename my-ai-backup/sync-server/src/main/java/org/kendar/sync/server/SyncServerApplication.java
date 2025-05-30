@@ -16,13 +16,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class SyncServerApplication implements CommandLineRunner {
 
+    private static final Logger log = LoggerFactory.getLogger(SyncServerApplication.class);
     @Autowired
     private ServerConfig serverConfig;
     @Autowired
     private Servlet servlet;
-
     private boolean dryRun = false;
-
 
     /**
      * Main method to start the application.
@@ -54,5 +53,4 @@ public class SyncServerApplication implements CommandLineRunner {
             server.startTcpServer();
         }).start();
     }
-    private static final Logger log = LoggerFactory.getLogger(SyncServerApplication.class);
 }

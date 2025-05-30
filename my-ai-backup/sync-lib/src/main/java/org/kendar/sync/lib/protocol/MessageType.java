@@ -10,7 +10,7 @@ public enum MessageType {
     CONNECT_RESPONSE("CR"),  // Server response to connection request
 
     // File listing and comparison
-    FILE_LIST("FL"),         // Client sends list of files
+    FILE_LIST("FL"),         // Client sends the list of files
     FILE_LIST_RESPONSE("FR"), // Server responds with files to transfer
 
     // File transfer
@@ -18,11 +18,11 @@ public enum MessageType {
     FILE_DESCRIPTOR_ACK("FA"), // Acknowledgment of file descriptor
     FILE_DATA("FT"),         // File content data
     FILE_END("FE"),          // End of file marker
-    FILE_END_ACK("EA"),      // Acknowledgment of file end
+    FILE_END_ACK("EA"),      // Acknowledgment of the file end
 
     // Synchronization control
     SYNC_END("SE"),          // End of synchronization
-    SYNC_END_ACK("SA"),      // Acknowledgment of sync end
+    SYNC_END_ACK("SA"),      // Acknowledgment of the sync end
 
     // Error handling
     ERROR("ER"),
