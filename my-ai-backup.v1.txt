@@ -235,6 +235,14 @@ Implement the missing method in the open classes extending Message using the Con
 
 Adapt the tests and fix the missing serialization of subitems
 
+### Prompt 014
+
+#file:BackupHandler.java #file:DateSeparatedBackupHandler.java #file:MirrorBackupHandler.java #file:PreserveBackupHandler.java 
+given these files refactor them to reduce duplication. Here some info
+* Move common stuff on BackupHandler
+* Inside the handleFileList the sending of the files when doing restore (!isBackup) is very similar. Could do a common function in BackupHandler handling the common parts receiving a lambda with the specific operations 
+* Preparing and sending the FileDataMessage should be a common part too.
+
 
 
 
