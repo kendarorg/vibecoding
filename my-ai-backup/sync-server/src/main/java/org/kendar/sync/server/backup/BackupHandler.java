@@ -234,9 +234,10 @@ public abstract class BackupHandler {
             return new ArrayList<>();
         }
 
-        return Files.walk(sourcePath)
-                .filter(path -> !Files.isDirectory(path))
-                .collect(Collectors.toList());
+        try(var result = Files.walk(sourcePath)) {
+            return result.filter(path -> !Files.isDirectory(path))
+                    .collect(Collectors.toList());
+        }
     }
 
     protected List<Path> listAllFilesAndDirs(Path sourcePath) throws IOException {
@@ -244,8 +245,9 @@ public abstract class BackupHandler {
             return new ArrayList<>();
         }
 
-        return Files.walk(sourcePath)
-                .collect(Collectors.toList());
+        try(var result = Files.walk(sourcePath)) {
+            return result.collect(Collectors.toList());
+        }
     }
 
     protected boolean shouldUpdate(FileInfo fileInfo, Path file, BasicFileAttributes attr) {
