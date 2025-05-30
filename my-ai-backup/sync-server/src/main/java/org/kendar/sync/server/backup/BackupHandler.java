@@ -249,9 +249,9 @@ public abstract class BackupHandler {
     }
 
     protected boolean shouldUpdate(FileInfo fileInfo, Path file, BasicFileAttributes attr) {
-        if (fileInfo == null) return true;
-        if (fileInfo.getModificationTime().isAfter(attr.lastModifiedTime().toInstant())) return true;
-        if (fileInfo.getCreationTime().isAfter(attr.creationTime().toInstant())) return true;
-        return fileInfo.getSize() != attr.size();
+        if (fileInfo == null) return false;
+        if (fileInfo.getModificationTime().isAfter(attr.lastModifiedTime().toInstant())) return false;
+        if (fileInfo.getCreationTime().isAfter(attr.creationTime().toInstant())) return false;
+        return fileInfo.getSize() == attr.size();
     }
 }

@@ -19,6 +19,7 @@ import java.util.UUID;
 public class SettingsController {
     private final ServerConfig serverConfig;
     private ServerSettings serverSettings;
+
     public SettingsController(ServerConfig serverConfig, ServerSettings serverSettings) {
         this.serverConfig = serverConfig;
         this.serverSettings = serverSettings;

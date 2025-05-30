@@ -65,13 +65,13 @@ public class MirrorBackupHandler extends BackupHandler {
                 filesToRemove.remove(fts);
             }
 
-            if (message.isBackup() && !shouldUpdate(filesOnClient.get(fts), file, attr)) {
+            if (message.isBackup() && shouldUpdate(filesOnClient.get(fts), file, attr)) {
                 filesOnClient.remove(fts);
             } else if (!message.isBackup()) {
                 if (filesOnClient.get(fts) == null) {
                     var fi = FileInfo.fromFile(file.toFile(), session.getFolder().getRealPath());
                     filesOnClient.put(fi.getRelativePath(), fi);
-                } else if (!shouldUpdate(filesOnClient.get(fts), file, attr)) {
+                } else if (shouldUpdate(filesOnClient.get(fts), file, attr)) {
                     filesOnClient.remove(fts);
                 }
             }
@@ -126,10 +126,23 @@ public class MirrorBackupHandler extends BackupHandler {
             log.debug("[SERVER] Received FILE_DATA message for {} on connection {} (block {} of {}, {} bytes)", message.getRelativePath(), connectionId, message.getBlockNumber() + 1, message.getTotalBlocks(), message.getData().length);
         }
 
-        String relativePath = session.isBackup() ? fileInfo.getRelativePath() : message.getRelativePath();
+        String relativePath;
+        if (session.isBackup()) {
+            if (fileInfo == null || fileInfo.getRelativePath() == null) {
+                throw new RuntimeException("No file info found for connection 1 " + connectionId);
+            }
+            relativePath = fileInfo.getRelativePath();
+        } else {
+            if (message.getRelativePath() == null) {
+                throw new RuntimeException("No file info found for connection 2 " + connectionId);
+            }
+            relativePath = message.getRelativePath();
+        }
         File file = new File(session.getFolder().getRealPath(), relativePath);
-        file.getParentFile().mkdirs();
-        try (FileOutputStream fos = new FileOutputStream(file, !message.isFirstBlock())) {
+        if (!file.getParentFile().mkdirs()) {
+            throw new IOException("Failed to create directory 6: " + file.getParentFile().getAbsolutePath());
+        }
+        try (FileOutputStream fos = new FileOutputStream(file, message.isFirstBlock())) {
             fos.write(message.getData());
         }
         message.isLastBlock();

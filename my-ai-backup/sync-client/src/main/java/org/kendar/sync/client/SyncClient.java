@@ -64,7 +64,9 @@ public class SyncClient {
 
             if (fileInfo.isDirectory()) {
                 if (!args.isDryRun()) {
-                    targetFile.mkdirs();
+                    if (!targetFile.mkdirs()) {
+                        throw new IOException("Failed to create directory 2: " + targetFile.getAbsolutePath());
+                    }
                 } else {
                     log.debug("[CLIENT] Dry run: Would create directory {}", targetFile.getAbsolutePath());
                 }
@@ -78,7 +80,10 @@ public class SyncClient {
 
             // Create parent directories
             if (!args.isDryRun()) {
-                targetFile.getParentFile().mkdirs();
+                if (!targetFile.getParentFile().mkdirs()) {
+                    throw new IOException("Failed to create directory 3: " +
+                            targetFile.getParentFile().getAbsolutePath());
+                }
             } else {
                 log.debug("[CLIENT] Dry run: Would create parent directories for {}", targetFile.getAbsolutePath());
             }
@@ -100,10 +105,13 @@ public class SyncClient {
                 // Write file data
                 if (!args.isDryRun()) {
                     // Create parent directories if needed
-                    targetFile.getParentFile().mkdirs();
+                    if (!targetFile.getParentFile().mkdirs()) {
+                        throw new IOException("Failed to create directory 4: " +
+                                targetFile.getParentFile().getAbsolutePath());
+                    }
 
                     // Write the data to the file
-                    try (FileOutputStream fos = new FileOutputStream(targetFile, !fileDataMessage.isFirstBlock())) {
+                    try (FileOutputStream fos = new FileOutputStream(targetFile, fileDataMessage.isFirstBlock())) {
                         fos.write(fileDataMessage.getData());
                     }
                 } else {
@@ -242,7 +250,10 @@ public class SyncClient {
 
             if (!args.isDryRun()) {
                 if (fileToDelete.exists()) {
-                    fileToDelete.delete();
+                    if (!fileToDelete.delete()) {
+                        throw new IOException("Failed to delete file: " +
+                                fileToDelete.getAbsolutePath());
+                    }
                 }
             } else {
                 log.debug("[CLIENT] Dry run: Would delete file {}", fileToDelete.getAbsolutePath());
@@ -570,6 +581,9 @@ public class SyncClient {
                     log.debug("[CLIENT] transferring file {}", file.getRelativePath());
                     //semaphore.acquire();
                     currentConnection = connections.poll();
+                    if (currentConnection == null) {
+                        throw new RuntimeException("[CLIENT] No connection available");
+                    }
                     transferFile(file, args, currentConnection);
                 } catch (Exception e) {
                     log.error("[CLIENT] Error transferring file {}: {}", file.getRelativePath(), e.getMessage());

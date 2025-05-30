@@ -60,7 +60,7 @@ public class DateSeparatedBackupHandler extends BackupHandler {
             BasicFileAttributes attr = Files.readAttributes(Path.of(filePath), BasicFileAttributes.class);
 
             if (!fts.matches(".*\\d{4}-\\d{2}-\\d{2}.*")) {
-                if (!shouldUpdate(filesOnClient.get(fts), file, attr)) {
+                if (shouldUpdate(filesOnClient.get(fts), file, attr)) {
                     filesOnClient.remove(fts);
                 }
                 if (!message.isBackup()) {
@@ -70,7 +70,7 @@ public class DateSeparatedBackupHandler extends BackupHandler {
                 }
             } else {
                 var newFts = fts.substring(11); // Remove the date prefix
-                if (!shouldUpdate(filesOnClient.get(newFts), file, attr)) {
+                if (shouldUpdate(filesOnClient.get(newFts), file, attr)) {
                     filesOnClient.remove(fts);
                 }
                 if (!message.isBackup()) {
@@ -128,9 +128,11 @@ public class DateSeparatedBackupHandler extends BackupHandler {
         String relativePath = message.getRelativePath();
         File targetFile = new File(new File(session.getFolder().getRealPath(), dateDir), relativePath);
 
-        targetFile.getParentFile().mkdirs();
+        if (!targetFile.getParentFile().mkdirs()) {
+            throw new IOException("Failed to create directory 1: " + targetFile.getParentFile().getAbsolutePath());
+        }
 
-        try (FileOutputStream fos = new FileOutputStream(targetFile, !message.isFirstBlock())) {
+        try (FileOutputStream fos = new FileOutputStream(targetFile, message.isFirstBlock())) {
             fos.write(message.getData());
         }
         message.isLastBlock();

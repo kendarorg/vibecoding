@@ -20,6 +20,7 @@ import java.util.Optional;
 public class AuthController {
     private final JwtTokenUtil jwtTokenUtil;
     private final ServerSettings serverSettings;
+
     public AuthController(JwtTokenUtil jwtTokenUtil, ServerSettings serverSettings) {
         this.jwtTokenUtil = jwtTokenUtil;
         this.serverSettings = serverSettings;

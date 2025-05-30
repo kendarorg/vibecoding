@@ -93,7 +93,9 @@ public class ServerSettings {
 
         // Create parent directories if they don't exist
         if (file.getParentFile() != null) {
-            file.getParentFile().mkdirs();
+            if (!file.getParentFile().mkdirs()) {
+                throw new IOException("Failed to create directory 5: " + file.getParentFile().getAbsolutePath());
+            }
         }
 
         mapper.writerWithDefaultPrettyPrinter().writeValue(file, this);

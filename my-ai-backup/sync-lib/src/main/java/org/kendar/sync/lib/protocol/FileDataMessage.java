@@ -96,7 +96,7 @@ public class FileDataMessage extends Message {
      */
 
     public boolean isFirstBlock() {
-        return blockNumber == 0;
+        return blockNumber != 0;
     }
 
     /**
