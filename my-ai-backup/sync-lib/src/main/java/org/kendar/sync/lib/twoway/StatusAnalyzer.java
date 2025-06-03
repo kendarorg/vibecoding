@@ -1,6 +1,8 @@
 package org.kendar.sync.lib.twoway;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
@@ -15,18 +17,18 @@ import java.util.concurrent.ConcurrentHashMap;
  * for two-way synchronization between client and server.
  */
 public class StatusAnalyzer {
-    
+
     private static final String LAST_UPDATE_LOG = ".lastupdate.log";
     private static final String OPERATION_LOG = ".operation.log";
     private static final String LAST_COMPACT_LOG = ".lastcompact.log";
     private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    
+
     private final Path baseDirectory;
     private final Path lastUpdateLogPath;
     private final Path operationLogPath;
     private final Path lastCompactLogPath;
     private Map<String, FileInfo> previousFileStates;
-    
+
     public StatusAnalyzer(String baseDirectory) {
         this.baseDirectory = Paths.get(baseDirectory).toAbsolutePath();
         this.lastUpdateLogPath = this.baseDirectory.resolve(LAST_UPDATE_LOG);
@@ -34,88 +36,89 @@ public class StatusAnalyzer {
         this.lastCompactLogPath = this.baseDirectory.resolve(LAST_COMPACT_LOG);
         this.previousFileStates = new ConcurrentHashMap<>();
     }
-    
+
     /**
      * Analyzes the directory and updates log files with changes since last run
      */
     public void analyze() throws IOException {
         Instant runStartTime = Instant.now();
-        
+
         // Load previous state if exists
         loadPreviousState();
-        
+
         // Get current file states
         Map<String, FileInfo> currentFileStates = getCurrentFileStates();
-        
+
         // Compare and log changes
         List<LogEntry> changes = detectChanges(currentFileStates);
-        
+
         // Write changes to operation log
         writeOperationLog(changes);
-        
+
         // Update last update log
         writeLastUpdateLog(runStartTime);
-        
+
         // Update internal state
         this.previousFileStates = currentFileStates;
     }
-    
+
     /**
      * Compacts the operation.log file by keeping only the latest "CR" operations
      * and creates a .lastcompact.log with the timestamp of the operation
      */
     public void compact() throws IOException {
-        if (!Files.exists(operationLogPath)) {
-            return;
-        }
-        
         Instant compactTime = Instant.now();
-        Map<String, LogEntry> latestCreations = new LinkedHashMap<>();
-        
-        // Read all entries and keep only the latest CR operation for each file
-        try (BufferedReader reader = Files.newBufferedReader(operationLogPath)) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                LogEntry entry = parseLogEntry(line);
-                if (entry != null && "CR".equals(entry.operation)) {
-                    latestCreations.put(entry.relativePath, entry);
+        if (Files.exists(operationLogPath)) {
+
+
+            Map<String, LogEntry> latestCreations = new LinkedHashMap<>();
+
+            // Read all entries and keep only the latest CR operation for each file
+            try (BufferedReader reader = Files.newBufferedReader(operationLogPath)) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    LogEntry entry = parseLogEntry(line);
+                    if (entry != null && "CR".equals(entry.operation)) {
+                        latestCreations.put(entry.relativePath, entry);
+                    }
                 }
             }
-        }
-        
-        // Write compacted log with only CR operations
-        try (BufferedWriter writer = Files.newBufferedWriter(operationLogPath, 
-                StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
-            for (LogEntry entry : latestCreations.values()) {
-                writer.write(formatLogEntry(entry));
-                writer.newLine();
+
+            // Write compacted log with only CR operations
+            try (BufferedWriter writer = Files.newBufferedWriter(operationLogPath,
+                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+                for (LogEntry entry : latestCreations.values()) {
+                    writer.write(formatLogEntry(entry));
+                    writer.newLine();
+                }
             }
+
         }
-        
         // Create .lastcompact.log with timestamp
         writeLastCompactLog(compactTime);
     }
-    
+
     /**
      * Compares two operation.log files and determines synchronization actions
+     *
      * @param otherLogPath Path to the other operation.log file
      * @return SyncActions containing lists of files to update/delete
      */
     public SyncActions compare(Path otherLogPath) throws IOException {
         Map<String, LogEntry> localOperations = loadOperationLog(operationLogPath);
         Map<String, LogEntry> remoteOperations = loadOperationLog(otherLogPath);
-        
+
         SyncActions actions = new SyncActions();
         Set<String> allFiles = new HashSet<>();
         allFiles.addAll(localOperations.keySet());
         allFiles.addAll(remoteOperations.keySet());
-        
+
         for (String filePath : allFiles) {
             LogEntry localEntry = localOperations.get(filePath);
             LogEntry remoteEntry = remoteOperations.get(filePath);
-            
+
             SyncDecision decision = decideSyncAction(localEntry, remoteEntry, filePath);
-            
+
             switch (decision.action) {
                 case UPDATE_FROM_REMOTE:
                     actions.filesToUpdate.add(new SyncItem(filePath, decision.sourceEntry));
@@ -137,17 +140,17 @@ public class StatusAnalyzer {
                     break;
             }
         }
-        
+
         return actions;
     }
-    
+
     private Map<String, LogEntry> loadOperationLog(Path logPath) throws IOException {
         Map<String, LogEntry> operations = new HashMap<>();
-        
+
         if (!Files.exists(logPath)) {
             return operations;
         }
-        
+
         try (BufferedReader reader = Files.newBufferedReader(logPath)) {
             String line;
             while ((line = reader.readLine()) != null) {
@@ -157,10 +160,10 @@ public class StatusAnalyzer {
                 }
             }
         }
-        
+
         return operations;
     }
-    
+
     private SyncDecision decideSyncAction(LogEntry localEntry, LogEntry remoteEntry, String filePath) {
         // File exists only locally
         if (localEntry != null && remoteEntry == null) {
@@ -170,7 +173,7 @@ public class StatusAnalyzer {
                 return new SyncDecision(SyncAction.UPDATE_TO_REMOTE, localEntry);
             }
         }
-        
+
         // File exists only remotely
         if (localEntry == null && remoteEntry != null) {
             if ("DE".equals(remoteEntry.operation)) {
@@ -179,24 +182,24 @@ public class StatusAnalyzer {
                 return new SyncDecision(SyncAction.UPDATE_FROM_REMOTE, remoteEntry);
             }
         }
-        
+
         // File exists in both logs
         if (localEntry != null && remoteEntry != null) {
             // Both deleted
             if ("DE".equals(localEntry.operation) && "DE".equals(remoteEntry.operation)) {
                 return new SyncDecision(SyncAction.NO_ACTION, null);
             }
-            
+
             // Local deleted, remote exists
             if ("DE".equals(localEntry.operation) && !"DE".equals(remoteEntry.operation)) {
                 return new SyncDecision(SyncAction.DELETE_REMOTE, localEntry);
             }
-            
+
             // Remote deleted, local exists
             if (!"DE".equals(localEntry.operation) && "DE".equals(remoteEntry.operation)) {
                 return new SyncDecision(SyncAction.DELETE_LOCAL, remoteEntry);
             }
-            
+
             // Both exist - compare modification times
             if (!localEntry.modificationTime.equals(remoteEntry.modificationTime)) {
                 if (localEntry.modificationTime.isAfter(remoteEntry.modificationTime)) {
@@ -209,22 +212,22 @@ public class StatusAnalyzer {
                 }
             }
         }
-        
+
         return new SyncDecision(SyncAction.NO_ACTION, null);
     }
-    
+
     private void writeLastCompactLog(Instant compactTime) throws IOException {
         Files.createDirectories(lastCompactLogPath.getParent());
-        
+
         String timestamp = LocalDateTime.ofInstant(compactTime, ZoneId.systemDefault())
                 .format(TIMESTAMP_FORMAT);
-        
-        try (BufferedWriter writer = Files.newBufferedWriter(lastCompactLogPath, 
+
+        try (BufferedWriter writer = Files.newBufferedWriter(lastCompactLogPath,
                 StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
             writer.write(timestamp);
         }
     }
-    
+
     /**
      * Returns the last compact time from the log file
      */
@@ -232,33 +235,33 @@ public class StatusAnalyzer {
         if (!Files.exists(lastCompactLogPath)) {
             return Optional.empty();
         }
-        
+
         try {
             String content = Files.readString(lastCompactLogPath).trim();
             if (content.isEmpty()) {
                 return Optional.empty();
             }
-            
+
             LocalDateTime dateTime = LocalDateTime.parse(content, TIMESTAMP_FORMAT);
             return Optional.of(dateTime.atZone(ZoneId.systemDefault()).toInstant());
         } catch (Exception e) {
             return Optional.empty();
         }
     }
-    
+
     private void loadPreviousState() {
         if (!Files.exists(operationLogPath)) {
             return;
         }
-        
+
         try (BufferedReader reader = Files.newBufferedReader(operationLogPath)) {
             String line;
             while ((line = reader.readLine()) != null) {
                 LogEntry entry = parseLogEntry(line);
                 if (entry != null && !entry.operation.equals("DE")) {
                     // Only keep non-deleted files in previous state
-                    previousFileStates.put(entry.relativePath, 
-                        new FileInfo(entry.creationTime, entry.modificationTime, entry.size));
+                    previousFileStates.put(entry.relativePath,
+                            new FileInfo(entry.creationTime, entry.modificationTime, entry.size));
                 }
             }
         } catch (IOException e) {
@@ -266,14 +269,14 @@ public class StatusAnalyzer {
             previousFileStates.clear();
         }
     }
-    
+
     private Map<String, FileInfo> getCurrentFileStates() throws IOException {
         Map<String, FileInfo> currentStates = new ConcurrentHashMap<>();
-        
+
         if (!Files.exists(baseDirectory)) {
             return currentStates;
         }
-        
+
         Files.walkFileTree(baseDirectory, new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
@@ -281,78 +284,78 @@ public class StatusAnalyzer {
                 if (file.equals(lastUpdateLogPath) || file.equals(operationLogPath) || file.equals(lastCompactLogPath)) {
                     return FileVisitResult.CONTINUE;
                 }
-                
+
                 String relativePath = baseDirectory.relativize(file).toString().replace('\\', '/');
                 Instant creationTime = attrs.creationTime().toInstant();
                 Instant modificationTime = attrs.lastModifiedTime().toInstant();
                 long size = attrs.size();
-                
+
                 currentStates.put(relativePath, new FileInfo(creationTime, modificationTime, size));
                 return FileVisitResult.CONTINUE;
             }
         });
-        
+
         return currentStates;
     }
-    
+
     private List<LogEntry> detectChanges(Map<String, FileInfo> currentStates) {
         List<LogEntry> changes = new ArrayList<>();
         Instant now = Instant.now();
-        
+
         // Check for new and modified files
         for (Map.Entry<String, FileInfo> entry : currentStates.entrySet()) {
             String path = entry.getKey();
             FileInfo currentInfo = entry.getValue();
             FileInfo previousInfo = previousFileStates.get(path);
-            
+
             if (previousInfo == null) {
                 // New file
                 changes.add(new LogEntry(
-                    currentInfo.creationTime,
-                    currentInfo.modificationTime,
-                    currentInfo.size,
-                    "CR",
-                    path
+                        currentInfo.creationTime,
+                        currentInfo.modificationTime,
+                        currentInfo.size,
+                        "CR",
+                        path
                 ));
             } else if (!currentInfo.modificationTime.equals(previousInfo.modificationTime) ||
-                       currentInfo.size != previousInfo.size) {
+                    currentInfo.size != previousInfo.size) {
                 // Modified file (time or size changed)
                 changes.add(new LogEntry(
-                    currentInfo.creationTime,
-                    currentInfo.modificationTime,
-                    currentInfo.size,
-                    "MO",
-                    path
+                        currentInfo.creationTime,
+                        currentInfo.modificationTime,
+                        currentInfo.size,
+                        "MO",
+                        path
                 ));
             }
         }
-        
+
         // Check for deleted files
         for (Map.Entry<String, FileInfo> entry : previousFileStates.entrySet()) {
             String path = entry.getKey();
             if (!currentStates.containsKey(path)) {
                 changes.add(new LogEntry(
-                    now,
-                    now,
-                    0L, // Size 0 for deleted files
-                    "DE",
-                    path
+                        now,
+                        now,
+                        0L, // Size 0 for deleted files
+                        "DE",
+                        path
                 ));
             }
         }
-        
+
         return changes;
     }
-    
+
     private void writeOperationLog(List<LogEntry> changes) throws IOException {
         if (changes.isEmpty()) {
             return;
         }
-        
+
         // Ensure parent directory exists
         Files.createDirectories(operationLogPath.getParent());
-        
-        try (BufferedWriter writer = Files.newBufferedWriter(operationLogPath, 
+
+        try (BufferedWriter writer = Files.newBufferedWriter(operationLogPath,
                 StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
             for (LogEntry change : changes) {
                 writer.write(formatLogEntry(change));
@@ -360,36 +363,36 @@ public class StatusAnalyzer {
             }
         }
     }
-    
+
     private void writeLastUpdateLog(Instant runStartTime) throws IOException {
         // Ensure parent directory exists
         Files.createDirectories(lastUpdateLogPath.getParent());
-        
+
         String timestamp = LocalDateTime.ofInstant(runStartTime, ZoneId.systemDefault())
                 .format(TIMESTAMP_FORMAT);
-        
-        try (BufferedWriter writer = Files.newBufferedWriter(lastUpdateLogPath, 
+
+        try (BufferedWriter writer = Files.newBufferedWriter(lastUpdateLogPath,
                 StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
             writer.write(timestamp);
         }
     }
-    
+
     private String formatLogEntry(LogEntry entry) {
         String creationTime = LocalDateTime.ofInstant(entry.creationTime, ZoneId.systemDefault())
                 .format(TIMESTAMP_FORMAT);
         String modificationTime = LocalDateTime.ofInstant(entry.modificationTime, ZoneId.systemDefault())
                 .format(TIMESTAMP_FORMAT);
-        
-        return String.format("%s|%s|%d|%s|%s", 
+
+        return String.format("%s|%s|%d|%s|%s",
                 creationTime, modificationTime, entry.size, entry.operation, entry.relativePath);
     }
-    
+
     private LogEntry parseLogEntry(String line) {
         String[] parts = line.split("\\|", 5);
         if (parts.length != 5) {
             return null;
         }
-        
+
         try {
             Instant creationTime = LocalDateTime.parse(parts[0], TIMESTAMP_FORMAT)
                     .atZone(ZoneId.systemDefault()).toInstant();
@@ -398,13 +401,13 @@ public class StatusAnalyzer {
             long size = Long.parseLong(parts[2]);
             String operation = parts[3];
             String relativePath = parts[4];
-            
+
             return new LogEntry(creationTime, modificationTime, size, operation, relativePath);
         } catch (Exception e) {
             return null;
         }
     }
-    
+
     /**
      * Returns the last update time from the log file
      */
@@ -412,95 +415,20 @@ public class StatusAnalyzer {
         if (!Files.exists(lastUpdateLogPath)) {
             return Optional.empty();
         }
-        
+
         try {
             String content = Files.readString(lastUpdateLogPath).trim();
             if (content.isEmpty()) {
                 return Optional.empty();
             }
-            
+
             LocalDateTime dateTime = LocalDateTime.parse(content, TIMESTAMP_FORMAT);
             return Optional.of(dateTime.atZone(ZoneId.systemDefault()).toInstant());
         } catch (Exception e) {
             return Optional.empty();
         }
     }
-    
-    // Inner classes for data structures
-    private static class FileInfo {
-        final Instant creationTime;
-        final Instant modificationTime;
-        final long size;
-        
-        FileInfo(Instant creationTime, Instant modificationTime, long size) {
-            this.creationTime = creationTime;
-            this.modificationTime = modificationTime;
-            this.size = size;
-        }
-        
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) return true;
-            if (!(obj instanceof FileInfo)) return false;
-            FileInfo other = (FileInfo) obj;
-            return Objects.equals(creationTime, other.creationTime) &&
-                   Objects.equals(modificationTime, other.modificationTime) &&
-                   size == other.size;
-        }
-        
-        @Override
-        public int hashCode() {
-            return Objects.hash(creationTime, modificationTime, size);
-        }
-    }
-    
-    private static class LogEntry {
-        final Instant creationTime;
-        final Instant modificationTime;
-        final long size;
-        final String operation;
-        final String relativePath;
-        
-        LogEntry(Instant creationTime, Instant modificationTime, long size, String operation, String relativePath) {
-            this.creationTime = creationTime;
-            this.modificationTime = modificationTime;
-            this.size = size;
-            this.operation = operation;
-            this.relativePath = relativePath;
-        }
-    }
-    
-    // Classes for sync comparison results
-    public static class SyncActions {
-        public final List<SyncItem> filesToUpdate = new ArrayList<>();
-        public final List<SyncItem> filesToSend = new ArrayList<>();
-        public final List<String> filesToDelete = new ArrayList<>();
-        public final List<String> filesToDeleteRemote = new ArrayList<>();
-        public final List<ConflictItem> conflicts = new ArrayList<>();
-    }
-    
-    public static class SyncItem {
-        public final String relativePath;
-        public final LogEntry logEntry;
-        
-        public SyncItem(String relativePath, LogEntry logEntry) {
-            this.relativePath = relativePath;
-            this.logEntry = logEntry;
-        }
-    }
-    
-    public static class ConflictItem {
-        public final String relativePath;
-        public final LogEntry localEntry;
-        public final LogEntry remoteEntry;
-        
-        public ConflictItem(String relativePath, LogEntry localEntry, LogEntry remoteEntry) {
-            this.relativePath = relativePath;
-            this.localEntry = localEntry;
-            this.remoteEntry = remoteEntry;
-        }
-    }
-    
+
     private enum SyncAction {
         UPDATE_FROM_REMOTE,
         UPDATE_TO_REMOTE,
@@ -509,11 +437,85 @@ public class StatusAnalyzer {
         CONFLICT,
         NO_ACTION
     }
-    
+
+    // Inner classes for data structures
+    private static class FileInfo {
+        final Instant creationTime;
+        final Instant modificationTime;
+        final long size;
+
+        FileInfo(Instant creationTime, Instant modificationTime, long size) {
+            this.creationTime = creationTime;
+            this.modificationTime = modificationTime;
+            this.size = size;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (!(obj instanceof FileInfo other)) return false;
+            return Objects.equals(creationTime, other.creationTime) &&
+                    Objects.equals(modificationTime, other.modificationTime) &&
+                    size == other.size;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(creationTime, modificationTime, size);
+        }
+    }
+
+    private static class LogEntry {
+        final Instant creationTime;
+        final Instant modificationTime;
+        final long size;
+        final String operation;
+        final String relativePath;
+
+        LogEntry(Instant creationTime, Instant modificationTime, long size, String operation, String relativePath) {
+            this.creationTime = creationTime;
+            this.modificationTime = modificationTime;
+            this.size = size;
+            this.operation = operation;
+            this.relativePath = relativePath;
+        }
+    }
+
+    // Classes for sync comparison results
+    public static class SyncActions {
+        public final List<SyncItem> filesToUpdate = new ArrayList<>();
+        public final List<SyncItem> filesToSend = new ArrayList<>();
+        public final List<String> filesToDelete = new ArrayList<>();
+        public final List<String> filesToDeleteRemote = new ArrayList<>();
+        public final List<ConflictItem> conflicts = new ArrayList<>();
+    }
+
+    public static class SyncItem {
+        public final String relativePath;
+        public final LogEntry logEntry;
+
+        public SyncItem(String relativePath, LogEntry logEntry) {
+            this.relativePath = relativePath;
+            this.logEntry = logEntry;
+        }
+    }
+
+    public static class ConflictItem {
+        public final String relativePath;
+        public final LogEntry localEntry;
+        public final LogEntry remoteEntry;
+
+        public ConflictItem(String relativePath, LogEntry localEntry, LogEntry remoteEntry) {
+            this.relativePath = relativePath;
+            this.localEntry = localEntry;
+            this.remoteEntry = remoteEntry;
+        }
+    }
+
     private static class SyncDecision {
         final SyncAction action;
         final LogEntry sourceEntry;
-        
+
         SyncDecision(SyncAction action, LogEntry sourceEntry) {
             this.action = action;
             this.sourceEntry = sourceEntry;

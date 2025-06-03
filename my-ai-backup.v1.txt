@@ -288,5 +288,9 @@ Add the following function to StatusAnalyzer
 * compare: compares two operation.log and decide what to update/delete to synchronize correctly the directory using the history of files in case of conflict
 * Generate the unit tests for the StatusAnalyzer class
 
+### Fix 020
+
+Fix unit tests
+
 
   

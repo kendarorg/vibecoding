@@ -86,6 +86,7 @@ class StatusAnalyzerTest {
         Files.writeString(testFile, "content");
         Instant beforeAnalysis = Instant.now();
 
+        Sleeper.sleep(1000);
         // When
         statusAnalyzer.analyze();
 
@@ -113,13 +114,13 @@ class StatusAnalyzerTest {
     }
 
     @Test
-    void testCompact_EmptyOperationLog_NoCompaction() throws IOException {
+    void testCompact_EmptyOperationLog() throws IOException {
         // When
         statusAnalyzer.compact();
 
         // Then
         Path lastCompactLog = tempDir.resolve(".lastcompact.log");
-        assertFalse(Files.exists(lastCompactLog));
+        assertTrue(Files.exists(lastCompactLog));
     }
 
     @Test
