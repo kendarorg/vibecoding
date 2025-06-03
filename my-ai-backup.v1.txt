@@ -308,6 +308,13 @@ Add a new BackupHandler using the StatusAnalyzer for two-way synchronization
 	** Client modifies the .operations.log accordingly
 * The Client start to send update files to server(following the usual descriptor/data/end protocol already defined in the project)
 	** Server modifies the .operations.log accordingly
+* Implement the placeholders	
 
+FAILED MISERABLY
+
+
+### Fix 023
+
+* Refactoring backup/restore process
 
   

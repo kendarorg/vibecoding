@@ -33,9 +33,8 @@ class SyncClientAppBackupTestSimple {
     private File sourceDir;
     private File targetDir;
     private MockTcpConnection mockConnection;
-    private java.lang.reflect.Method performBackupMethod;
     private Object commandLineArgs;
-    private SyncClient target;
+    private SyncClientBackup syncClientBackup;
 
     /**
      * Simple mock implementation of TcpConnection for testing.
@@ -44,7 +43,7 @@ class SyncClientAppBackupTestSimple {
     @BeforeEach
     void setUp() throws Exception {
 
-        target = new FakeSyncClient();
+        //target = new FakeSyncClient();
         // Create a unique test directory inside target/tests
         String uniqueId = UUID.randomUUID().toString();
         testRoot = Path.of("target", "tests", uniqueId);
@@ -73,13 +72,6 @@ class SyncClientAppBackupTestSimple {
         // Create a mock TcpConnection
         mockConnection = new MockTcpConnection();
 
-        // Get the private performBackup method using reflection
-        // We need to create a custom method that takes our MockTcpConnection instead of TcpConnection
-        performBackupMethod = SyncClient.class.getDeclaredMethod("performBackup",
-                org.kendar.sync.lib.network.TcpConnection.class,
-                Class.forName("org.kendar.sync.client.CommandLineArgs"),
-                int.class, int.class);
-        performBackupMethod.setAccessible(true);
 
         // Create CommandLineArgs object using reflection
         Class<?> commandLineArgsClass = Class.forName("org.kendar.sync.client.CommandLineArgs");
@@ -101,6 +93,14 @@ class SyncClientAppBackupTestSimple {
                 .invoke(commandLineArgs, 1024);
         commandLineArgsClass.getDeclaredMethod("setMaxConnections", int.class)
                 .invoke(commandLineArgs, 1);
+
+        syncClientBackup = new SyncClientBackup(){
+            @Override
+            protected TcpConnection getTcpConnection(TcpConnection connection,
+                                                     CommandLineArgs args, int i, int maxPacketSize) throws IOException {
+                return connection;
+            }
+        };
     }
 
     @AfterEach
@@ -128,7 +128,7 @@ class SyncClientAppBackupTestSimple {
         mockConnection.addMessageToReturn(FileEndAckMessage.success(sourceDir.getName() + "/subdir/testFile2.txt"));
 
         // Call the performBackup method
-        performBackupMethod.invoke(target, mockConnection, commandLineArgs, 1, 1024);
+        syncClientBackup.performBackup(mockConnection, (CommandLineArgs) commandLineArgs, 1, 1024);
 
         // Get the sent messages
         List<Message> sentMessages = mockConnection.getSentMessages();
@@ -189,7 +189,7 @@ class SyncClientAppBackupTestSimple {
         mockConnection.addMessageToReturn(FileEndAckMessage.success(sourceDir.getName() + "/subdir/testFile2.txt"));
 
         // Call the performBackup method
-        performBackupMethod.invoke(target, mockConnection, commandLineArgs, 1, 1024);
+        syncClientBackup.performBackup(mockConnection, (CommandLineArgs) commandLineArgs, 1, 1024);
 
         // Get the sent messages
         List<Message> sentMessages = mockConnection.getSentMessages();
@@ -231,7 +231,7 @@ class SyncClientAppBackupTestSimple {
         mockConnection.addMessageToReturn(FileEndAckMessage.failure(sourceDir.getName() + "/subdir/testFile2.txt", "Failed to write file"));
 
         // Call the performBackup method
-        performBackupMethod.invoke(target, mockConnection, commandLineArgs, 1, 1024);
+        syncClientBackup.performBackup( mockConnection, (CommandLineArgs) commandLineArgs, 1, 1024);
 
         // Get the sent messages
         List<Message> sentMessages = mockConnection.getSentMessages();
