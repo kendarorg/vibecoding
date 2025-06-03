@@ -297,5 +297,17 @@ Fix unit tests
 * When logging operations on .operation.log add as first field the start time of the run (the one written at the beginning in `.lastupdate.log`
 * Update the StatusAnalyzerTest accordingly
 
+### Prompt 022
+
+Add a new BackupHandler using the StatusAnalyzer for two-way synchronization
+* Server receive a two-way-sync request with the client last update and the list of modifications since the last update
+	** Server loads the updates since the client last update 
+	** Server delete the fiels it should delete
+	** Server respond with the list of files it will send and the files to delete
+* Client start to receive the files	to update/delete (following the usual descriptor/data/end protocol already defined in the project)
+	** Client modifies the .operations.log accordingly
+* The Client start to send update files to server(following the usual descriptor/data/end protocol already defined in the project)
+	** Server modifies the .operations.log accordingly
+
 
   
