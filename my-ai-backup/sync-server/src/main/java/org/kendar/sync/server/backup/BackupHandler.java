@@ -33,7 +33,9 @@ public abstract class BackupHandler {
      * @param message    The file list message
      * @throws IOException If an I/O error occurs
      */
-    public abstract void handleFileList(TcpConnection connection, ClientSession session, FileListMessage message) throws IOException;
+    public void handleFileList(TcpConnection connection, ClientSession session, FileListMessage message) throws IOException{
+        throw new RuntimeException("Invalid operation for this handler type. This handler does not support file sync operations.");
+    }
 
     /**
      * Handles a file descriptor message.
@@ -261,5 +263,9 @@ public abstract class BackupHandler {
         if (fileInfo.getModificationTime().isAfter(attr.lastModifiedTime().toInstant())) return false;
         if (fileInfo.getCreationTime().isAfter(attr.creationTime().toInstant())) return false;
         return fileInfo.getSize() == attr.size();
+    }
+
+    public void handleFileSync(TcpConnection connection, ClientSession session, FileSyncMessage message) {
+        throw new RuntimeException("Invalid operation for this handler type. This handler does not support file sync operations.");
     }
 }

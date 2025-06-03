@@ -191,7 +191,7 @@ class StatusAnalyzerTest {
         Files.writeString(otherLogPath, "");
 
         // When
-        StatusAnalyzer.SyncActions actions = statusAnalyzer.compare(otherLogPath);
+        SyncActions actions = statusAnalyzer.compare(otherLogPath);
 
         // Then
         assertTrue(actions.filesToUpdate.isEmpty());
@@ -211,7 +211,7 @@ class StatusAnalyzerTest {
         Files.writeString(otherLog, "");
 
         // When
-        StatusAnalyzer.SyncActions actions = statusAnalyzer.compare(otherLog);
+        SyncActions actions = statusAnalyzer.compare(otherLog);
 
         // Then
         assertEquals(1, actions.filesToSend.size());
@@ -232,7 +232,7 @@ class StatusAnalyzerTest {
         Files.writeString(otherLog, "2024-01-01 09:00:00|2024-01-01 10:00:00|2024-01-01 10:00:00|100|CR|file1.txt\n");
 
         // When
-        StatusAnalyzer.SyncActions actions = statusAnalyzer.compare(otherLog);
+        SyncActions actions = statusAnalyzer.compare(otherLog);
 
         // Then
         assertEquals(1, actions.filesToUpdate.size());
@@ -253,7 +253,7 @@ class StatusAnalyzerTest {
         Files.writeString(otherLog, "2024-01-01 09:00:00|2024-01-01 10:00:00|2024-01-01 10:00:00|100|CR|file1.txt\n");
 
         // When
-        StatusAnalyzer.SyncActions actions = statusAnalyzer.compare(otherLog);
+        SyncActions actions = statusAnalyzer.compare(otherLog);
 
         // Then
         assertEquals(1, actions.filesToDeleteRemote.size());
@@ -274,7 +274,7 @@ class StatusAnalyzerTest {
         Files.writeString(otherLog, "2024-01-01 11:00:00|2024-01-01 12:00:00|2024-01-01 12:00:00|0|DE|file1.txt\n");
 
         // When
-        StatusAnalyzer.SyncActions actions = statusAnalyzer.compare(otherLog);
+        SyncActions actions = statusAnalyzer.compare(otherLog);
 
         // Then
         assertEquals(1, actions.filesToDelete.size());
@@ -295,7 +295,7 @@ class StatusAnalyzerTest {
         Files.writeString(otherLog, "2024-01-01 09:00:00|2024-01-01 10:00:00|2024-01-01 10:00:00|100|CR|file1.txt\n");
 
         // When
-        StatusAnalyzer.SyncActions actions = statusAnalyzer.compare(otherLog);
+        SyncActions actions = statusAnalyzer.compare(otherLog);
 
         // Then
         assertEquals(1, actions.filesToSend.size());
@@ -316,7 +316,7 @@ class StatusAnalyzerTest {
         Files.writeString(otherLog, "2024-01-01 11:00:00|2024-01-01 10:00:00|2024-01-01 12:00:00|100|MO|file1.txt\n");
 
         // When
-        StatusAnalyzer.SyncActions actions = statusAnalyzer.compare(otherLog);
+        SyncActions actions = statusAnalyzer.compare(otherLog);
 
         // Then
         assertEquals(1, actions.filesToUpdate.size());
@@ -337,7 +337,7 @@ class StatusAnalyzerTest {
         Files.writeString(otherLog, "2024-01-01 09:00:00|2024-01-01 10:00:00|2024-01-01 10:00:00|0|DE|file1.txt\n");
 
         // When
-        StatusAnalyzer.SyncActions actions = statusAnalyzer.compare(otherLog);
+        SyncActions actions = statusAnalyzer.compare(otherLog);
 
         // Then
         assertTrue(actions.filesToUpdate.isEmpty());

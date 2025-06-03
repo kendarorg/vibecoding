@@ -5,6 +5,11 @@ package org.kendar.sync.lib.protocol;
  */
 public enum BackupType {
     /**
+     * No backup/restore operation.
+     * This is the default type, indicating no action is taken.
+     */
+    NONE,
+    /**
      * Backup/Restore without deleting old files.
      * Files on the target that don't exist on the source are preserved.
      */
@@ -22,5 +27,9 @@ public enum BackupType {
      * During restore, the date structure is ignored and files are placed directly in the target directory.
      */
     DATE_SEPARATED,
+    /**
+     * Two-way synchronization.
+     * Files are synchronized in both directions, ensuring both source and target have the latest versions.
+     */
     TWO_WAY_SYNC
 }

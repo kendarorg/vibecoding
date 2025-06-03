@@ -28,7 +28,9 @@ public enum MessageType {
     ERROR("ER"),
     START_RESTORE("RS"),
     START_RESTORE_ACK("RK"),
-    FILE_DATA_ACK("FK");             // Error message
+    FILE_DATA_ACK("FK"),
+    FILE_SYNC("SY"),
+    FILE_SYNC_ACK("SK");             // Error message
 
     private final String code;
 

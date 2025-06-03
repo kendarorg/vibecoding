@@ -39,8 +39,10 @@ public class StatusAnalyzer {
 
     /**
      * Analyzes the directory and updates log files with changes since last run
+     *
+     * @return
      */
-    public void analyze() throws IOException {
+    public List<LogEntry> analyze() throws IOException {
         Instant runStartTime = Instant.now();
 
         // Load previous state if exists
@@ -60,6 +62,7 @@ public class StatusAnalyzer {
 
         // Update internal state
         this.previousFileStates = currentFileStates;
+        return changes;
     }
 
     /**
@@ -105,9 +108,12 @@ public class StatusAnalyzer {
      * @return SyncActions containing lists of files to update/delete
      */
     public SyncActions compare(Path otherLogPath) throws IOException {
-        Map<String, LogEntry> localOperations = loadOperationLog(operationLogPath);
         Map<String, LogEntry> remoteOperations = loadOperationLog(otherLogPath);
+        return compare(remoteOperations);
+    }
 
+    public SyncActions compare(Map<String, LogEntry> remoteOperations) throws IOException {
+        Map<String, LogEntry> localOperations = loadOperationLog(operationLogPath);
         SyncActions actions = new SyncActions();
         Set<String> allFiles = new HashSet<>();
         allFiles.addAll(localOperations.keySet());
@@ -438,15 +444,6 @@ public class StatusAnalyzer {
         }
     }
 
-    private enum SyncAction {
-        UPDATE_FROM_REMOTE,
-        UPDATE_TO_REMOTE,
-        DELETE_LOCAL,
-        DELETE_REMOTE,
-        CONFLICT,
-        NO_ACTION
-    }
-
     // Inner classes for data structures
     private static class FileInfo {
         final Instant creationTime;
@@ -474,54 +471,6 @@ public class StatusAnalyzer {
         }
     }
 
-    private static class LogEntry {
-        final Instant runStartTime;
-        final Instant creationTime;
-        final Instant modificationTime;
-        final long size;
-        final String operation;
-        final String relativePath;
-
-        LogEntry(Instant runStartTime, Instant creationTime, Instant modificationTime, long size, String operation, String relativePath) {
-            this.runStartTime = runStartTime;
-            this.creationTime = creationTime;
-            this.modificationTime = modificationTime;
-            this.size = size;
-            this.operation = operation;
-            this.relativePath = relativePath;
-        }
-    }
-
-    // Classes for sync comparison results
-    public static class SyncActions {
-        public final List<SyncItem> filesToUpdate = new ArrayList<>();
-        public final List<SyncItem> filesToSend = new ArrayList<>();
-        public final List<String> filesToDelete = new ArrayList<>();
-        public final List<String> filesToDeleteRemote = new ArrayList<>();
-        public final List<ConflictItem> conflicts = new ArrayList<>();
-    }
-
-    public static class SyncItem {
-        public final String relativePath;
-        public final LogEntry logEntry;
-
-        public SyncItem(String relativePath, LogEntry logEntry) {
-            this.relativePath = relativePath;
-            this.logEntry = logEntry;
-        }
-    }
-
-    public static class ConflictItem {
-        public final String relativePath;
-        public final LogEntry localEntry;
-        public final LogEntry remoteEntry;
-
-        public ConflictItem(String relativePath, LogEntry localEntry, LogEntry remoteEntry) {
-            this.relativePath = relativePath;
-            this.localEntry = localEntry;
-            this.remoteEntry = remoteEntry;
-        }
-    }
 
     private static class SyncDecision {
         final SyncAction action;

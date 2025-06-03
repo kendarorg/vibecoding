@@ -15,6 +15,7 @@ public class ConnectResponseMessage extends Message {
     private String errorMessage = "";
     private int maxPacketSize;
     private int maxConnections;
+    private BackupType backupType;
 
     // Default constructor for Jackson
     public ConnectResponseMessage() {
@@ -27,12 +28,16 @@ public class ConnectResponseMessage extends Message {
      * @param errorMessage   Error message if the connection was rejected
      * @param maxPacketSize  The maximum packet size negotiated for the session
      * @param maxConnections The maximum number of parallel connections negotiated for the session
+     * @param backupType
      */
-    public ConnectResponseMessage(boolean accepted, String errorMessage, int maxPacketSize, int maxConnections) {
+    public ConnectResponseMessage(boolean accepted, String errorMessage,
+                                  int maxPacketSize, int maxConnections,
+                                  BackupType backupType) {
         this.accepted = accepted;
         this.errorMessage = errorMessage;
         this.maxPacketSize = maxPacketSize;
         this.maxConnections = maxConnections;
+        this.backupType = backupType;
     }
 
     /**
@@ -43,7 +48,7 @@ public class ConnectResponseMessage extends Message {
      * @return A new connection response message
      */
     public static ConnectResponseMessage accepted(int maxPacketSize, int maxConnections) {
-        return new ConnectResponseMessage(true, null, maxPacketSize, maxConnections);
+        return new ConnectResponseMessage(true, null, maxPacketSize, maxConnections,BackupType.NONE );
     }
 
     /**
@@ -53,7 +58,7 @@ public class ConnectResponseMessage extends Message {
      * @return A new connection response message
      */
     public static ConnectResponseMessage rejected(String errorMessage) {
-        return new ConnectResponseMessage(false, errorMessage, 0, 0);
+        return new ConnectResponseMessage(false, errorMessage, 0, 0,BackupType.NONE);
     }
 
     @Override
@@ -62,6 +67,7 @@ public class ConnectResponseMessage extends Message {
         errorMessage = buffer.readType(String.class);
         maxPacketSize = buffer.readType(Integer.class);
         maxConnections = buffer.readType(Integer.class);
+        backupType = buffer.readType(BackupType.class);
         return this;
     }
 
@@ -77,9 +83,19 @@ public class ConnectResponseMessage extends Message {
         else buffer.writeType(errorMessage);
         buffer.writeType(maxPacketSize);
         buffer.writeType(maxConnections);
+        buffer.writeType(backupType);
     }
 
     // Getters and setters
+
+    public BackupType getBackupType() {
+        return backupType;
+    }
+
+    public void setBackupType(BackupType backupType) {
+        this.backupType = backupType;
+    }
+
     public boolean isAccepted() {
         return accepted;
     }

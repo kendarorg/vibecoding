@@ -27,7 +27,6 @@ class ProtocolMessagesTest {
                 "documents",
                 1024 * 1024,
                 5,
-                BackupType.MIRROR,
                 false
         );
 
@@ -45,7 +44,6 @@ class ProtocolMessagesTest {
         assertEquals("documents", deserializedMessage.getTargetFolder());
         assertEquals(1024 * 1024, deserializedMessage.getMaxPacketSize());
         assertEquals(5, deserializedMessage.getMaxConnections());
-        assertEquals(BackupType.MIRROR, deserializedMessage.getBackupType());
         assertFalse(deserializedMessage.isDryRun());
     }
 
@@ -56,7 +54,8 @@ class ProtocolMessagesTest {
                 true,
                 null,
                 1024 * 1024,
-                5
+                5,
+                BackupType.NONE
         );
 
         // Serialize the message
@@ -78,7 +77,8 @@ class ProtocolMessagesTest {
                 false,
                 "Authentication failed",
                 1024 * 1024,
-                5
+                5,
+                BackupType.NONE
         );
 
         byte[] errorSerialized = errorMessage.serialize();

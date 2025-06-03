@@ -67,7 +67,7 @@ public class SyncClientBackup extends BaseSyncClientProcess{
                 .toList();
 
 
-        log.debug("[CLIENT] Transferring {} files with 10 parallel connections", filesToTransfer.size());
+        log.debug("[CLIENT] Transferring {} files with {} parallel connections", filesToTransfer.size(),maxConnections);
 
         // Use a fixed pool of 10 threads for parallel file transfers
         ExecutorService executorService = new ThreadPoolExecutor(maxConnections, maxConnections,

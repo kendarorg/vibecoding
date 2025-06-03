@@ -3,11 +3,7 @@ package org.kendar.sync.server.server;
 import org.kendar.sync.lib.model.ServerSettings;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
-import org.kendar.sync.lib.utils.Sleeper;
-import org.kendar.sync.server.backup.BackupHandler;
-import org.kendar.sync.server.backup.DateSeparatedBackupHandler;
-import org.kendar.sync.server.backup.MirrorBackupHandler;
-import org.kendar.sync.server.backup.PreserveBackupHandler;
+import org.kendar.sync.server.backup.*;
 import org.kendar.sync.server.config.ServerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +13,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.ServiceLoader;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -44,6 +39,7 @@ public class Server {
         backupHandlers.put(BackupType.PRESERVE, new PreserveBackupHandler());
         backupHandlers.put(BackupType.MIRROR, new MirrorBackupHandler());
         backupHandlers.put(BackupType.DATE_SEPARATED, new DateSeparatedBackupHandler());
+        backupHandlers.put(BackupType.TWO_WAY_SYNC, new SyncBackupHandler());
 
         // Initialize session monitor to check for hung sessions every 10 seconds
         this.sessionMonitor = new SessionMonitor(sessions, 10);
@@ -196,7 +192,8 @@ public class Server {
             connection.setSession(()->session.touch());
 
             // Send connect response
-            connection.sendMessage(new ConnectResponseMessage(true, null, settings.getMaxPacketSize(), settings.getMaxConnections()));
+            connection.sendMessage(new ConnectResponseMessage(true, null, settings.getMaxPacketSize(),
+                    settings.getMaxConnections(), session.getBackupType()));
 
             // Handle messages
             while (true) {
@@ -207,6 +204,9 @@ public class Server {
                 switch (message.getMessageType()) {
                     case FILE_LIST:
                         handleFileList(connection, session, (FileListMessage) message);
+                        break;
+                    case FILE_SYNC:
+                        handleFileSync(connection, session, (FileSyncMessage) message);
                         break;
                     case SYNC_END:
                         handleSyncEnd(connection, session, (SyncEndMessage) message);
@@ -227,6 +227,19 @@ public class Server {
                 // Ignore
             }
         }
+    }
+
+    private void handleFileSync(TcpConnection connection, ClientSession session, FileSyncMessage message) throws IOException {
+        // Get the appropriate backup handler for the session's backup type
+        BackupHandler handler = backupHandlers.get(session.getBackupType());
+        if (handler == null) {
+            log.error("No handler found for backup type 6: {}", session.getBackupType());
+            connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
+            return;
+        }
+
+        // Delegate to the backup handler
+        handler.handleFileSync(connection, session, message);
     }
 
     /**

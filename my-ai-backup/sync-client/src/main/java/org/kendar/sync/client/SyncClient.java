@@ -1,25 +1,15 @@
 package org.kendar.sync.client;
 
-import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
-import org.kendar.sync.lib.utils.FileUtils;
-import org.kendar.sync.lib.utils.Sleeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.FileTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.*;
-import java.util.stream.Collectors;
 
 @SuppressWarnings("DuplicatedCode")
 public class SyncClient {
@@ -75,7 +65,6 @@ public class SyncClient {
     }
 
 
-
     public void doSync(CommandLineArgs commandLineArgs) {
         // Validate arguments
         if (!validateArgs(commandLineArgs)) {
@@ -106,7 +95,6 @@ public class SyncClient {
                         commandLineArgs.getTargetFolder(),
                         DEFAULT_MAX_PACKET_SIZE,
                         DEFAULT_MAX_CONNECTIONS,
-                        commandLineArgs.getBackupType(),
                         commandLineArgs.isDryRun()
                 );
 
@@ -133,12 +121,10 @@ public class SyncClient {
                 log.debug("[CLIENT] Connected to server");
 
                 // Perform backup or restore
-                if (commandLineArgs.isBackup()) {
-                    if(commandLineArgs.getBackupType()==BackupType.TWO_WAY_SYNC){
-
-                    }else {
-                        new SyncClientBackup().performBackup(connection, commandLineArgs, maxConnections, maxPacketSize);
-                    }
+                if (connectResponse.getBackupType() == BackupType.TWO_WAY_SYNC) {
+                    new SyncClientSync().peformSync(connection, commandLineArgs, maxConnections, maxPacketSize);
+                } else if (commandLineArgs.isBackup()) {
+                    new SyncClientBackup().performBackup(connection, commandLineArgs, maxConnections, maxPacketSize);
                 } else {
                     new SyncClientRestore().performRestore(connection, commandLineArgs, maxConnections, maxPacketSize);
                 }
@@ -161,11 +147,10 @@ public class SyncClient {
 
                 log.debug("[CLIENT] Sync completed successfully");
             }
-        } catch (IOException e) {
+        } catch (InterruptedException | IOException e) {
             //TODO log.error("[CLIENT] Error: " + e.getMessage());
         }
     }
-
 
 
 }

@@ -55,6 +55,26 @@ public class SyncClientRestore extends BaseSyncClientProcess{
 
         FileListResponseMessage fileListResponse = (FileListResponseMessage) response;
 
+
+        new Thread(()->{
+            // Process files to delete
+            for (String relativePath : fileListResponse.getFilesToDelete()) {
+                File fileToDelete = new File(args.getSourceFolder(), relativePath);
+
+                if (!args.isDryRun()) {
+                    if (fileToDelete.exists()) {
+                        if (!fileToDelete.delete()) {
+                            continue;
+                        }
+                    }
+                } else {
+                    log.debug("[CLIENT] Dry run: Would delete file {}", fileToDelete.getAbsolutePath());
+                }
+
+                log.debug("[CLIENT] Deleted file: {}", relativePath);
+            }
+        }).start();
+
         var mapToTransferInitial = fileListResponse.getFilesToTransfer().stream()
                 .collect(Collectors.toMap(fileInfo -> FileUtils.makeUniformPath(fileInfo.getRelativePath()), fileInfo -> fileInfo));
         var mapToTransfer = new ConcurrentHashMap<>(mapToTransferInitial);
@@ -111,22 +131,6 @@ public class SyncClientRestore extends BaseSyncClientProcess{
             executorService.shutdown();
         }
 
-        // Process files to delete
-        for (String relativePath : fileListResponse.getFilesToDelete()) {
-            File fileToDelete = new File(args.getSourceFolder(), relativePath);
 
-            if (!args.isDryRun()) {
-                if (fileToDelete.exists()) {
-                    if (!fileToDelete.delete()) {
-                        throw new IOException("Failed to delete file: " +
-                                fileToDelete.getAbsolutePath());
-                    }
-                }
-            } else {
-                log.debug("[CLIENT] Dry run: Would delete file {}", fileToDelete.getAbsolutePath());
-            }
-
-            log.debug("[CLIENT] Deleted file: {}", relativePath);
-        }
     }
 }

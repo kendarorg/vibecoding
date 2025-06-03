@@ -16,7 +16,6 @@ public class ConnectMessage extends Message {
     private String targetFolder;
     private int maxPacketSize;
     private int maxConnections;
-    private BackupType backupType;
     private boolean dryRun;
 
     // Default constructor for Jackson
@@ -31,18 +30,16 @@ public class ConnectMessage extends Message {
      * @param targetFolder   The virtual target folder name
      * @param maxPacketSize  The maximum packet size supported by the client
      * @param maxConnections The maximum number of parallel connections supported by the client
-     * @param backupType     The type of backup operation
      * @param dryRun         Whether this is a dry run (no actual file operations)
      */
     public ConnectMessage(String username, String password, String targetFolder,
-                          int maxPacketSize, int maxConnections, BackupType backupType,
+                          int maxPacketSize, int maxConnections,
                           boolean dryRun) {
         this.username = username;
         this.password = password;
         this.targetFolder = targetFolder;
         this.maxPacketSize = maxPacketSize;
         this.maxConnections = maxConnections;
-        this.backupType = backupType;
         this.dryRun = dryRun;
     }
 
@@ -53,7 +50,6 @@ public class ConnectMessage extends Message {
         targetFolder = buffer.readType(String.class);
         maxPacketSize = buffer.readType(Integer.class);
         maxConnections = buffer.readType(Integer.class);
-        backupType = buffer.readType(BackupType.class);
         dryRun = buffer.readType(Boolean.class);
         return this;
     }
@@ -70,7 +66,6 @@ public class ConnectMessage extends Message {
         buffer.writeType(targetFolder);
         buffer.writeType(maxPacketSize);
         buffer.writeType(maxConnections);
-        buffer.writeType(backupType);
         buffer.writeType(dryRun);
     }
 
@@ -113,14 +108,6 @@ public class ConnectMessage extends Message {
 
     public void setMaxConnections(int maxConnections) {
         this.maxConnections = maxConnections;
-    }
-
-    public BackupType getBackupType() {
-        return backupType;
-    }
-
-    public void setBackupType(BackupType backupType) {
-        this.backupType = backupType;
     }
 
     public boolean isDryRun() {
