@@ -281,3 +281,12 @@ This is part of the creation a two-way synchronization algorithm
 		* Relative path from the "base" directory
 * On subsequent runs the StatusAnalyzer should add lines corresponding to what happened to the file since the last run and udpdate the lastupdate.log
 
+### Prompt 020
+
+Add the following function to StatusAnalyzer
+* compact: collapse the operation.log keepeing leaving a list of only "CR", create the file .lastcompact.log with the timestamp of the operation
+* compare: compares two operation.log and decide what to update/delete to synchronize correctly the directory using the history of files in case of conflict
+* Generate the unit tests for the StatusAnalyzer class
+
+
+  
