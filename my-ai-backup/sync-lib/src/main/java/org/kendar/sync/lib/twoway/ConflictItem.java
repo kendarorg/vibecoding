@@ -10,4 +10,16 @@ public class ConflictItem {
         this.localEntry = localEntry;
         this.remoteEntry = remoteEntry;
     }
+
+    public LogEntry getLocalEntry() {
+        return localEntry;
+    }
+
+    public LogEntry getRemoteEntry() {
+        return remoteEntry;
+    }
+
+    public String getRelativePath() {
+        return relativePath;
+    }
 }

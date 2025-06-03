@@ -12,6 +12,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -85,7 +86,7 @@ public class BaseSyncClientProcess {
 
         // Send file data
         if (!args.isDryRun()) {
-            File sourceFile = new File(file.getPath());
+            File sourceFile = new File(Path.of(args.getSourceFolder(), file.getRelativePath()).toString());
             long fileSize = sourceFile.length();
             int maxPacketSize = connection.getMaxPacketSize();
 
@@ -147,6 +148,7 @@ public class BaseSyncClientProcess {
 
     protected void performSingleFileRestore(CommandLineArgs args, ConcurrentLinkedQueue<TcpConnection> connections, ConcurrentHashMap<String, FileInfo> mapToTransfer, Semaphore semaphore, CountDownLatch completionLatch) {
         TcpConnection currentConnection = null;
+        FileInfo fileInfo = null;
         try {
             currentConnection = connections.poll();
             if (currentConnection == null) {
@@ -164,7 +166,7 @@ public class BaseSyncClientProcess {
             }
 
             FileDescriptorMessage fileDescriptorMessage = (FileDescriptorMessage) message;
-            FileInfo fileInfo = fileDescriptorMessage.getFileInfo();
+            fileInfo = fileDescriptorMessage.getFileInfo();
             if (!mapToTransfer.containsKey(FileUtils.makeUniformPath(fileInfo.getRelativePath()))) {
                 log.debug("[CLIENT] Skipping file not in transfer list: {}", fileInfo.getRelativePath());
                 // Send file descriptor ack
@@ -172,8 +174,7 @@ public class BaseSyncClientProcess {
                 currentConnection.sendMessage(fileDescriptorAck);
                 return;
             }
-            mapToTransfer.remove(FileUtils.makeUniformPath(fileInfo.getRelativePath()));
-            semaphore.release();
+
             log.debug("[CLIENT] Receiving file: {}", fileInfo.getRelativePath());
 
             // Create the file or directory
@@ -258,9 +259,14 @@ public class BaseSyncClientProcess {
         } catch (Exception e) {
             log.error("[CLIENT] Error receiving file: {}", e.getMessage());
         } finally {
-            if (currentConnection != null) connections.add(currentConnection);
-            completionLatch.countDown();
-            semaphore.release();
+            try {
+                if (currentConnection != null) connections.add(currentConnection);
+                if (fileInfo != null) mapToTransfer.remove(FileUtils.makeUniformPath(fileInfo.getRelativePath()));
+                completionLatch.countDown();
+                semaphore.release();
+            }catch (Exception e) {
+                log.error("[CLIENT] Error releasing resources: {}", e.getMessage());
+            }
         }
     }
 

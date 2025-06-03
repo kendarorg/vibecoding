@@ -2,6 +2,7 @@ package org.kendar.sync.server;
 
 import org.junit.jupiter.api.TestInfo;
 import org.kendar.sync.lib.protocol.BackupType;
+import org.kendar.sync.lib.utils.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,7 +41,15 @@ public class TestUtils {
         }
     }
 
+    private static List<String> conflicts = new ArrayList<>();
+
     public static void assertDirectoriesEqual(Path dir1, Path dir2) throws IOException {
+        if(Files.exists(Path.of(dir1.toString(),".conflicts.log"))){
+            conflicts= Files.readAllLines(Path.of(dir1.toString(),".conflicts.log"));
+        }
+        if(Files.exists(Path.of(dir2.toString(),".conflicts.log"))){
+            conflicts= Files.readAllLines(Path.of(dir2.toString(),".conflicts.log"));
+        }
         if (!areDirectoriesEqual(dir1, dir2, new ArrayList<>())) {
             fail("Directories are not equal: " + dir1 + " and " + dir2);
         }
@@ -60,12 +69,16 @@ public class TestUtils {
         Set<Path> dir1Files = Files.walk(dir1)
                 .filter(p -> !Files.isDirectory(p))
                 .filter(p -> !p.getFileName().toString().startsWith("."))
+                .filter(p->!conflicts.contains(
+                        FileUtils.makeUniformPath(p.toString().replace(dir1.toString(),""))))
                 .map(dir1::relativize)
                 .collect(Collectors.toSet());
 
         Set<Path> dir2Files = Files.walk(dir2)
                 .filter(p -> !Files.isDirectory(p))
                 .filter(p -> !p.getFileName().toString().startsWith("."))
+                .filter(p->!conflicts.contains(
+                        FileUtils.makeUniformPath(p.toString().replace(dir2.toString(),""))))
                 .map(dir2::relativize)
                 .collect(Collectors.toSet());
 
@@ -237,6 +250,7 @@ public class TestUtils {
 
         var allFiles = Files.walk(fromDir)
                 .filter(path -> !Files.isDirectory(path))
+                .filter(path -> !path.getFileName().startsWith("."))
                 .collect(Collectors.toList());
         var rand = getRandomNumber(0, allFiles.size() - 1);
 
@@ -245,6 +259,23 @@ public class TestUtils {
         File fileToRemove = allFiles.get(rand).toFile();
         Files.delete(fileToRemove.toPath());
         System.out.println("================= Removed file: " + getRelativePath(fileToRemove, sourceDir.toFile()));
+
+        return fileToRemove;
+    }
+
+    public static File touchRandomFile(Path sourceDir,Path fromDir) throws IOException {
+
+        var allFiles = Files.walk(fromDir)
+                .filter(path -> !Files.isDirectory(path))
+                .filter(path -> !path.getFileName().startsWith("."))
+                .collect(Collectors.toList());
+        var rand = getRandomNumber(0, allFiles.size() - 1);
+
+
+        // Remove a random file
+        File fileToRemove = allFiles.get(rand).toFile();
+        Files.writeString(fileToRemove.toPath(),"CHANGED CONTENT " + UUID.randomUUID());
+        System.out.println("================= Changed file: " + getRelativePath(fileToRemove, sourceDir.toFile()));
 
         return fileToRemove;
     }

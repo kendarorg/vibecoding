@@ -4,6 +4,7 @@ import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.model.ServerSettings;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.BackupType;
+import org.kendar.sync.lib.utils.Sleeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -128,6 +129,21 @@ public class ClientSession {
         connections.clear();
     }
 
+    public void closeChildConnections() {
+        var lst = new ArrayList<>(connections);
+        for (TcpConnection connection : lst) {
+            try {
+                if(connection.getConnectionId()!=0){
+                    connection.close();
+                    connections.remove(connection);
+                }
+            } catch (Exception e) {
+                log.error("Error closing connection: {}", e.getMessage());
+            }
+        }
+        Sleeper.sleep(200);
+    }
+
     public Set<TcpConnection> getConnections() {
         return connections;
     }
@@ -147,6 +163,8 @@ public class ClientSession {
      *         false otherwise
      */
     public boolean isExpired() {
-        return System.currentTimeMillis() >= lastOperationTimestamp.get();
+        return false;//System.currentTimeMillis() >= lastOperationTimestamp.get(); //KENDAR
     }
+
+
 }

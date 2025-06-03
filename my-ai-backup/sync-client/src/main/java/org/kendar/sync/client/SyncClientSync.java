@@ -3,6 +3,7 @@ package org.kendar.sync.client;
 import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
+import org.kendar.sync.lib.twoway.ConflictItem;
 import org.kendar.sync.lib.twoway.StatusAnalyzer;
 import org.kendar.sync.lib.utils.FileUtils;
 import org.kendar.sync.lib.utils.Sleeper;
@@ -11,6 +12,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +39,8 @@ public class SyncClientSync  extends BaseSyncClientProcess{
         }
         statusAnalyzer = new StatusAnalyzer(sourceDir.toString());
         var changes = statusAnalyzer.analyze();
+
+
         var lastUpdateTime = statusAnalyzer.getLastUpdateTime();
         if( lastUpdateTime.isEmpty()) {
             lastUpdateTime = Optional.of(Instant.now());
@@ -55,13 +60,9 @@ public class SyncClientSync  extends BaseSyncClientProcess{
 
 
         FileListResponseMessage fileListResponse = (FileListResponseMessage) response;
-        var mapToTransfer = fileListResponse.getFilesToTransfer()
-                .stream().collect(Collectors.toMap(fileInfo -> FileUtils.makeUniformPath(fileInfo.getRelativePath()), fileInfo -> fileInfo));
 
         // Prepare the list of files to transfer
-        List<FileInfo> filesToTransfer = files.stream()
-                .filter(file -> mapToTransfer.containsKey(FileUtils.makeUniformPath(file.getRelativePath())))
-                .toList();
+        List<FileInfo> filesToTransfer = fileListResponse.getFilesToTransfer();
 
         new Thread(()->{
             // Process files to delete
@@ -110,7 +111,7 @@ public class SyncClientSync  extends BaseSyncClientProcess{
                     log.debug("[CLIENT-"+currentConnection.getConnectionId()+"] transferring file {}", file.getRelativePath());
                     transferFile(file, args, currentConnection);
                 } catch (Exception e) {
-                    log.error("[CLIENT] Error transferring file {}: {}", file.getRelativePath(), e.getMessage());
+                    log.error("[CLIENT] Error transferring file 1 {}: {}", file.getRelativePath(), e.getMessage());
                 } finally {
                     if (currentConnection != null) connections.add(currentConnection);
                     //semaphore.release();
@@ -142,6 +143,7 @@ public class SyncClientSync  extends BaseSyncClientProcess{
         var mapToTransferInitialRetrieve = retrieveListResponse.getFilesToTransfer().stream()
                 .collect(Collectors.toMap(fileInfo -> FileUtils.makeUniformPath(fileInfo.getRelativePath()), fileInfo -> fileInfo));
         var mapToTransferRetrieve = new ConcurrentHashMap<>(mapToTransferInitialRetrieve);
+
 
         // Use a fixed pool of 10 threads for parallel file transfers
         var completionLatchRetrieve = new CountDownLatch(mapToTransferRetrieve.size());
@@ -184,6 +186,9 @@ public class SyncClientSync  extends BaseSyncClientProcess{
                     completionLatchRetrieve));
         }
         try {
+            while(!mapToTransferRetrieve.isEmpty()) {
+                Sleeper.sleep(100);
+            }
             completionLatchRetrieve.await();
             log.debug("[CLIENT] All file transfers completed 1");
             connection.sendMessage(new SyncEndMessage());

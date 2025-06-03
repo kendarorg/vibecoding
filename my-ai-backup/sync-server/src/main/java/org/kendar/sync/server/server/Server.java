@@ -121,10 +121,14 @@ public class Server {
                         var sess= session;
                         connection.setSession(()->sess.touch());
                         session.setConnection(connection);
+                        log.debug("[SERVER-{}] Receiving header {}", connection.getConnectionId(),
+                                ((FileDescriptorMessage) message).getFileInfo().getRelativePath());
                         handleFileDescriptor(connection, session, (FileDescriptorMessage) message);
                         message = connection.receiveMessage();
                         var lastMessage = message;
                         while (message.getMessageType() == MessageType.FILE_DATA) {
+                            log.debug("[SERVER-{}] Receiving data", connection.getConnectionId());
+
                             handleFileData(connection, session, (FileDataMessage) message);
                             message = connection.receiveMessage();
                         }
@@ -132,6 +136,9 @@ public class Server {
                             log.error("[SERVER] Unexpected message 1: {}", message.getMessageType());
                             return;
                         }
+                        log.debug("[SERVER-{}] Receiving end {}", connection.getConnectionId(),
+                                ((FileEndMessage) message).getFileInfo().getRelativePath());
+
                         //message = connection.receiveMessage();
                         handleFileEnd(connection, session, (FileEndMessage) message);
                         session = sessions.get(message.getSessionId());

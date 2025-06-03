@@ -207,6 +207,9 @@ public class StatusAnalyzer {
             }
 
             // Both exist - compare modification times
+            if (!localEntry.creationTime.equals(remoteEntry.creationTime)) {
+                return new SyncDecision(SyncAction.CONFLICT, null);
+            }
             if (!localEntry.modificationTime.equals(remoteEntry.modificationTime)) {
                 if (localEntry.modificationTime.isAfter(remoteEntry.modificationTime)) {
                     return new SyncDecision(SyncAction.UPDATE_TO_REMOTE, localEntry);

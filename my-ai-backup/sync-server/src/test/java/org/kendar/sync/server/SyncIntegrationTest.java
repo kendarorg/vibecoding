@@ -124,7 +124,7 @@ public class SyncIntegrationTest {
 
 
     @Test
-    void testBackupAndRestorePreserve() throws Exception {
+    void testSynchronize() throws Exception {
 
         startServer(BackupType.TWO_WAY_SYNC);
         createRandomFiles(sourceDir, 5, 3);
@@ -139,32 +139,65 @@ public class SyncIntegrationTest {
         System.out.println("================= Verifying backup...");
         assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
 
-//        //Add a non deletable file tot destination
-//        System.out.println("================= ADd file on target...");
-//        Files.writeString(Path.of(targetDir.toPath() + "/atest.txt"), "testBackup");
+        //Add a new file on target
+        System.out.println("================= ADd file on target...");
+        Files.writeString(Path.of(targetDir.toPath() + "/targetnew.txt"), "testBackup");
+
+        // Perform backup
+        System.out.println("================= Performing backup...");
+        target.doSync(commandLineArgs);
+
+        // Verify backup
+        System.out.println("================= Verifying backup...");
+        assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
+
+        //Add a new file on source
+        System.out.println("================= ADd file on target...");
+        Files.writeString(Path.of(sourceDir.toPath() + "/sourcenew.txt"), "testBackup");
+
+        // Perform backup
+        System.out.println("================= Performing backup...");
+        target.doSync(commandLineArgs);
+
+        // Verify backup
+        System.out.println("================= Verifying backup...");
+        assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
+
 //
-//        // Perform backup
-//        System.out.println("================= Performing backup...");
-//        commandLineArgs.setBackup(true);
-//        target.doSync(commandLineArgs);
-//
-//        // Verify backup
-//        System.out.println("================= Verifying backup...");
-//        List<String> diff = new ArrayList<>();
-//        assertFalse(areDirectoriesEqual(sourceDir.toPath(), targetDir.toPath(), diff));
-//        assertEquals(List.of(sourceDir.toPath() + File.separator + "atest.txt"), diff);
-//
-//
-//        // Remove a file from the source directory
-//        removedFile = removeRandomFile(sourceDir.toPath(),sourceDir.toPath());
-//
-//        // Perform restore
-//        System.out.println("================= Performing restore...");
-//        if (restore) {
-//            commandLineArgs.setBackup(false);
-//            target.doSync(commandLineArgs);
-//            assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
-//        }
+        // Remove a file from the source directory
+        removedFile = removeRandomFile(sourceDir.toPath(),sourceDir.toPath());
+        System.out.println("================= Performing backup...");
+
+        target.doSync(commandLineArgs);
+
+        // Verify backup
+        System.out.println("================= Verifying backup...");
+        assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
+
+
+        // Touch a file from the source directory
+        var touchedFile = touchRandomFile(sourceDir.toPath(),sourceDir.toPath());
+        System.out.println("================= Performing backup...");
+
+        target.doSync(commandLineArgs);
+
+        // Verify backup
+        System.out.println("================= Verifying backup...");
+        assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
+
+        Files.writeString(Path.of(sourceDir.toPath() + "/conflict.txt"), "testBackup");
+        Sleeper.sleep(1100);
+        Files.writeString(Path.of(targetDir.toPath() + "/conflict.txt"), "testBackup");
+
+        target.doSync(commandLineArgs);
+
+        // Verify backup
+        System.out.println("================= Verifying backup...");
+        assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
+        var conflicts = Files.readAllLines(Path.of(targetDir.toPath().toString(),".conflicts.log"));
+        assertTrue(conflicts.size()>0, "There should be conflicts in the log file");
+        assertTrue(conflicts.stream().anyMatch(conflict ->conflict.contains("conflict.txt")),
+                "There should be a conflict for the file conflict.txt in the log file");
 
     }
 

@@ -3,7 +3,9 @@ package org.kendar.sync.server.backup;
 import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
+import org.kendar.sync.lib.twoway.ConflictItem;
 import org.kendar.sync.lib.twoway.StatusAnalyzer;
+import org.kendar.sync.lib.utils.Sleeper;
 import org.kendar.sync.server.server.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -124,6 +126,8 @@ public class SyncBackupHandler extends BackupHandler{
             var remoteChanges = message.getChanges().stream().collect(Collectors.
                     toMap(c -> c.getRelativePath(), c -> c));
             var result = statusAnalyzer.compare(remoteChanges);
+            var conflictFiles = String.join("\n",result.getConflicts().stream().map(ConflictItem::getRelativePath).toList());
+            Files.writeString(Path.of(session.getFolder().getRealPath(), ".conflicts.log"), conflictFiles);
 
             for(var delete:result.getFilesToDelete()){
                 var pathToDelete = Path.of(session.getFolder().getRealPath(), delete);
@@ -138,19 +142,6 @@ public class SyncBackupHandler extends BackupHandler{
             }
 
             List<FileInfo> filesToSend = new ArrayList<>();
-            for (var file : result.getFilesToSend()) {
-                var path = Path.of(session.getFolder().getRealPath(), file.getRelativePath());
-                filesToSend.add(FileInfo.fromFile(path.toFile(),session.getFolder().getRealPath()));
-            }
-            connection.sendMessage(new FileListResponseMessage(filesToSend, filesToRemoveRemote, true, 1, 1));
-
-            var response = connection.receiveMessage();
-            if (response.getMessageType() != MessageType.FILE_SYNC_ACK) {
-                log.error("[CLIENT] Unexpected response 6: {}", response.getMessageType());
-                return;
-            }
-
-            List<FileInfo> filesToReceive = new ArrayList<>();
             for (var file : result.getFilesToUpdate()) {
                 var path = Path.of(session.getFolder().getRealPath(), file.getRelativePath());
                 var fi = new FileInfo();
@@ -161,14 +152,25 @@ public class SyncBackupHandler extends BackupHandler{
                 fi.setSize(li.getSize());
                 filesToSend.add(fi);
             }
-            connection.sendMessage(new FileListResponseMessage(filesToReceive, List.of(), true, 1, 1));
-            response = connection.receiveMessage();
-            if (response.getMessageType() != MessageType.START_RESTORE) {
+            connection.sendMessage(new FileListResponseMessage(filesToSend, filesToRemoveRemote, true, 1, 1));
+
+            var response = connection.receiveMessage();
+            if (response.getMessageType() != MessageType.FILE_SYNC_ACK) {
                 log.error("[CLIENT] Unexpected response 6: {}", response.getMessageType());
                 return;
             }
-            connection.sendMessage(new StartRestoreAck());
-            connection.receiveMessage();
+
+            List<FileInfo> filesToReceive = new ArrayList<>();
+            for (var file : result.getFilesToSend()) {
+
+                var path = Path.of(session.getFolder().getRealPath(), file.getRelativePath());
+                filesToReceive.add(FileInfo.fromFile(path.toFile(),session.getFolder().getRealPath()));
+            }
+            session.closeChildConnections();
+
+            connection.sendMessage(new FileListResponseMessage(filesToReceive, List.of(), true, 1, 1));
+            handleFileRestore(connection, session, filesToReceive);
+            log.debug("[SERVER] File sync completed successfully. Local changes: {}, Remote changes: {}", localChanges.size(), remoteChanges.size());
 
 
         }catch (Exception ex){

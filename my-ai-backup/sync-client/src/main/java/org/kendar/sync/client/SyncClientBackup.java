@@ -95,7 +95,7 @@ public class SyncClientBackup extends BaseSyncClientProcess{
                     log.debug("[CLIENT-"+currentConnection.getConnectionId()+"] transferring file {}", file.getRelativePath());
                     transferFile(file, args, currentConnection);
                 } catch (Exception e) {
-                    log.error("[CLIENT] Error transferring file {}: {}", file.getRelativePath(), e.getMessage());
+                    log.error("[CLIENT] Error transferring file 2 {}: {}", file.getRelativePath(), e.getMessage());
                 } finally {
                     if (currentConnection != null) connections.add(currentConnection);
                     //semaphore.release();
