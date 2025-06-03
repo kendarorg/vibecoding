@@ -2,6 +2,7 @@ package org.kendar.sync.client;
 
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
+import org.kendar.sync.lib.utils.Sleeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -128,7 +129,7 @@ public class SyncClient {
                 } else {
                     new SyncClientRestore().performRestore(connection, commandLineArgs, maxConnections, maxPacketSize);
                 }
-
+                Sleeper.sleep(200);
                 // Send sync end message
                 connection.sendMessage(new SyncEndMessage());
 
@@ -146,6 +147,7 @@ public class SyncClient {
                 }
 
                 log.debug("[CLIENT] Sync completed successfully");
+                connection.close();
             }
         } catch (InterruptedException | IOException e) {
             //TODO log.error("[CLIENT] Error: " + e.getMessage());

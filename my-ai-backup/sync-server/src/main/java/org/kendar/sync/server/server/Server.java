@@ -3,6 +3,7 @@ package org.kendar.sync.server.server;
 import org.kendar.sync.lib.model.ServerSettings;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
+import org.kendar.sync.lib.utils.Sleeper;
 import org.kendar.sync.server.backup.*;
 import org.kendar.sync.server.config.ServerConfig;
 import org.slf4j.Logger;
@@ -361,6 +362,7 @@ public class Server {
 
         // Delegate to the backup handler
         handler.handleSyncEnd(connection, session, message);
+        Sleeper.sleep(200);
     }
 
     public void stop() {

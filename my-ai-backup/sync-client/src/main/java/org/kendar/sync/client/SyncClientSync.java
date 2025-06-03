@@ -191,9 +191,9 @@ public class SyncClientSync  extends BaseSyncClientProcess{
             }
             completionLatchRetrieve.await();
             log.debug("[CLIENT] All file transfers completed 1");
-            connection.sendMessage(new SyncEndMessage());
-            Sleeper.sleep(500);
-            connection.close();
+            //connection.sendMessage(new SyncEndMessage());
+            //Sleeper.sleep(500);
+            //connection.close();
         } catch (InterruptedException e) {
             log.error("[CLIENT] File transfer interrupted 1: {}", e.getMessage());
         } finally {
