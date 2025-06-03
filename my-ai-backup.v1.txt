@@ -266,7 +266,18 @@ Should add on sync-server module a way to handle hung transfers
 #file:SyncClientAppBackupTest.java #file:SyncClientAppBackupTestSimple.java 
 Fix the failing tests aligning them with the modifications on client
 
+### Prompt 019
 
+This is part of the creation a two-way synchronization algorithm
 
+* This function must be in the lib, common to client and server
+* Create a class StatusAnalyzer that lists all the files in a "base" directory, and write
+	* A .lastupdate.log containing the start time of the run
+	* a .operation.log containing
+		* Creation time
+		* Modification time
+		* Size
+		* Operation (CR for create, MO for modify, DE for delete)
+		* Relative path from the "base" directory
+* On subsequent runs the StatusAnalyzer should add lines corresponding to what happened to the file since the last run and udpdate the lastupdate.log
 
-  
