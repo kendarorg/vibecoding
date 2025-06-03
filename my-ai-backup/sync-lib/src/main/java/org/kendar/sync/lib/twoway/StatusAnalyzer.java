@@ -50,7 +50,7 @@ public class StatusAnalyzer {
         Map<String, FileInfo> currentFileStates = getCurrentFileStates();
 
         // Compare and log changes
-        List<LogEntry> changes = detectChanges(currentFileStates);
+        List<LogEntry> changes = detectChanges(currentFileStates, runStartTime);
 
         // Write changes to operation log
         writeOperationLog(changes);
@@ -298,7 +298,7 @@ public class StatusAnalyzer {
         return currentStates;
     }
 
-    private List<LogEntry> detectChanges(Map<String, FileInfo> currentStates) {
+            private List<LogEntry> detectChanges(Map<String, FileInfo> currentStates, Instant runStartTime) {
         List<LogEntry> changes = new ArrayList<>();
         Instant now = Instant.now();
 
@@ -311,6 +311,7 @@ public class StatusAnalyzer {
             if (previousInfo == null) {
                 // New file
                 changes.add(new LogEntry(
+                        runStartTime,
                         currentInfo.creationTime,
                         currentInfo.modificationTime,
                         currentInfo.size,
@@ -321,6 +322,7 @@ public class StatusAnalyzer {
                     currentInfo.size != previousInfo.size) {
                 // Modified file (time or size changed)
                 changes.add(new LogEntry(
+                        runStartTime,
                         currentInfo.creationTime,
                         currentInfo.modificationTime,
                         currentInfo.size,
@@ -335,6 +337,7 @@ public class StatusAnalyzer {
             String path = entry.getKey();
             if (!currentStates.containsKey(path)) {
                 changes.add(new LogEntry(
+                        runStartTime,
                         now,
                         now,
                         0L, // Size 0 for deleted files
@@ -382,25 +385,31 @@ public class StatusAnalyzer {
                 .format(TIMESTAMP_FORMAT);
         String modificationTime = LocalDateTime.ofInstant(entry.modificationTime, ZoneId.systemDefault())
                 .format(TIMESTAMP_FORMAT);
+        String runStartTime = LocalDateTime.ofInstant(entry.runStartTime, ZoneId.systemDefault())
+                .format(TIMESTAMP_FORMAT);
 
-        return String.format("%s|%s|%d|%s|%s",
-                creationTime, modificationTime, entry.size, entry.operation, entry.relativePath);
+        return String.format("%s|%s|%s|%d|%s|%s",
+                runStartTime, creationTime, modificationTime, entry.size, entry.operation, entry.relativePath);
     }
 
     private LogEntry parseLogEntry(String line) {
-        String[] parts = line.split("\\|", 5);
-        if (parts.length != 5) {
+        String[] parts = line.split("\\|", 6);
+        if (parts.length != 6 && parts.length != 5) {
             return null;
         }
 
         try {
-            Instant creationTime = LocalDateTime.parse(parts[0], TIMESTAMP_FORMAT)
-                    .atZone(ZoneId.systemDefault()).toInstant();
-            Instant modificationTime = LocalDateTime.parse(parts[1], TIMESTAMP_FORMAT)
-                    .atZone(ZoneId.systemDefault()).toInstant();
-            long size = Long.parseLong(parts[2]);
-            String operation = parts[3];
-            String relativePath = parts[4];
+            // Handle both old format (without runStartTime) and new format
+            if (parts.length == 6) {
+                Instant runStartTime = LocalDateTime.parse(parts[0], TIMESTAMP_FORMAT)
+                        .atZone(ZoneId.systemDefault()).toInstant();
+                Instant creationTime = LocalDateTime.parse(parts[1], TIMESTAMP_FORMAT)
+                        .atZone(ZoneId.systemDefault()).toInstant();
+                Instant modificationTime = LocalDateTime.parse(parts[2], TIMESTAMP_FORMAT)
+                        .atZone(ZoneId.systemDefault()).toInstant();
+                long size = Long.parseLong(parts[3]);
+                String operation = parts[4];
+                String relativePath = parts[5];
 
             return new LogEntry(creationTime, modificationTime, size, operation, relativePath);
         } catch (Exception e) {
@@ -466,13 +475,15 @@ public class StatusAnalyzer {
     }
 
     private static class LogEntry {
+        final Instant runStartTime;
         final Instant creationTime;
         final Instant modificationTime;
         final long size;
         final String operation;
         final String relativePath;
 
-        LogEntry(Instant creationTime, Instant modificationTime, long size, String operation, String relativePath) {
+        LogEntry(Instant runStartTime, Instant creationTime, Instant modificationTime, long size, String operation, String relativePath) {
+            this.runStartTime = runStartTime;
             this.creationTime = creationTime;
             this.modificationTime = modificationTime;
             this.size = size;

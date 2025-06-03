@@ -292,5 +292,10 @@ Add the following function to StatusAnalyzer
 
 Fix unit tests
 
+### Prompt 021
+
+* When logging operations on .operation.log add as first field the start time of the run (the one written at the beginning in `.lastupdate.log`
+* Update the StatusAnalyzerTest accordingly
+
 
   
