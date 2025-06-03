@@ -47,7 +47,7 @@ class StatusAnalyzerTest {
         assertTrue(logContent.contains("CR|testfile.txt"));
 
         // Check that the log entry starts with a timestamp (run start time)
-        String[] parts = logContent.split("\|");
+        String[] parts = logContent.split("\\|");
         assertEquals(6, parts.length, "Log entry should have 6 fields including run start time");
     }
 

@@ -400,18 +400,18 @@ public class StatusAnalyzer {
 
         try {
             // Handle both old format (without runStartTime) and new format
-            if (parts.length == 6) {
-                Instant runStartTime = LocalDateTime.parse(parts[0], TIMESTAMP_FORMAT)
-                        .atZone(ZoneId.systemDefault()).toInstant();
-                Instant creationTime = LocalDateTime.parse(parts[1], TIMESTAMP_FORMAT)
-                        .atZone(ZoneId.systemDefault()).toInstant();
-                Instant modificationTime = LocalDateTime.parse(parts[2], TIMESTAMP_FORMAT)
-                        .atZone(ZoneId.systemDefault()).toInstant();
-                long size = Long.parseLong(parts[3]);
-                String operation = parts[4];
-                String relativePath = parts[5];
 
-            return new LogEntry(creationTime, modificationTime, size, operation, relativePath);
+            Instant runStartTime = LocalDateTime.parse(parts[0], TIMESTAMP_FORMAT)
+                    .atZone(ZoneId.systemDefault()).toInstant();
+            Instant creationTime = LocalDateTime.parse(parts[1], TIMESTAMP_FORMAT)
+                    .atZone(ZoneId.systemDefault()).toInstant();
+            Instant modificationTime = LocalDateTime.parse(parts[2], TIMESTAMP_FORMAT)
+                    .atZone(ZoneId.systemDefault()).toInstant();
+            long size = Long.parseLong(parts[3]);
+            String operation = parts[4];
+            String relativePath = parts[5];
+
+            return new LogEntry(runStartTime, creationTime, modificationTime, size, operation, relativePath);
         } catch (Exception e) {
             return null;
         }
