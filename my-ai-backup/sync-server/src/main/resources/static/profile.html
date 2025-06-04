@@ -12,14 +12,15 @@
             <div class="logo">Sync Server</div>
             <nav>
                 <ul>
-                    <li id="admin-nav"><a href="users.html">Users</a></li>
-                    <li id="admin-nav"><a href="folders.html">Backup Folders</a></li>
-                    <li><a href="#" id="logout-btn">Logout</a></li>
+                    <li class="admin-nav"><a href="users.html">Users</a></li>
+                    <li class="admin-nav"><a href="folders.html">Backup Folders</a></li>
+                    <li><a href="login.html?action=logout" id="logout-btn">Logout</a></li>
                     <li>Welcome, <span id="current-username">User</span></li>
                 </ul>
             </nav>
         </div>
     </header>
+
 
     <div class="container">
         <div class="card">
@@ -71,8 +72,6 @@
             // Check if user is authenticated
             if (!Utils.checkAuth()) return;
 
-            // Initialize page
-            Utils.initPage();
 
             // Get elements
             const profileForm = document.getElementById('profile-form');
@@ -114,8 +113,6 @@
                         ...currentUser,
                         username: userData.username
                     };
-                    API.setCurrentUser(updatedUser);
-                    Utils.updateNavigation();
                 }
 
                 Utils.showAlert('Profile updated successfully');
@@ -185,6 +182,8 @@
                     default: return type;
                 }
             }
+            // Initialize page
+            Utils.initPage();
         });
     </script>
 </body>

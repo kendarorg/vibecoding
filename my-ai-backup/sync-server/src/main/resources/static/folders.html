@@ -12,9 +12,9 @@
             <div class="logo">Sync Server</div>
             <nav>
                 <ul>
-                    <li id="admin-nav"><a href="users.html">Users</a></li>
-                    <li id="user-nav"><a href="profile.html">My Profile</a></li>
-                    <li><a href="#" id="logout-btn">Logout</a></li>
+                    <li class="admin-nav"><a href="users.html">Users</a></li>
+                    <li class="user-nav"><a href="profile.html">My Profile</a></li>
+                    <li><a href="login.html?action=logout" id="logout-btn">Logout</a></li>
                     <li>Welcome, <span id="current-username">User</span></li>
                 </ul>
             </nav>
@@ -121,8 +121,6 @@
             // Check if user is authenticated and admin
             if (!Utils.checkAuth() || !Utils.checkAdmin()) return;
 
-            // Initialize page
-            Utils.initPage();
 
             // Get elements
             const foldersTable = document.getElementById('folders-table').querySelector('tbody');
@@ -346,6 +344,10 @@
                 deleteFolderName.textContent = folderName;
                 Utils.openModal('delete-modal');
             }
+
+
+            // Initialize page
+            Utils.initPage();
         });
     </script>
 </body>

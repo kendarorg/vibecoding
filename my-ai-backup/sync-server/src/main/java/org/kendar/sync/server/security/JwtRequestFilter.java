@@ -48,10 +48,17 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 logger.warn("Unable to get JWT Token");
             } catch (ExpiredJwtException e) {
                 logger.warn("JWT Token has expired");
+            } catch (Exception e) {
+                logger.warn("JWT Token has problems");
             }
         } else {
+
             logger.debug("No auth token found");
         }
+
+//        if(username==null){
+//            username = "guest";
+//        }
 
         // Once we get the token, validate it.
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {

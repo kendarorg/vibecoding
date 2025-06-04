@@ -331,4 +331,8 @@ Given the APIs listed in context
 * Add the configuration for the static folder
 * Allow access to anyone to the login page
 
+### Fix 024
+
+* Rstructure the auth (was not working at all)
+
   

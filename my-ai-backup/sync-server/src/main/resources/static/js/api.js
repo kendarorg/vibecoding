@@ -59,7 +59,7 @@ const API = {
         };
 
         if (this.getToken()) {
-            headers['Authorization'] = `Bearer ${this.getToken()}`;
+            headers['X-Auth-Token'] = `${this.getToken()}`;
         }
 
         try {
@@ -69,10 +69,11 @@ const API = {
             });
 
             // Handle unauthorized responses
-            if (response.status === 401) {
+            if (response.status === 401 || response.status === 403) {
                 this.removeToken();
                 this.removeCurrentUser();
                 window.location.href = '/login.html';
+                
                 return null;
             }
 
@@ -103,6 +104,7 @@ const API = {
             body: JSON.stringify({ username, password })
         });
 
+        
         if (data && data.token) {
             this.setToken(data.token);
             this.setCurrentUser({
@@ -120,6 +122,7 @@ const API = {
         this.removeToken();
         this.removeCurrentUser();
         window.location.href = '/login.html';
+        
     },
 
     // Users

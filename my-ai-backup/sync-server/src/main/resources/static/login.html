@@ -43,17 +43,13 @@
     <script src="js/utils.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Redirect if already logged in
-            if (API.isAuthenticated()) {
-                const user = API.getCurrentUser();
-                if (user && user.isAdmin) {
-                    window.location.href = '/users.html';
-                } else {
-                    window.location.href = '/profile.html';
-                }
-                return;
-            }
+            const urlParams = new URLSearchParams(window.location.search);
+            if( urlParams.get('action') === 'logout') {
 
+                API.removeToken();
+                API.removeCurrentUser();
+                Utils.showAlert('You have been logged out successfully.', 'success');
+            }
             // Handle login form submission
             const loginForm = document.getElementById('login-form');
 
@@ -64,11 +60,7 @@
 
                     // Redirect based on user role
                     const user = API.getCurrentUser();
-                    if (user.isAdmin) {
-                        window.location.href = '/users.html';
-                    } else {
-                        window.location.href = '/profile.html';
-                    }
+                    window.location.href = '/profile.html';
                 } catch (error) {
                     Utils.showAlert('Invalid username or password', 'danger');
                 }

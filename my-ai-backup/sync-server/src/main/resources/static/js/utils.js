@@ -78,6 +78,7 @@ const Utils = {
     checkAuth() {
         if (!API.isAuthenticated()) {
             window.location.href = '/login.html';
+            
             return false;
         }
         return true;
@@ -95,15 +96,14 @@ const Utils = {
     // Update navigation based on user role
     updateNavigation() {
         const user = API.getCurrentUser();
-        const adminNav = document.getElementById('admin-nav');
-        const userNav = document.getElementById('user-nav');
+        const adminNav = document.getElementsByClassName('admin-nav');
+        const userNav = document.getElementsByClassName('user-nav');
         const usernameEl = document.getElementById('current-username');
 
         if (user) {
-            // Show/hide admin links
-            if (adminNav) {
-                adminNav.style.display = user.isAdmin ? 'block' : 'none';
-            }
+            Array.prototype.forEach.call(adminNav, function(el) {
+                el.style.display = user.isAdmin ? 'block' : 'none';
+            });
 
             // Update username display
             if (usernameEl) {
@@ -111,13 +111,16 @@ const Utils = {
             }
 
             // Show user nav
-            if (userNav) {
-                userNav.style.display = 'block';
-            }
+            Array.prototype.forEach.call(userNav, function(el) {
+                el.style.display =  'block';
+            });
         } else {
-            // Hide all authenticated navigation
-            if (adminNav) adminNav.style.display = 'none';
-            if (userNav) userNav.style.display = 'none';
+            Array.prototype.forEach.call(adminNav, function(el) {
+                el.style.display =  'none';
+            });
+            Array.prototype.forEach.call(userNav, function(el) {
+                el.style.display =  'none';
+            });
         }
     },
 

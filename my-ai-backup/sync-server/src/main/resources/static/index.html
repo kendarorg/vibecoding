@@ -9,15 +9,14 @@
     <script>
         // Redirect based on authentication status
         document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+
             if (API.isAuthenticated()) {
                 const user = API.getCurrentUser();
-                if (user && user.isAdmin) {
-                    window.location.href = '/users.html';
-                } else {
-                    window.location.href = '/profile.html';
-                }
+                window.location.href = '/profile.html';
             } else {
                 window.location.href = '/login.html';
+
             }
         });
     </script>

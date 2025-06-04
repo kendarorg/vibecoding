@@ -7,6 +7,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.security.Principal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -69,8 +71,8 @@ public class SettingsController {
      * @return The user
      */
     @GetMapping("/users/{id}")
-    @PreAuthorize("hasRole('ADMIN') or authentication.name == #id")
-    public ResponseEntity<?> getUser(@PathVariable String id) {
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    public ResponseEntity<?> getUser(Principal principal, @PathVariable String id) {
         Optional<ServerSettings.User> user = serverSettings.getUsers().stream()
                 .filter(u -> u.getId().equals(id))
                 .findFirst();
@@ -78,8 +80,11 @@ public class SettingsController {
         if (user.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-
-        return ResponseEntity.ok(user.get());
+        var loginUser = serverSettings.getUsers().stream().filter(u->u.getUsername().equalsIgnoreCase(principal.getName())).findFirst().get();
+        if(loginUser.getId().equalsIgnoreCase(user.get().getId()) || loginUser.isAdmin()) {
+            return ResponseEntity.ok(user.get());
+        }
+        return ResponseEntity.notFound().build();
     }
 
     /**
@@ -120,12 +125,14 @@ public class SettingsController {
      * @throws IOException If an I/O error occurs
      */
     @PutMapping("/users/{id}")
-    @PreAuthorize("hasRole('ADMIN') or authentication.name == #id")
-    public ResponseEntity<?> updateUser(@PathVariable String id, @RequestBody ServerSettings.User user) throws IOException {
+    @PreAuthorize("hasRole('ADMIN')  or hasRole('USER')")
+    public ResponseEntity<?> updateUser(Principal principal,@PathVariable String id, @RequestBody ServerSettings.User user) throws IOException {
         // Find the user
         Optional<ServerSettings.User> existingUser = serverSettings.getUsers().stream()
                 .filter(u -> u.getId().equals(id))
                 .findFirst();
+        var loginUser = serverSettings.getUsers().stream().filter(u->u.getUsername().equalsIgnoreCase(principal.getName())).findFirst().get();
+
 
         if (existingUser.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -135,20 +142,24 @@ public class SettingsController {
         ServerSettings.User userToUpdate = existingUser.get();
 
         // Only admins can change the admin status
-        if (!userToUpdate.isAdmin() && user.isAdmin()) {
+        if (!userToUpdate.isAdmin() && user.isAdmin() && !loginUser.isAdmin()) {
             return ResponseEntity.status(403).build();
         }
 
         userToUpdate.setUsername(user.getUsername());
         userToUpdate.setPassword(user.getPassword());
 
-        if (userToUpdate.isAdmin()) {
+        if (loginUser.isAdmin()) {
             userToUpdate.setAdmin(user.isAdmin());
         }
+        if(loginUser.getId().equalsIgnoreCase(userToUpdate.getId()) || loginUser.isAdmin()) {
+            serverSettings.save(serverConfig.getSettingsFile());
+            return ResponseEntity.ok(userToUpdate);
+        }
 
-        serverSettings.save(serverConfig.getSettingsFile());
 
-        return ResponseEntity.ok(userToUpdate);
+        return ResponseEntity.notFound().build();
+
     }
 
     /**
@@ -189,9 +200,16 @@ public class SettingsController {
      * @return The list of backup folders
      */
     @GetMapping("/folders")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<ServerSettings.BackupFolder>> getFolders() {
-        return ResponseEntity.ok(serverSettings.getBackupFolders());
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    public ResponseEntity<List<ServerSettings.BackupFolder>> getFolders(Principal principal) {
+        var result = new ArrayList<ServerSettings.BackupFolder>();
+        var user = serverSettings.getUsers().stream().filter(u->u.getUsername().equalsIgnoreCase(principal.getName())).findFirst().get();
+        for(var bff:serverSettings.getBackupFolders()){
+            if(bff.getAllowedUsers().contains(user.getId())) {
+                result.add(bff);
+            }
+        }
+        return ResponseEntity.ok(result);
     }
 
     /**
@@ -201,14 +219,18 @@ public class SettingsController {
      * @return The backup folder
      */
     @GetMapping("/folders/{name}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> getFolder(@PathVariable String name) {
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    public ResponseEntity<?> getFolder(Principal principal,@PathVariable String name) {
         Optional<ServerSettings.BackupFolder> folder = serverSettings.getBackupFolders().stream()
                 .filter(f -> f.getVirtualName().equals(name))
                 .findFirst();
 
         if (folder.isEmpty()) {
             return ResponseEntity.notFound().build();
+        }
+        var user = serverSettings.getUsers().stream().filter(u->u.getUsername().equalsIgnoreCase(principal.getName())).findFirst().get();
+        if(!folder.get().getAllowedUsers().contains(user.getId())){
+            return ResponseEntity.status(403).build();
         }
 
         return ResponseEntity.ok(folder.get());
