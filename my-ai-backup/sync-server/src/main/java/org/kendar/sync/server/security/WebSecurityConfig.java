@@ -29,10 +29,12 @@ public class WebSecurityConfig {
             JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) throws Exception {
         // We don't need CSRF for this example
         httpSecurity.csrf(AbstractHttpConfigurer::disable)
-                // Don't authenticate this particular request
+                // Don't authenticate these particular requests
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/status").permitAll()
+                        // Allow access to static resources
+                        .requestMatchers("/", "/index.html", "/login.html", "/css/**", "/js/**", "/images/**").permitAll()
                         // All other requests need to be authenticated
                         .anyRequest().authenticated())
                 // Make sure we use stateless session; session won't be used to store user's state

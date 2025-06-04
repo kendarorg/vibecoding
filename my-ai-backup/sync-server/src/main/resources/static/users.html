@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - Sync Server</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <div class="logo">Sync Server</div>
+            <nav>
+                <ul>
+                    <li id="admin-nav"><a href="folders.html">Backup Folders</a></li>
+                    <li id="user-nav"><a href="profile.html">My Profile</a></li>
+                    <li><a href="#" id="logout-btn">Logout</a></li>
+                    <li>Welcome, <span id="current-username">User</span></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <div class="flex-between mb-20">
+                <h2 class="card-title">User Management</h2>
+                <button class="btn" id="add-user-btn">Add New User</button>
+            </div>
+
+            <div id="alert-container"></div>
+
+            <div class="table-container">
+                <table id="users-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Admin</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- User rows will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit User Modal -->
+    <div id="user-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="user-modal-title">Add User</h3>
+                <span class="close">&times;</span>
+            </div>
+
+            <form id="user-form">
+                <input type="hidden" id="user-id" name="id">
+
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="admin" name="admin">
+                        Administrator
+                    </label>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Confirm Delete</h3>
+                <span class="close">&times;</span>
+            </div>
+
+            <p>Are you sure you want to delete user <strong id="delete-user-name"></strong>?</p>
+            <p>This action cannot be undone.</p>
+
+            <div class="modal-footer">
+                <button type="button" class="btn" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirm-delete-btn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check if user is authenticated and admin
+            if (!Utils.checkAuth() || !Utils.checkAdmin()) return;
+
+            // Initialize page
+            Utils.initPage();
+
+            // Get elements
+            const usersTable = document.getElementById('users-table').querySelector('tbody');
+            const userForm = document.getElementById('user-form');
+            const addUserBtn = document.getElementById('add-user-btn');
+            const userModal = document.getElementById('user-modal');
+            const userModalTitle = document.getElementById('user-modal-title');
+            const deleteModal = document.getElementById('delete-modal');
+            const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+            const deleteUserName = document.getElementById('delete-user-name');
+
+            // Variables to store current user ID for editing/deleting
+            let currentUserId = null;
+
+            // Load users
+            await loadUsers();
+
+            // Add event listeners
+            addUserBtn.addEventListener('click', () => {
+                // Reset form and open modal for adding
+                userForm.reset();
+                userModalTitle.textContent = 'Add User';
+                currentUserId = null;
+                Utils.openModal('user-modal');
+            });
+
+            // Handle modal close buttons
+            document.querySelectorAll('[data-dismiss="modal"]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const modalId = btn.closest('.modal').id;
+                    Utils.closeModal(modalId);
+                });
+            });
+
+            // Handle user form submission
+            Utils.handleFormSubmit(userForm, async (form) => {
+                const userData = Utils.formToObject(form);
+
+                if (currentUserId) {
+                    // Update existing user
+                    await API.updateUser(currentUserId, userData);
+                    Utils.showAlert('User updated successfully');
+                } else {
+                    // Create new user
+                    await API.createUser(userData);
+                    Utils.showAlert('User created successfully');
+                }
+
+                // Close modal and reload users
+                Utils.closeModal('user-modal');
+                await loadUsers();
+            });
+
+            // Handle delete confirmation
+            confirmDeleteBtn.addEventListener('click', async () => {
+                if (currentUserId) {
+                    try {
+                        await API.deleteUser(currentUserId);
+                        Utils.showAlert('User deleted successfully');
+                        Utils.closeModal('delete-modal');
+                        await loadUsers();
+                    } catch (error) {
+                        Utils.showAlert('Error deleting user: ' + error.message, 'danger');
+                    }
+                }
+            });
+
+            // Function to load all users
+            async function loadUsers() {
+                try {
+                    const users = await API.getUsers();
+                    renderUsers(users);
+                } catch (error) {
+                    Utils.showAlert('Error loading users: ' + error.message, 'danger');
+                }
+            }
+
+            // Function to render users in the table
+            function renderUsers(users) {
+                usersTable.innerHTML = '';
+
+                if (users.length === 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = '<td colspan="3" class="text-center">No users found</td>';
+                    usersTable.appendChild(row);
+                    return;
+                }
+
+                users.forEach(user => {
+                    const row = document.createElement('tr');
+
+                    row.innerHTML = `
+                        <td>${user.username}</td>
+                        <td>${user.admin ? 'Yes' : 'No'}</td>
+                        <td class="actions">
+                            <button class="btn edit-user" data-id="${user.id}">Edit</button>
+                            <button class="btn btn-danger delete-user" data-id="${user.id}" data-name="${user.username}">Delete</button>
+                        </td>
+                    `;
+
+                    usersTable.appendChild(row);
+                });
+
+                // Add event listeners to edit and delete buttons
+                document.querySelectorAll('.edit-user').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const userId = btn.getAttribute('data-id');
+                        await editUser(userId);
+                    });
+                });
+
+                document.querySelectorAll('.delete-user').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const userId = btn.getAttribute('data-id');
+                        const username = btn.getAttribute('data-name');
+                        showDeleteConfirmation(userId, username);
+                    });
+                });
+            }
+
+            // Function to load user data for editing
+            async function editUser(userId) {
+                try {
+                    const user = await API.getUser(userId);
+
+                    // Fill form with user data
+                    userForm.elements.id.value = user.id;
+                    userForm.elements.username.value = user.username;
+                    userForm.elements.password.value = '';
+                    userForm.elements.admin.checked = user.admin;
+
+                    // Set current user ID for form submission
+                    currentUserId = userId;
+
+                    // Update modal title and open it
+                    userModalTitle.textContent = 'Edit User';
+                    Utils.openModal('user-modal');
+
+                } catch (error) {
+                    Utils.showAlert('Error loading user: ' + error.message, 'danger');
+                }
+            }
+
+            // Function to show delete confirmation
+            function showDeleteConfirmation(userId, username) {
+                currentUserId = userId;
+                deleteUserName.textContent = username;
+                Utils.openModal('delete-modal');
+            }
+        });
+    </script>
+</body>
+</html>

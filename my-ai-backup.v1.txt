@@ -316,5 +316,19 @@ FAILED MISERABLY
 ### Fix 023
 
 * Refactoring backup/restore process
+* Fix the two way sync
+
+### Prompt 024
+
+`#file:AuthController.java` `#file:SettingsController.java`
+
+Given the APIs listed in context 
+* Create a login page 
+* Create a page to manage users
+* Create a page to manage backup folders
+	* For each backup folder 
+* Create a page to manage the logged in user
+* Add the configuration for the static folder
+* Allow access to anyone to the login page
 
   

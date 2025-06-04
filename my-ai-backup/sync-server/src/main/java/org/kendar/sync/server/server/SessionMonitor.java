@@ -46,7 +46,7 @@ public class SessionMonitor implements AutoCloseable {
      */
     private void checkSessions() {
         try {
-            log.debug("Checking {} sessions for expiration", sessions.size());
+            log.trace("Checking {} sessions for expiration", sessions.size());
 
             // Create a copy of the session IDs to avoid concurrent modification
             UUID[] sessionIds = sessions.keySet().toArray(new UUID[0]);
