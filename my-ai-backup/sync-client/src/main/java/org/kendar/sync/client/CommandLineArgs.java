@@ -19,6 +19,7 @@ public class CommandLineArgs {
     private boolean help = false;
     private int maxConnections = 0;
     private int maxSize;
+    private String hostName;
 
     public String getSourceFolder() {
         return sourceFolder;
@@ -114,5 +115,13 @@ public class CommandLineArgs {
 
     public void setMaxSize(int maxSize) {
         this.maxSize = maxSize;
+    }
+
+    public void setHostName(String hostName) {
+        this.hostName = hostName;
+    }
+
+    public String getHostName() {
+        return hostName;
     }
 }

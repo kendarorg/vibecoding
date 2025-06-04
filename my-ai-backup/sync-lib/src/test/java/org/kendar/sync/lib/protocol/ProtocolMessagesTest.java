@@ -27,7 +27,8 @@ class ProtocolMessagesTest {
                 "documents",
                 1024 * 1024,
                 5,
-                false
+                false,
+                "test-hostname"
         );
 
         // Serialize the message

@@ -4,6 +4,11 @@ import org.kendar.sync.lib.protocol.BackupType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.InetAddress;
+import java.util.ArrayList;
+
 /**
  * Main class for the sync client application.
  */
@@ -23,9 +28,49 @@ public class SyncClientApp {
             printHelp();
             return;
         }
+        var hostname= getHostname();
         var syncClient = new SyncClient();
+        commandLineArgs.setHostName(hostname);
 
         syncClient.doSync(commandLineArgs);
+    }
+
+    private static String getHostname() {
+        var hostnames = new ArrayList<String>();
+        try {
+            Runtime r = Runtime.getRuntime();
+            Process p = r.exec("hostname");
+            var in = new BufferedReader(new
+                    InputStreamReader(p.getInputStream()));
+            String inputLine;
+            while ((inputLine = in.readLine()) != null) {
+                var trimmed = inputLine.trim().toUpperCase();
+                if(isValid(trimmed))continue;
+                hostnames.add(inputLine);
+            }
+            in.close();
+        }catch (Exception ex){
+
+        }
+        try{
+            var hostname =  InetAddress.getLocalHost().getHostName()
+                    .trim().toUpperCase();
+            if(!isValid(hostname) && !hostnames.contains(hostname)){
+                hostnames.add(hostname);
+            }
+        }catch (Exception ex){
+
+        }
+        if(hostnames.isEmpty()) {
+            hostnames.add("localhost");
+        }
+        return hostnames.get(0);
+    }
+
+    private static boolean isValid(String trimmed) {
+        return trimmed.isEmpty() ||
+                trimmed.equalsIgnoreCase("localhost") ||
+                trimmed.equalsIgnoreCase("127.0.0.1");
     }
 
 

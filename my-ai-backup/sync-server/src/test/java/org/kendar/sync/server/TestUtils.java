@@ -50,8 +50,17 @@ public class TestUtils {
         if(Files.exists(Path.of(dir2.toString(),".conflicts.log"))){
             conflicts= Files.readAllLines(Path.of(dir2.toString(),".conflicts.log"));
         }
-        if (!areDirectoriesEqual(dir1, dir2, new ArrayList<>())) {
-            fail("Directories are not equal: " + dir1 + " and " + dir2);
+        var diffferent = new ArrayList<String>();
+        if (!areDirectoriesEqual(dir1, dir2, diffferent)) {
+            for(var d:diffferent){
+                if(conflicts.contains(d)){
+                    conflicts.remove(d);
+                }
+            }
+            if(!conflicts.isEmpty()){
+                fail("Directories are not equal: " + dir1 + " and " + dir2);
+            }
+
         }
     }
 

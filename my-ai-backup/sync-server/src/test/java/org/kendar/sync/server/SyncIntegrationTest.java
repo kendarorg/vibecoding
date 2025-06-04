@@ -120,6 +120,7 @@ public class SyncIntegrationTest {
         commandLineArgs.setTargetFolder("testBackup");
         commandLineArgs.setUsername("user");
         commandLineArgs.setPassword("password");
+        commandLineArgs.setHostName("testHost");
     }
 
 

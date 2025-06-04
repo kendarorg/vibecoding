@@ -96,7 +96,8 @@ public class SyncClient {
                         commandLineArgs.getTargetFolder(),
                         DEFAULT_MAX_PACKET_SIZE,
                         DEFAULT_MAX_CONNECTIONS,
-                        commandLineArgs.isDryRun()
+                        commandLineArgs.isDryRun(),
+                        commandLineArgs.getHostName()
                 );
 
                 connection.sendMessage(connectMessage);

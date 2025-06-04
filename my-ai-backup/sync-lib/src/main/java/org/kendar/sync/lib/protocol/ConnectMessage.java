@@ -17,6 +17,7 @@ public class ConnectMessage extends Message {
     private int maxPacketSize;
     private int maxConnections;
     private boolean dryRun;
+    private String hostName;
 
     // Default constructor for Jackson
     public ConnectMessage() {
@@ -34,13 +35,14 @@ public class ConnectMessage extends Message {
      */
     public ConnectMessage(String username, String password, String targetFolder,
                           int maxPacketSize, int maxConnections,
-                          boolean dryRun) {
+                          boolean dryRun,String hostName) {
         this.username = username;
         this.password = password;
         this.targetFolder = targetFolder;
         this.maxPacketSize = maxPacketSize;
         this.maxConnections = maxConnections;
         this.dryRun = dryRun;
+        this.hostName = hostName;
     }
 
     @Override
@@ -51,6 +53,7 @@ public class ConnectMessage extends Message {
         maxPacketSize = buffer.readType(Integer.class);
         maxConnections = buffer.readType(Integer.class);
         dryRun = buffer.readType(Boolean.class);
+        hostName = buffer.readType(String.class);
         return this;
     }
 
@@ -67,6 +70,7 @@ public class ConnectMessage extends Message {
         buffer.writeType(maxPacketSize);
         buffer.writeType(maxConnections);
         buffer.writeType(dryRun);
+        buffer.writeType(hostName);
     }
 
     // Getters and setters
