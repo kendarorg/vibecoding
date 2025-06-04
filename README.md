@@ -39,6 +39,7 @@ Backup client and server with Junie, spring-boot, binary tcp protocol and web-ui
 	* First issue, every request needed a response to keep the synchronization
 	* Second issue the return of mkdirs() when uploading the files is not usefule: many files can create it at once, and if the file exists false is returned
 * Will now leave to the AI the fix of Client tests (changed due to the new messages)
+* I tried to generate the ui, that was decent BUT there was an unsolvable (by AI) problem with the authentication that manage to solve in only one evening
 
 
 ### my-ai-cms according to Claude
