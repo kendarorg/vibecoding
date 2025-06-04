@@ -205,7 +205,7 @@ public class SettingsController {
         var result = new ArrayList<ServerSettings.BackupFolder>();
         var user = serverSettings.getUsers().stream().filter(u->u.getUsername().equalsIgnoreCase(principal.getName())).findFirst().get();
         for(var bff:serverSettings.getBackupFolders()){
-            if(bff.getAllowedUsers().contains(user.getId())) {
+            if(bff.getAllowedUsers().contains(user.getId())||user.isAdmin()) {
                 result.add(bff);
             }
         }
@@ -229,7 +229,7 @@ public class SettingsController {
             return ResponseEntity.notFound().build();
         }
         var user = serverSettings.getUsers().stream().filter(u->u.getUsername().equalsIgnoreCase(principal.getName())).findFirst().get();
-        if(!folder.get().getAllowedUsers().contains(user.getId())){
+        if(!folder.get().getAllowedUsers().contains(user.getId())||user.isAdmin()){
             return ResponseEntity.status(403).build();
         }
 
