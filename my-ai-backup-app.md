@@ -1,0 +1,51 @@
+### Prompt 001
+
+This is a client application to backup and synchronize to a server
+<prerequisites>
+* The application need to run in background
+* The application need full access to files
+* Detect all permissions needed from the following descriptions
+* The client implementation for the backup process will be an interface implemented by someone else
+</prerequisites>
+<application-screens>
+* The first screen will list all the backup jobs by name, with a button to delete the job, one to edit and one to show it.
+  * On top there will be a "add new job" button
+* Show button will show an activity
+  * Directory on the phone to backup
+  * Address of the remote machine with port
+  * Name of the remote target 
+  * Last run time
+  * Last run duration
+  * Next scheduled run
+* Edit button will show an activity with
+  * Directory on the phone to backup
+  * Address of the remote machine with port
+  * Directory on the phone to backup (with explore button to choose the directory on the phone
+  * Name of the remote target (with explore button that will show a list of available targets)
+  * Login 
+  * Password
+  * Schedule (with an edit button to show an activity with the schedule)
+  * If it should run only on wifi
+  * If it should run only when charging
+* Explore phone directory will show an activity with a tree view where can click on a directory to choose to backup it
+  * Each directory will show how many files it contains 
+  * Only one dir can be selected
+  * Clicking on the top OK button will confirm the chosen directory and set it on the edit activity
+* Explore the remote target will require the available targets to the server via a rest api
+  * The button will work only when the address of the remote machine, login, password and port are set
+  * Only one remote target can be selected
+  * The rest api will return a list of string
+  * Clicking on the top OK button will confirm the chosen target and set it on the edit activity
+* The schedule edit button will give the possibility to run the job
+  * Monthly (on specific days)
+  * Weekly choosing the days of Week
+  * At a certain time 
+</application-screens>
+<background-operations>
+* When the time has come to run a backup 
+  * Load all the data for the Backup
+  * Call a fake function passing all the backup data to it
+  * Wait the end of the backup operation
+  * If specified from the settings call the fake stop function when not on wifi or not anymore charging
+</background-operations>
+	

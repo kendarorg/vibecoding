@@ -41,6 +41,11 @@ Backup client and server with Junie, spring-boot, binary tcp protocol and web-ui
 * Will now leave to the AI the fix of Client tests (changed due to the new messages)
 * I tried to generate the ui, that was decent BUT there was an unsolvable (by AI) problem with the authentication that manage to solve in only one evening
 
+### my-ai-backup-app
+
+Time to start the client for android, i converted all the client and lib to java 11 and prepared a Java 11/API 34 Android application.
+After a loong time downloading virtual environments, sdks, gradles, any kind of stuffs, finally can start the development.
+* Took a while to define a -loooong- first prompt that is definitively the most important. Took a while to do it
 
 ### my-ai-cms according to Claude
 
