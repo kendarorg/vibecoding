@@ -73,13 +73,13 @@ const API = {
                 this.removeToken();
                 this.removeCurrentUser();
                 window.location.href = '/login.html';
-                
+
                 return null;
             }
 
             // For non-JSON responses
             if (response.status === 204) {
-                return { success: true };
+                return {success: true};
             }
 
             // Parse JSON response
@@ -101,10 +101,10 @@ const API = {
     async login(username, password) {
         const data = await this.fetch('/auth/login', {
             method: 'POST',
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({username, password})
         });
 
-        
+
         if (data && data.token) {
             this.setToken(data.token);
             this.setCurrentUser({
@@ -122,7 +122,7 @@ const API = {
         this.removeToken();
         this.removeCurrentUser();
         window.location.href = '/login.html';
-        
+
     },
 
     // Users

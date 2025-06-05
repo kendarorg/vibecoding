@@ -5,6 +5,7 @@ import org.kendar.sync.lib.model.FileInfo;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Message sent by the server to the client in response to a file list message.
@@ -76,7 +77,7 @@ public class FileListResponseMessage extends Message {
     protected void serialize(ByteContainer buffer) {
         var filesLines = filesToTransfer.stream()
                 .map(FileInfo::toLine)
-                .toList();
+                .collect(Collectors.toList());
         buffer.writeType(String.join("\n", filesLines));
         buffer.writeType(String.join("\n", filesToDelete));
         buffer.writeType(isBackup);

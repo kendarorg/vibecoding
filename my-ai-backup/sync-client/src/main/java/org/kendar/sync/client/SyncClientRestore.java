@@ -14,8 +14,9 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
-public class SyncClientRestore extends BaseSyncClientProcess{
+public class SyncClientRestore extends BaseSyncClientProcess {
     private static final Logger log = LoggerFactory.getLogger(SyncClientRestore.class);
+
     /**
      * Performs a restore operation.
      *
@@ -56,7 +57,7 @@ public class SyncClientRestore extends BaseSyncClientProcess{
         FileListResponseMessage fileListResponse = (FileListResponseMessage) response;
 
 
-        new Thread(()->{
+        new Thread(() -> {
             // Process files to delete
             for (String relativePath : fileListResponse.getFilesToDelete()) {
                 File fileToDelete = new File(args.getSourceFolder(), relativePath);
@@ -94,7 +95,7 @@ public class SyncClientRestore extends BaseSyncClientProcess{
                     subConnection.getSessionId(), 0);
             subConnection.sendMessage(startRestoreMessage);
             var message = subConnection.receiveMessage();
-            if(message.getMessageType() != MessageType.START_RESTORE_ACK){
+            if (message.getMessageType() != MessageType.START_RESTORE_ACK) {
                 log.error("[CLIENT] Unexpected message 5: {}", message.getMessageType());
                 throw new IOException("Unexpected message 5: " + message.getMessageType());
             }
@@ -107,7 +108,7 @@ public class SyncClientRestore extends BaseSyncClientProcess{
         connection.sendMessage(startRestoreMessage);
 
         var message = connection.receiveMessage();
-        if(message.getMessageType() != MessageType.START_RESTORE_ACK){
+        if (message.getMessageType() != MessageType.START_RESTORE_ACK) {
             log.error("[CLIENT] Unexpected message 6: {}", message.getMessageType());
             throw new IOException("Unexpected message 6: " + message.getMessageType());
         }

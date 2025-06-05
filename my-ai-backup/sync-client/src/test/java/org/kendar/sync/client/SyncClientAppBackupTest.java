@@ -13,7 +13,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -95,7 +94,7 @@ class SyncClientAppBackupTest {
         commandLineArgsClass.getDeclaredMethod("setMaxConnections", int.class)
                 .invoke(commandLineArgs, 1);
 
-        syncClientBackup = new SyncClientBackup(){
+        syncClientBackup = new SyncClientBackup() {
             @Override
             protected TcpConnection getTcpConnection(TcpConnection connection,
                                                      CommandLineArgs args, int i, int maxPacketSize) throws IOException {
@@ -125,7 +124,7 @@ class SyncClientAppBackupTest {
 
 
         // Call the performBackup method
-        syncClientBackup.performBackup( mockConnection, (CommandLineArgs) commandLineArgs, 1, 1024);
+        syncClientBackup.performBackup(mockConnection, (CommandLineArgs) commandLineArgs, 1, 1024);
 
         // Verify that the correct messages were sent
         // 1. FileListMessage
@@ -240,7 +239,7 @@ class SyncClientAppBackupTest {
                 .thenReturn(FileEndAckMessage.failure(sourceDir.getName() + "/subdir/testFile2.txt", "Failed to write file"));
 
         // Call the performBackup method
-        syncClientBackup.performBackup( mockConnection, (CommandLineArgs) commandLineArgs, 1, 1024);
+        syncClientBackup.performBackup(mockConnection, (CommandLineArgs) commandLineArgs, 1, 1024);
 
         // Verify output
         String output = outContent.toString() + errContent.toString();

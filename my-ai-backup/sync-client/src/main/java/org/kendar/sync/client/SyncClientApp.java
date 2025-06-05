@@ -28,7 +28,7 @@ public class SyncClientApp {
             printHelp();
             return;
         }
-        var hostname= getHostname();
+        var hostname = getHostname();
         var syncClient = new SyncClient();
         commandLineArgs.setHostName(hostname);
 
@@ -45,23 +45,23 @@ public class SyncClientApp {
             String inputLine;
             while ((inputLine = in.readLine()) != null) {
                 var trimmed = inputLine.trim().toUpperCase();
-                if(isValid(trimmed))continue;
+                if (isValid(trimmed)) continue;
                 hostnames.add(inputLine);
             }
             in.close();
-        }catch (Exception ex){
-
+        } catch (Exception ex) {
+            log.trace("[SERVER] error on `hostname` call", ex);
         }
-        try{
-            var hostname =  InetAddress.getLocalHost().getHostName()
+        try {
+            var hostname = InetAddress.getLocalHost().getHostName()
                     .trim().toUpperCase();
-            if(!isValid(hostname) && !hostnames.contains(hostname)){
+            if (!isValid(hostname) && !hostnames.contains(hostname)) {
                 hostnames.add(hostname);
             }
-        }catch (Exception ex){
-
+        } catch (Exception ex) {
+            log.trace("[SERVER] error on getHostname", ex);
         }
-        if(hostnames.isEmpty()) {
+        if (hostnames.isEmpty()) {
             hostnames.add("localhost");
         }
         return hostnames.get(0);

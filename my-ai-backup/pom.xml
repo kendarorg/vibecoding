@@ -17,11 +17,9 @@
 
     <properties>
         <revision>1.0-SNAPSHOT</revision>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.plugin.version>3.11.0</maven.compiler.plugin.version>
         <maven.assembly.plugin.version>3.4.0</maven.assembly.plugin.version>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jackson.version>2.15.2</jackson.version>
         <junit.version>5.9.2</junit.version>
         <spring.boot.version>3.1.0</spring.boot.version>
@@ -57,19 +55,4 @@
         </dependencies>
     </dependencyManagement>
 
-    <build>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>${maven.compiler.plugin.version}</version>
-                    <configuration>
-                        <source>${maven.compiler.source}</source>
-                        <target>${maven.compiler.target}</target>
-                    </configuration>
-                </plugin>
-            </plugins>
-        </pluginManagement>
-    </build>
 </project>

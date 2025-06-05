@@ -36,7 +36,7 @@ const Utils = {
 
     // Initialize modals
     initModals() {
-        // Close modal when clicking outside of it
+        // Close modal when clicking outside it
         document.querySelectorAll('.modal').forEach(modal => {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
@@ -78,7 +78,7 @@ const Utils = {
     checkAuth() {
         if (!API.isAuthenticated()) {
             window.location.href = '/login.html';
-            
+
             return false;
         }
         return true;
@@ -101,7 +101,7 @@ const Utils = {
         const usernameEl = document.getElementById('current-username');
 
         if (user) {
-            Array.prototype.forEach.call(adminNav, function(el) {
+            Array.prototype.forEach.call(adminNav, function (el) {
                 el.style.display = user.isAdmin ? 'block' : 'none';
             });
 
@@ -111,15 +111,15 @@ const Utils = {
             }
 
             // Show user nav
-            Array.prototype.forEach.call(userNav, function(el) {
-                el.style.display =  'block';
+            Array.prototype.forEach.call(userNav, function (el) {
+                el.style.display = 'block';
             });
         } else {
-            Array.prototype.forEach.call(adminNav, function(el) {
-                el.style.display =  'none';
+            Array.prototype.forEach.call(adminNav, function (el) {
+                el.style.display = 'none';
             });
-            Array.prototype.forEach.call(userNav, function(el) {
-                el.style.display =  'none';
+            Array.prototype.forEach.call(userNav, function (el) {
+                el.style.display = 'none';
             });
         }
     },

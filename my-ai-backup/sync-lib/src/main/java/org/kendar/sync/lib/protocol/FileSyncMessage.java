@@ -1,13 +1,12 @@
 package org.kendar.sync.lib.protocol;
 
 import org.kendar.sync.lib.buffer.ByteContainer;
-import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.twoway.LogEntry;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Message sent by the client to the server with a list of files in the source directory.
@@ -17,10 +16,11 @@ public class FileSyncMessage extends Message {
     static {
         Message.registerMessageType(FileSyncMessage.class);
     }
+
     private int partNumber;
     private int totalParts;
     private List<LogEntry> changes;
-    private Instant lastyUpdateTime;
+    private Instant lastlyUpdateTime;
 
     // Default constructor for Jackson
     public FileSyncMessage() {
@@ -51,7 +51,7 @@ public class FileSyncMessage extends Message {
     protected void serialize(ByteContainer buffer) {
         var filesLines = changes.stream()
                 .map(LogEntry::toLine)
-                .toList();
+                .collect(Collectors.toList());
         buffer.writeType(String.join("\n", filesLines));
         buffer.writeType(partNumber);
         buffer.writeType(totalParts);
@@ -74,21 +74,19 @@ public class FileSyncMessage extends Message {
         this.totalParts = totalParts;
     }
 
-
+    public List<LogEntry> getChanges() {
+        return changes;
+    }
 
     public void setChanges(List<LogEntry> changes) {
         this.changes = changes;
     }
 
-    public List<LogEntry> getChanges() {
-        return changes;
+    public Instant getLastlyUpdateTime() {
+        return lastlyUpdateTime;
     }
 
-    public void setLastyUpdateTime(Instant lastyUpdateTime) {
-        this.lastyUpdateTime = lastyUpdateTime;
-    }
-
-    public Instant getLastyUpdateTime() {
-        return lastyUpdateTime;
+    public void setLastlyUpdateTime(Instant lastlyUpdateTime) {
+        this.lastlyUpdateTime = lastlyUpdateTime;
     }
 }

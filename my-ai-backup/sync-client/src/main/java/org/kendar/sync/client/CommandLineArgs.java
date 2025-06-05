@@ -117,11 +117,11 @@ public class CommandLineArgs {
         this.maxSize = maxSize;
     }
 
-    public void setHostName(String hostName) {
-        this.hostName = hostName;
-    }
-
     public String getHostName() {
         return hostName;
+    }
+
+    public void setHostName(String hostName) {
+        this.hostName = hostName;
     }
 }

@@ -14,14 +14,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.attribute.FileTime;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+import java.util.List;
+import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.kendar.sync.server.TestUtils.*;
 
 /**
@@ -65,7 +61,6 @@ public class SyncIntegrationTest {
     public static void beforeClass() {
         uniqueId = UUID.randomUUID().toString();
     }
-
 
 
     @AfterEach
@@ -166,7 +161,7 @@ public class SyncIntegrationTest {
 
 //
         // Remove a file from the source directory
-        removedFile = removeRandomFile(sourceDir.toPath(),sourceDir.toPath());
+        removedFile = removeRandomFile(sourceDir.toPath(), sourceDir.toPath());
         System.out.println("================= Performing backup...");
 
         target.doSync(commandLineArgs);
@@ -177,7 +172,7 @@ public class SyncIntegrationTest {
 
 
         // Touch a file from the source directory
-        var touchedFile = touchRandomFile(sourceDir.toPath(),sourceDir.toPath());
+        var touchedFile = touchRandomFile(sourceDir.toPath(), sourceDir.toPath());
         System.out.println("================= Performing backup...");
 
         target.doSync(commandLineArgs);
@@ -195,9 +190,9 @@ public class SyncIntegrationTest {
         // Verify backup
         System.out.println("================= Verifying backup...");
         assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
-        var conflicts = Files.readAllLines(Path.of(targetDir.toPath().toString(),".conflicts.log"));
-        assertTrue(conflicts.size()>0, "There should be conflicts in the log file");
-        assertTrue(conflicts.stream().anyMatch(conflict ->conflict.contains("conflict.txt")),
+        var conflicts = Files.readAllLines(Path.of(targetDir.toPath().toString(), ".conflicts.log"));
+        assertTrue(conflicts.size() > 0, "There should be conflicts in the log file");
+        assertTrue(conflicts.stream().anyMatch(conflict -> conflict.contains("conflict.txt")),
                 "There should be a conflict for the file conflict.txt in the log file");
 
     }

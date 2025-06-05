@@ -268,7 +268,7 @@ public class FileUtils {
             var filesToDelete = paths
                     .filter(path -> !path.equals(directory))
                     .sorted((a, b) -> -a.compareTo(b)) // Reverse order to delete children before parents
-                    .toList();
+                    .collect(Collectors.toList());
 
             for (Path path : filesToDelete) {
                 try {

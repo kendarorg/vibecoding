@@ -33,7 +33,7 @@ public abstract class BackupHandler {
      * @param message    The file list message
      * @throws IOException If an I/O error occurs
      */
-    public void handleFileList(TcpConnection connection, ClientSession session, FileListMessage message) throws IOException{
+    public void handleFileList(TcpConnection connection, ClientSession session, FileListMessage message) throws IOException {
         throw new RuntimeException("Invalid operation for this handler type. This handler does not support file sync operations.");
     }
 

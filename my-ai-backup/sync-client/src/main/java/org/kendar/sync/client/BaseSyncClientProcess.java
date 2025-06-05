@@ -22,6 +22,7 @@ import java.util.concurrent.Semaphore;
 
 public class BaseSyncClientProcess {
     private static final Logger log = LoggerFactory.getLogger(BaseSyncClientProcess.class);
+
     /**
      * Recursively scans a directory and adds all files to the list.
      *
@@ -111,7 +112,7 @@ public class BaseSyncClientProcess {
 
                     var fileAck = connection.receiveMessage();
                     if (fileAck.getMessageType() != MessageType.FILE_DATA_ACK) {
-                        log.error("[CLIENT-{}] Unexpected response 9: {}",connectionId, response.getMessageType());
+                        log.error("[CLIENT-{}] Unexpected response 9: {}", connectionId, response.getMessageType());
                         return;
                     }
 
@@ -264,7 +265,7 @@ public class BaseSyncClientProcess {
                 if (fileInfo != null) mapToTransfer.remove(FileUtils.makeUniformPath(fileInfo.getRelativePath()));
                 completionLatch.countDown();
                 semaphore.release();
-            }catch (Exception e) {
+            } catch (Exception e) {
                 log.error("[CLIENT] Error releasing resources: {}", e.getMessage());
             }
         }

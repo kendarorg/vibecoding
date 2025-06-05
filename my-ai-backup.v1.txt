@@ -333,6 +333,6 @@ Given the APIs listed in context
 
 ### Fix 024
 
-* Rstructure the auth (was not working at all)
-
+* Restructure the auth (was not working at all)
+* Prot client and lib to java 11 (for android compatibility)
   

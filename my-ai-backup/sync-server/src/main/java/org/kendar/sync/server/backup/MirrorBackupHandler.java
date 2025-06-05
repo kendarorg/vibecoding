@@ -83,7 +83,7 @@ public class MirrorBackupHandler extends BackupHandler {
                 filesOnClient.remove(toRemove);
             }
         }
-        var filesToSend = filesOnClient.values().stream().filter(f -> !f.isDirectory()).toList();
+        var filesToSend = filesOnClient.values().stream().filter(f -> !f.isDirectory()).collect(Collectors.toList());
 
         connection.sendMessage(new FileListResponseMessage(filesToSend, removedFiles, true, 1, 1));
 

@@ -4,8 +4,8 @@ import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
 import org.kendar.sync.lib.twoway.ConflictItem;
+import org.kendar.sync.lib.twoway.LogEntry;
 import org.kendar.sync.lib.twoway.StatusAnalyzer;
-import org.kendar.sync.lib.utils.Sleeper;
 import org.kendar.sync.server.server.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class SyncBackupHandler extends BackupHandler{
+public class SyncBackupHandler extends BackupHandler {
     private static final Logger log = LoggerFactory.getLogger(SyncBackupHandler.class);
     private StatusAnalyzer statusAnalyzer;
 
@@ -121,22 +121,22 @@ public class SyncBackupHandler extends BackupHandler{
             var localChanges = statusAnalyzer.analyze();
             var localLastUpdateTime = statusAnalyzer.getLastUpdateTime();
             if (localLastUpdateTime.isEmpty()) {
-                localLastUpdateTime = Optional.of(Instant.now());
+                localLastUpdateTime = Optional.of(Instant.now()); //TODO
             }
             var remoteChanges = message.getChanges().stream().collect(Collectors.
-                    toMap(c -> c.getRelativePath(), c -> c));
+                    toMap(LogEntry::getRelativePath, c -> c));
             var result = statusAnalyzer.compare(remoteChanges);
-            var conflictFiles = String.join("\n",result.getConflicts().stream().map(ConflictItem::getRelativePath).toList());
+            var conflictFiles = result.getConflicts().stream().map(ConflictItem::getRelativePath).collect(Collectors.joining("\n"));
             Files.writeString(Path.of(session.getFolder().getRealPath(), ".conflicts.log"), conflictFiles);
 
-            for(var delete:result.getFilesToDelete()){
+            for (var delete : result.getFilesToDelete()) {
                 var pathToDelete = Path.of(session.getFolder().getRealPath(), delete);
-                if(Files.exists(pathToDelete)){
+                if (Files.exists(pathToDelete)) {
                     Files.delete(pathToDelete);
                 }
             }
             var filesToRemoveRemote = new ArrayList<String>();
-            for(var delete:result.getFilesToDeleteRemote()){
+            for (var delete : result.getFilesToDeleteRemote()) {
                 var pathToDelete = Path.of(session.getFolder().getRealPath(), delete);
                 filesToRemoveRemote.add(delete);
             }
@@ -164,7 +164,7 @@ public class SyncBackupHandler extends BackupHandler{
             for (var file : result.getFilesToSend()) {
 
                 var path = Path.of(session.getFolder().getRealPath(), file.getRelativePath());
-                filesToReceive.add(FileInfo.fromFile(path.toFile(),session.getFolder().getRealPath()));
+                filesToReceive.add(FileInfo.fromFile(path.toFile(), session.getFolder().getRealPath()));
             }
             session.closeChildConnections();
 
@@ -173,14 +173,13 @@ public class SyncBackupHandler extends BackupHandler{
             log.debug("[SERVER] File sync completed successfully. Local changes: {}, Remote changes: {}", localChanges.size(), remoteChanges.size());
 
 
-        }catch (Exception ex){
+        } catch (Exception ex) {
             log.error("[SERVER] Error analyzing status: {}", ex.getMessage(), ex);
-        }finally {
+        } finally {
             try {
                 statusAnalyzer.analyze();
             } catch (IOException e) {
-
-
+                log.trace("[SERVER] error on analyzing", e);
             }
         }
     }

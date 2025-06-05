@@ -35,7 +35,7 @@ public class ConnectMessage extends Message {
      */
     public ConnectMessage(String username, String password, String targetFolder,
                           int maxPacketSize, int maxConnections,
-                          boolean dryRun,String hostName) {
+                          boolean dryRun, String hostName) {
         this.username = username;
         this.password = password;
         this.targetFolder = targetFolder;

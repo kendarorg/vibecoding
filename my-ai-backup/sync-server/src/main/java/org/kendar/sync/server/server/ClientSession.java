@@ -24,9 +24,9 @@ public class ClientSession {
     private final int secondsTimeout;
     private final Map<Integer, FileInfo> currentFileTransfers = new HashMap<>();
     private final Set<TcpConnection> connections = new HashSet<>();
+    private final AtomicLong lastOperationTimestamp = new AtomicLong(0);
     private boolean isBackup = false;
     private TcpConnection mainConnection;
-    private final AtomicLong lastOperationTimestamp = new AtomicLong(0);
 
     public ClientSession(UUID sessionId, ServerSettings.User user, ServerSettings.BackupFolder folder,
                          BackupType backupType, boolean dryRun,
@@ -123,7 +123,7 @@ public class ClientSession {
             try {
                 connection.close();
             } catch (Exception e) {
-                log.error("Error closing connection: {}", e.getMessage());
+                log.error("Error closing connection 1: {}", e.getMessage());
             }
         }
         connections.clear();
@@ -133,12 +133,12 @@ public class ClientSession {
         var lst = new ArrayList<>(connections);
         for (TcpConnection connection : lst) {
             try {
-                if(connection.getConnectionId()!=0){
+                if (connection.getConnectionId() != 0) {
                     connection.close();
                     connections.remove(connection);
                 }
             } catch (Exception e) {
-                log.error("Error closing connection: {}", e.getMessage());
+                log.error("Error closing connection 2: {}", e.getMessage());
             }
         }
         Sleeper.sleep(200);
@@ -153,17 +153,17 @@ public class ClientSession {
      */
     public void touch() {
         lastOperationTimestamp.set(System.currentTimeMillis() +
-                secondsTimeout*1000);
+                (long) secondsTimeout * 1000L);
     }
 
     /**
      * Checks if the session has expired based on the last operation timestamp.
-     * 
+     *
      * @return true if the current time is greater than or equal to the last operation timestamp,
-     *         false otherwise
+     * false otherwise
      */
     public boolean isExpired() {
-        return false;//System.currentTimeMillis() >= lastOperationTimestamp.get(); //KENDAR
+        return false;//System.currentTimeMillis() >= lastOperationTimestamp.get(); //TODO
     }
 
 

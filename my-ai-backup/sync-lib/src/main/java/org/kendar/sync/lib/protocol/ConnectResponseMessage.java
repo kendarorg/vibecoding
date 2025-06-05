@@ -28,7 +28,7 @@ public class ConnectResponseMessage extends Message {
      * @param errorMessage   Error message if the connection was rejected
      * @param maxPacketSize  The maximum packet size negotiated for the session
      * @param maxConnections The maximum number of parallel connections negotiated for the session
-     * @param backupType
+     * @param backupType     The type of backup requested (e.g., FULL, INCREMENTAL, NONE)
      */
     public ConnectResponseMessage(boolean accepted, String errorMessage,
                                   int maxPacketSize, int maxConnections,
@@ -48,7 +48,7 @@ public class ConnectResponseMessage extends Message {
      * @return A new connection response message
      */
     public static ConnectResponseMessage accepted(int maxPacketSize, int maxConnections) {
-        return new ConnectResponseMessage(true, null, maxPacketSize, maxConnections,BackupType.NONE );
+        return new ConnectResponseMessage(true, null, maxPacketSize, maxConnections, BackupType.NONE);
     }
 
     /**
@@ -58,7 +58,7 @@ public class ConnectResponseMessage extends Message {
      * @return A new connection response message
      */
     public static ConnectResponseMessage rejected(String errorMessage) {
-        return new ConnectResponseMessage(false, errorMessage, 0, 0,BackupType.NONE);
+        return new ConnectResponseMessage(false, errorMessage, 0, 0, BackupType.NONE);
     }
 
     @Override

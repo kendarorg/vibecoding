@@ -18,6 +18,8 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestUtils {
+    private static List<String> conflicts = new ArrayList<>();
+
     public static String getTestFolder(TestInfo testInfo) {
         if (testInfo != null && testInfo.getTestClass().isPresent() &&
                 testInfo.getTestMethod().isPresent()) {
@@ -41,23 +43,21 @@ public class TestUtils {
         }
     }
 
-    private static List<String> conflicts = new ArrayList<>();
-
     public static void assertDirectoriesEqual(Path dir1, Path dir2) throws IOException {
-        if(Files.exists(Path.of(dir1.toString(),".conflicts.log"))){
-            conflicts= Files.readAllLines(Path.of(dir1.toString(),".conflicts.log"));
+        if (Files.exists(Path.of(dir1.toString(), ".conflicts.log"))) {
+            conflicts = Files.readAllLines(Path.of(dir1.toString(), ".conflicts.log"));
         }
-        if(Files.exists(Path.of(dir2.toString(),".conflicts.log"))){
-            conflicts= Files.readAllLines(Path.of(dir2.toString(),".conflicts.log"));
+        if (Files.exists(Path.of(dir2.toString(), ".conflicts.log"))) {
+            conflicts = Files.readAllLines(Path.of(dir2.toString(), ".conflicts.log"));
         }
         var diffferent = new ArrayList<String>();
         if (!areDirectoriesEqual(dir1, dir2, diffferent)) {
-            for(var d:diffferent){
-                if(conflicts.contains(d)){
+            for (var d : diffferent) {
+                if (conflicts.contains(d)) {
                     conflicts.remove(d);
                 }
             }
-            if(!conflicts.isEmpty()){
+            if (!conflicts.isEmpty()) {
                 fail("Directories are not equal: " + dir1 + " and " + dir2);
             }
 
@@ -78,16 +78,16 @@ public class TestUtils {
         Set<Path> dir1Files = Files.walk(dir1)
                 .filter(p -> !Files.isDirectory(p))
                 .filter(p -> !p.getFileName().toString().startsWith("."))
-                .filter(p->!conflicts.contains(
-                        FileUtils.makeUniformPath(p.toString().replace(dir1.toString(),""))))
+                .filter(p -> !conflicts.contains(
+                        FileUtils.makeUniformPath(p.toString().replace(dir1.toString(), ""))))
                 .map(dir1::relativize)
                 .collect(Collectors.toSet());
 
         Set<Path> dir2Files = Files.walk(dir2)
                 .filter(p -> !Files.isDirectory(p))
                 .filter(p -> !p.getFileName().toString().startsWith("."))
-                .filter(p->!conflicts.contains(
-                        FileUtils.makeUniformPath(p.toString().replace(dir2.toString(),""))))
+                .filter(p -> !conflicts.contains(
+                        FileUtils.makeUniformPath(p.toString().replace(dir2.toString(), ""))))
                 .map(dir2::relativize)
                 .collect(Collectors.toSet());
 
@@ -255,7 +255,7 @@ public class TestUtils {
      * @return The removed file
      * @throws IOException If an I/O error occurs
      */
-    public static File removeRandomFile(Path sourceDir,Path fromDir) throws IOException {
+    public static File removeRandomFile(Path sourceDir, Path fromDir) throws IOException {
 
         var allFiles = Files.walk(fromDir)
                 .filter(path -> !Files.isDirectory(path))
@@ -272,7 +272,7 @@ public class TestUtils {
         return fileToRemove;
     }
 
-    public static File touchRandomFile(Path sourceDir,Path fromDir) throws IOException {
+    public static File touchRandomFile(Path sourceDir, Path fromDir) throws IOException {
 
         var allFiles = Files.walk(fromDir)
                 .filter(path -> !Files.isDirectory(path))
@@ -283,7 +283,7 @@ public class TestUtils {
 
         // Remove a random file
         File fileToRemove = allFiles.get(rand).toFile();
-        Files.writeString(fileToRemove.toPath(),"CHANGED CONTENT " + UUID.randomUUID());
+        Files.writeString(fileToRemove.toPath(), "CHANGED CONTENT " + UUID.randomUUID());
         System.out.println("================= Changed file: " + getRelativePath(fileToRemove, sourceDir.toFile()));
 
         return fileToRemove;

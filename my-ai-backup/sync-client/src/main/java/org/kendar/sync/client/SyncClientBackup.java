@@ -17,8 +17,9 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
-public class SyncClientBackup extends BaseSyncClientProcess{
-    private Logger log = LoggerFactory.getLogger(SyncClientBackup.class);
+public class SyncClientBackup extends BaseSyncClientProcess {
+    private final Logger log = LoggerFactory.getLogger(SyncClientBackup.class);
+
     /**
      * Performs a backup operation.
      *
@@ -64,10 +65,10 @@ public class SyncClientBackup extends BaseSyncClientProcess{
         // Prepare the list of files to transfer
         List<FileInfo> filesToTransfer = files.stream()
                 .filter(file -> mapToTransfer.containsKey(FileUtils.makeUniformPath(file.getRelativePath())))
-                .toList();
+                .collect(Collectors.toList());
 
 
-        log.debug("[CLIENT] Transferring {} files with {} parallel connections", filesToTransfer.size(),maxConnections);
+        log.debug("[CLIENT] Transferring {} files with {} parallel connections", filesToTransfer.size(), maxConnections);
 
         // Use a fixed pool of 10 threads for parallel file transfers
         ExecutorService executorService = new ThreadPoolExecutor(maxConnections, maxConnections,
@@ -92,7 +93,7 @@ public class SyncClientBackup extends BaseSyncClientProcess{
                     if (currentConnection == null) {
                         throw new RuntimeException("[CLIENT] No connection available");
                     }
-                    log.debug("[CLIENT-"+currentConnection.getConnectionId()+"] transferring file {}", file.getRelativePath());
+                    log.debug("[CLIENT-{}] transferring file {}", currentConnection.getConnectionId(), file.getRelativePath());
                     transferFile(file, args, currentConnection);
                 } catch (Exception e) {
                     log.error("[CLIENT] Error transferring file 2 {}: {}", file.getRelativePath(), e.getMessage());

@@ -12,7 +12,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
 
-@SuppressWarnings("DuplicatedCode")
 public class SyncClient {
 
     public static final int DEFAULT_MAX_PACKET_SIZE = 1024 * 1024; // 1 MB
@@ -124,7 +123,7 @@ public class SyncClient {
 
                 // Perform backup or restore
                 if (connectResponse.getBackupType() == BackupType.TWO_WAY_SYNC) {
-                    new SyncClientSync().peformSync(connection, commandLineArgs, maxConnections, maxPacketSize);
+                    new SyncClientSync().performSync(connection, commandLineArgs, maxConnections, maxPacketSize);
                 } else if (commandLineArgs.isBackup()) {
                     new SyncClientBackup().performBackup(connection, commandLineArgs, maxConnections, maxPacketSize);
                 } else {
@@ -148,10 +147,9 @@ public class SyncClient {
                 }
 
                 log.debug("[CLIENT] Sync completed successfully");
-                connection.close();
             }
         } catch (InterruptedException | IOException e) {
-            //TODO log.error("[CLIENT] Error: " + e.getMessage());
+            log.trace("[CLIENT] Error: " + e.getMessage());
         }
     }
 

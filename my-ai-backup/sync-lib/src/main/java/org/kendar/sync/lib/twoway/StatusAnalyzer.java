@@ -40,7 +40,7 @@ public class StatusAnalyzer {
     /**
      * Analyzes the directory and updates log files with changes since last run
      *
-     * @return
+     * @return List of detected changes as LogEntry objects
      */
     public List<LogEntry> analyze() throws IOException {
         Instant runStartTime = Instant.now();
@@ -190,19 +190,19 @@ public class StatusAnalyzer {
         }
 
         // File exists in both logs
-        if (localEntry != null && remoteEntry != null) {
+        if (localEntry != null) {
             // Both deleted
             if ("DE".equals(localEntry.operation) && "DE".equals(remoteEntry.operation)) {
                 return new SyncDecision(SyncAction.NO_ACTION, null);
             }
 
             // Local deleted, remote exists
-            if ("DE".equals(localEntry.operation) && !"DE".equals(remoteEntry.operation)) {
+            if ("DE".equals(localEntry.operation)) {
                 return new SyncDecision(SyncAction.DELETE_REMOTE, localEntry);
             }
 
             // Remote deleted, local exists
-            if (!"DE".equals(localEntry.operation) && "DE".equals(remoteEntry.operation)) {
+            if ("DE".equals(remoteEntry.operation)) {
                 return new SyncDecision(SyncAction.DELETE_LOCAL, remoteEntry);
             }
 
@@ -286,9 +286,9 @@ public class StatusAnalyzer {
             return currentStates;
         }
 
-        Files.walkFileTree(baseDirectory, new SimpleFileVisitor<Path>() {
+        Files.walkFileTree(baseDirectory, new SimpleFileVisitor<>() {
             @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
                 // Skip log files
                 if (file.equals(lastUpdateLogPath) || file.equals(operationLogPath) || file.equals(lastCompactLogPath)) {
                     return FileVisitResult.CONTINUE;
@@ -307,7 +307,7 @@ public class StatusAnalyzer {
         return currentStates;
     }
 
-            private List<LogEntry> detectChanges(Map<String, FileInfo> currentStates, Instant runStartTime) {
+    private List<LogEntry> detectChanges(Map<String, FileInfo> currentStates, Instant runStartTime) {
         List<LogEntry> changes = new ArrayList<>();
         Instant now = Instant.now();
 
@@ -460,12 +460,10 @@ public class StatusAnalyzer {
         }
 
         @Override
-        public boolean equals(Object obj) {
-            if (this == obj) return true;
-            if (!(obj instanceof FileInfo other)) return false;
-            return Objects.equals(creationTime, other.creationTime) &&
-                    Objects.equals(modificationTime, other.modificationTime) &&
-                    size == other.size;
+        public boolean equals(Object o) {
+            if (!(o instanceof FileInfo)) return false;
+            FileInfo fileInfo = (FileInfo) o;
+            return size == fileInfo.size && Objects.equals(creationTime, fileInfo.creationTime) && Objects.equals(modificationTime, fileInfo.modificationTime);
         }
 
         @Override

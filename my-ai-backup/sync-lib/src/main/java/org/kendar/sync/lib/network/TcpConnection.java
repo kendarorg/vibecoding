@@ -43,9 +43,11 @@ public class TcpConnection implements AutoCloseable {
         this.maxPacketSize = maxPacketSize;
     }
 
+
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof TcpConnection that)) return false;
+        if (!(o instanceof TcpConnection)) return false;
+        TcpConnection that = (TcpConnection) o;
         return Objects.equals(socket, that.socket);
     }
 

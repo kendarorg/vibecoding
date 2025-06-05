@@ -94,7 +94,7 @@ class SyncClientAppBackupTestSimple {
         commandLineArgsClass.getDeclaredMethod("setMaxConnections", int.class)
                 .invoke(commandLineArgs, 1);
 
-        syncClientBackup = new SyncClientBackup(){
+        syncClientBackup = new SyncClientBackup() {
             @Override
             protected TcpConnection getTcpConnection(TcpConnection connection,
                                                      CommandLineArgs args, int i, int maxPacketSize) throws IOException {
@@ -231,7 +231,7 @@ class SyncClientAppBackupTestSimple {
         mockConnection.addMessageToReturn(FileEndAckMessage.failure(sourceDir.getName() + "/subdir/testFile2.txt", "Failed to write file"));
 
         // Call the performBackup method
-        syncClientBackup.performBackup( mockConnection, (CommandLineArgs) commandLineArgs, 1, 1024);
+        syncClientBackup.performBackup(mockConnection, (CommandLineArgs) commandLineArgs, 1, 1024);
 
         // Get the sent messages
         List<Message> sentMessages = mockConnection.getSentMessages();

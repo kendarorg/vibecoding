@@ -85,7 +85,7 @@ public class DateSeparatedBackupHandler extends BackupHandler {
             }
         }
 
-        var filesToSend = filesOnClient.values().stream().filter(f -> !f.isDirectory()).toList();
+        var filesToSend = filesOnClient.values().stream().filter(f -> !f.isDirectory()).collect(Collectors.toList());
         connection.sendMessage(new FileListResponseMessage(filesToSend, new ArrayList<>(), true, 1, 1));
 
         if (message.isBackup()) {

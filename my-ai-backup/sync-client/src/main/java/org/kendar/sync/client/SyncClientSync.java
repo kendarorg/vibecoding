@@ -3,7 +3,6 @@ package org.kendar.sync.client;
 import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
-import org.kendar.sync.lib.twoway.ConflictItem;
 import org.kendar.sync.lib.twoway.StatusAnalyzer;
 import org.kendar.sync.lib.utils.FileUtils;
 import org.kendar.sync.lib.utils.Sleeper;
@@ -12,8 +11,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,12 +18,11 @@ import java.util.Optional;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
-public class SyncClientSync  extends BaseSyncClientProcess{
+public class SyncClientSync extends BaseSyncClientProcess {
 
     private static final Logger log = LoggerFactory.getLogger(SyncClientSync.class);
-    private StatusAnalyzer statusAnalyzer;
 
-    public void peformSync(TcpConnection connection, CommandLineArgs args, int maxConnections, int maxPacketSize) throws IOException, InterruptedException {
+    public void performSync(TcpConnection connection, CommandLineArgs args, int maxConnections, int maxPacketSize) throws IOException, InterruptedException {
         log.debug("[CLIENT] Starting backup from {} to {}", args.getSourceFolder(), args.getTargetFolder());
 
         // Get the list of files to back up
@@ -37,18 +33,18 @@ public class SyncClientSync  extends BaseSyncClientProcess{
             log.error("[CLIENT] 3 Source folder does not exist or is not a directory");
             return;
         }
-        statusAnalyzer = new StatusAnalyzer(sourceDir.toString());
+        StatusAnalyzer statusAnalyzer = new StatusAnalyzer(sourceDir.toString());
         var changes = statusAnalyzer.analyze();
 
 
         var lastUpdateTime = statusAnalyzer.getLastUpdateTime();
-        if( lastUpdateTime.isEmpty()) {
+        if (lastUpdateTime.isEmpty()) {
             lastUpdateTime = Optional.of(Instant.now());
         }
         //Send the file sync message
         var fileSyncMessage = new FileSyncMessage();
         fileSyncMessage.setChanges(changes);
-        fileSyncMessage.setLastyUpdateTime(lastUpdateTime.get());
+        fileSyncMessage.setLastlyUpdateTime(lastUpdateTime.get());
         connection.sendMessage(fileSyncMessage);
 
         // Wait for file list response
@@ -64,7 +60,7 @@ public class SyncClientSync  extends BaseSyncClientProcess{
         // Prepare the list of files to transfer
         List<FileInfo> filesToTransfer = fileListResponse.getFilesToTransfer();
 
-        new Thread(()->{
+        new Thread(() -> {
             // Process files to delete
             for (String relativePath : fileListResponse.getFilesToDelete()) {
                 File fileToDelete = new File(args.getSourceFolder(), relativePath);
@@ -83,7 +79,7 @@ public class SyncClientSync  extends BaseSyncClientProcess{
             }
         }).start();
 
-        log.debug("[CLIENT] Transferring {} files with {} parallel connections", filesToTransfer.size(),maxConnections);
+        log.debug("[CLIENT] Transferring {} files with {} parallel connections", filesToTransfer.size(), maxConnections);
 
         // Use a fixed pool of 10 threads for parallel file transfers
         ExecutorService executorService = new ThreadPoolExecutor(maxConnections, maxConnections,
@@ -108,7 +104,7 @@ public class SyncClientSync  extends BaseSyncClientProcess{
                     if (currentConnection == null) {
                         throw new RuntimeException("[CLIENT] No connection available");
                     }
-                    log.debug("[CLIENT-"+currentConnection.getConnectionId()+"] transferring file {}", file.getRelativePath());
+                    log.debug("[CLIENT-{}] transferring file {}", currentConnection.getConnectionId(), file.getRelativePath());
                     transferFile(file, args, currentConnection);
                 } catch (Exception e) {
                     log.error("[CLIENT] Error transferring file 1 {}: {}", file.getRelativePath(), e.getMessage());
@@ -157,7 +153,7 @@ public class SyncClientSync  extends BaseSyncClientProcess{
                     subConnection.getSessionId(), 0);
             subConnection.sendMessage(startRestoreMessage);
             var message = subConnection.receiveMessage();
-            if(message.getMessageType() != MessageType.START_RESTORE_ACK){
+            if (message.getMessageType() != MessageType.START_RESTORE_ACK) {
                 log.error("[CLIENT] Unexpected message 5: {}", message.getMessageType());
                 throw new IOException("Unexpected message 5: " + message.getMessageType());
             }
@@ -170,7 +166,7 @@ public class SyncClientSync  extends BaseSyncClientProcess{
         connection.sendMessage(startRestoreMessage);
 
         var message = connection.receiveMessage();
-        if(message.getMessageType() != MessageType.START_RESTORE_ACK){
+        if (message.getMessageType() != MessageType.START_RESTORE_ACK) {
             log.error("[CLIENT] Unexpected message 6: {}", message.getMessageType());
             throw new IOException("Unexpected message 6: " + message.getMessageType());
         }
@@ -186,14 +182,12 @@ public class SyncClientSync  extends BaseSyncClientProcess{
                     completionLatchRetrieve));
         }
         try {
-            while(!mapToTransferRetrieve.isEmpty()) {
+            //noinspection ConstantValue
+            while (!mapToTransferRetrieve.isEmpty()) {
                 Sleeper.sleep(100);
             }
             completionLatchRetrieve.await();
             log.debug("[CLIENT] All file transfers completed 1");
-            //connection.sendMessage(new SyncEndMessage());
-            //Sleeper.sleep(500);
-            //connection.close();
         } catch (InterruptedException e) {
             log.error("[CLIENT] File transfer interrupted 1: {}", e.getMessage());
         } finally {
