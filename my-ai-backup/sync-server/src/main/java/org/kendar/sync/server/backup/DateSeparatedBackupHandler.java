@@ -130,6 +130,7 @@ public class DateSeparatedBackupHandler extends BackupHandler {
         String relativePath = message.getRelativePath();
         File targetFile = new File(new File(session.getFolder().getRealPath(), dateDir), relativePath);
 
+        //noinspection ResultOfMethodCallIgnored
         targetFile.getParentFile().mkdirs();
 
         try (FileOutputStream fos = new FileOutputStream(targetFile, message.isFirstBlock())) {

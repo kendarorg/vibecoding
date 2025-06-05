@@ -74,7 +74,7 @@ const Utils = {
         }
     },
 
-    // Check if user is authenticated, redirect if not
+    // Check if the user is authenticated, redirect if not
     checkAuth() {
         if (!API.isAuthenticated()) {
             window.location.href = '/login.html';
@@ -84,7 +84,7 @@ const Utils = {
         return true;
     },
 
-    // Check if user is admin, redirect if not
+    // Check if the user is admin, redirect if not
     checkAdmin() {
         if (!API.isAdmin()) {
             window.location.href = '/profile.html';
@@ -93,7 +93,7 @@ const Utils = {
         return true;
     },
 
-    // Update navigation based on user role
+    // Update navigation based on the user role
     updateNavigation() {
         const user = API.getCurrentUser();
         const adminNav = document.getElementsByClassName('admin-nav');

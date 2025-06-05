@@ -38,7 +38,7 @@ public class StatusAnalyzer {
     }
 
     /**
-     * Analyzes the directory and updates log files with changes since last run
+     * Analyzes the directory and updates log files with changes since the last run
      *
      * @return List of detected changes as LogEntry objects
      */
@@ -54,7 +54,7 @@ public class StatusAnalyzer {
         // Compare and log changes
         List<LogEntry> changes = detectChanges(currentFileStates, runStartTime);
 
-        // Write changes to operation log
+        // Write changes to the operation log
         writeOperationLog(changes);
 
         // Update last update log
@@ -87,7 +87,7 @@ public class StatusAnalyzer {
                 }
             }
 
-            // Write compacted log with only CR operations
+            // Write the compacted log with only CR operations
             try (BufferedWriter writer = Files.newBufferedWriter(operationLogPath,
                     StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
                 for (LogEntry entry : latestCreations.values()) {
@@ -201,7 +201,7 @@ public class StatusAnalyzer {
                 return new SyncDecision(SyncAction.DELETE_REMOTE, localEntry);
             }
 
-            // Remote deleted, local exists
+            // The Remote is deleted, the local exists
             if ("DE".equals(remoteEntry.operation)) {
                 return new SyncDecision(SyncAction.DELETE_LOCAL, remoteEntry);
             }
@@ -268,7 +268,7 @@ public class StatusAnalyzer {
             while ((line = reader.readLine()) != null) {
                 LogEntry entry = parseLogEntry(line);
                 if (entry != null && !entry.operation.equals("DE")) {
-                    // Only keep non-deleted files in previous state
+                    // Only keep non-deleted files in the previous state
                     previousFileStates.put(entry.relativePath,
                             new FileInfo(entry.creationTime, entry.modificationTime, entry.size));
                 }
@@ -408,7 +408,7 @@ public class StatusAnalyzer {
         }
 
         try {
-            // Handle both old format (without runStartTime) and new format
+            // Handle both the old format (without runStartTime) and the  new format
 
             Instant runStartTime = LocalDateTime.parse(parts[0], TIMESTAMP_FORMAT)
                     .atZone(ZoneId.systemDefault()).toInstant();

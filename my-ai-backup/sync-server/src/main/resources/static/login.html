@@ -58,7 +58,7 @@
             try {
                 await API.login(formData.username, formData.password);
 
-                // Redirect based on user role
+                // Redirect based on the user role
                 const user = API.getCurrentUser();
                 window.location.href = '/profile.html';
             } catch (error) {

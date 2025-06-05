@@ -105,7 +105,7 @@
 <script src="js/utils.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', async () => {
-        // Check if user is authenticated and admin
+        // Check if the user is authenticated and admin
         if (!Utils.checkAuth() || !Utils.checkAdmin()) return;
 
         // Get elements
@@ -150,7 +150,7 @@
                 await API.updateUser(currentUserId, userData);
                 Utils.showAlert('User updated successfully');
             } else {
-                // Create new user
+                // Create the new user
                 await API.createUser(userData);
                 Utils.showAlert('User created successfully');
             }
@@ -232,7 +232,7 @@
             try {
                 const user = await API.getUser(userId);
 
-                // Fill form with user data
+                // Fill the form with user data
                 userForm.elements.id.value = user.id;
                 userForm.elements.username.value = user.username;
                 userForm.elements.password.value = '';
@@ -241,7 +241,7 @@
                 // Set current user ID for form submission
                 currentUserId = userId;
 
-                // Update modal title and open it
+                // Update the modal title and open it
                 userModalTitle.textContent = 'Edit User';
                 Utils.openModal('user-modal');
 

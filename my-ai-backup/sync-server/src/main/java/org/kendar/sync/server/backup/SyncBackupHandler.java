@@ -75,6 +75,7 @@ public class SyncBackupHandler extends BackupHandler {
             relativePath = message.getRelativePath();
         }
         File file = new File(session.getFolder().getRealPath(), relativePath);
+        //noinspection ResultOfMethodCallIgnored
         file.getParentFile().mkdirs();
         try (FileOutputStream fos = new FileOutputStream(file, message.isFirstBlock())) {
             fos.write(message.getData());

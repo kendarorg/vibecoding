@@ -19,6 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "My Ai Backup"
+rootProject.name = "My Ai Backup App"
 include(":app")
- 

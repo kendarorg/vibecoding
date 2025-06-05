@@ -42,7 +42,7 @@ public class Server {
         backupHandlers.put(BackupType.DATE_SEPARATED, new DateSeparatedBackupHandler());
         backupHandlers.put(BackupType.TWO_WAY_SYNC, new SyncBackupHandler());
 
-        // Initialize session monitor to check for hung sessions every 10 seconds
+        // Initialize the session monitor to check for hung sessions every 10 seconds
         this.sessionMonitor = new SessionMonitor(sessions, 10);
     }
 

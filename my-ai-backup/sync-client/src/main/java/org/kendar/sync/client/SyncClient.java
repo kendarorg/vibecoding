@@ -148,8 +148,8 @@ public class SyncClient {
 
                 log.debug("[CLIENT] Sync completed successfully");
             }
-        } catch (InterruptedException | IOException e) {
-            log.trace("[CLIENT] Error: " + e.getMessage());
+        } catch ( IOException e) {
+            log.trace("[CLIENT] Error: {}", e.getMessage());
         }
     }
 

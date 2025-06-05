@@ -163,7 +163,7 @@ public class ClientSession {
      * false otherwise
      */
     public boolean isExpired() {
-        return false;//System.currentTimeMillis() >= lastOperationTimestamp.get(); //TODO
+        return System.currentTimeMillis() >= lastOperationTimestamp.get(); //TODO
     }
 
 

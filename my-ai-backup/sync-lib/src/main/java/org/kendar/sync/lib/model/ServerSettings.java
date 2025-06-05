@@ -93,6 +93,7 @@ public class ServerSettings {
 
         // Create parent directories if they don't exist
         if (file.getParentFile() != null) {
+            //noinspection ResultOfMethodCallIgnored
             file.getParentFile().mkdirs();
         }
 

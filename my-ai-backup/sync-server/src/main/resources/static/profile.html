@@ -69,7 +69,7 @@
 <script src="js/utils.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', async () => {
-        // Check if user is authenticated
+        // Check if the user is authenticated
         if (!Utils.checkAuth()) return;
 
 
@@ -107,7 +107,7 @@
             // Update user profile
             await API.updateUser(currentUser.userId, userData);
 
-            // Update local storage with new username if changed
+            // Update local storage with the new username if changed
             if (userData.username !== currentUser.username) {
                 const updatedUser = {
                     ...currentUser,
@@ -123,7 +123,7 @@
             try {
                 const user = await API.getUser(currentUser.userId);
 
-                // Fill form with user data
+                // Fill the form with user data
                 profileForm.elements.username.value = user.username;
             } catch (error) {
                 Utils.showAlert('Error loading profile: ' + error.message, 'danger');

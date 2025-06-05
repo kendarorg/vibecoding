@@ -52,7 +52,7 @@ const API = {
     async fetch(endpoint, options = {}) {
         const url = `${this.baseUrl}${endpoint}`;
 
-        // Set up headers with authorization if token exists
+        // Set up headers with authorization if the token exists
         const headers = {
             'Content-Type': 'application/json',
             ...options.headers
@@ -85,7 +85,7 @@ const API = {
             // Parse JSON response
             const data = await response.json();
 
-            // Check if request was successful
+            // Check if the request was successful
             if (!response.ok) {
                 throw new Error(data.message || 'An error occurred');
             }
@@ -105,6 +105,7 @@ const API = {
         });
 
 
+        // noinspection JSUnresolvedReference
         if (data && data.token) {
             this.setToken(data.token);
             this.setCurrentUser({

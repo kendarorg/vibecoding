@@ -183,6 +183,7 @@ public class BaseSyncClientProcess {
 
             if (fileInfo.isDirectory()) {
                 if (!args.isDryRun()) {
+                    //noinspection ResultOfMethodCallIgnored
                     targetFile.mkdirs();
                 } else {
                     log.debug("[CLIENT] Dry run: Would create directory {}", targetFile.getAbsolutePath());
@@ -197,6 +198,7 @@ public class BaseSyncClientProcess {
 
             // Create parent directories
             if (!args.isDryRun()) {
+                //noinspection ResultOfMethodCallIgnored
                 targetFile.getParentFile().mkdirs();
             } else {
                 log.debug("[CLIENT] Dry run: Would create parent directories for {}", targetFile.getAbsolutePath());
@@ -219,6 +221,7 @@ public class BaseSyncClientProcess {
                 // Write file data
                 if (!args.isDryRun()) {
                     // Create parent directories if needed
+                    //noinspection ResultOfMethodCallIgnored
                     targetFile.getParentFile().mkdirs();
 
                     // Write the data to the file
