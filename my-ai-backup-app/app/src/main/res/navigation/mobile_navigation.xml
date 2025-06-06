@@ -11,17 +11,6 @@
         android:label="@string/menu_home"
         tools:layout="@layout/fragment_home" />
 
-<!--    <fragment-->
-<!--        android:id="@+id/nav_gallery"-->
-<!--        android:name="com.kendar.sync.ui.gallery.GalleryFragment"-->
-<!--        android:label="@string/menu_gallery"-->
-<!--        tools:layout="@layout/fragment_gallery" />-->
-
-<!--    <fragment-->
-<!--        android:id="@+id/nav_slideshow"-->
-<!--        android:name="com.kendar.sync.ui.slideshow.SlideshowFragment"-->
-<!--        android:label="@string/menu_slideshow"-->
-<!--        tools:layout="@layout/fragment_slideshow" />-->
     <fragment
         android:id="@+id/jobsListFragment"
         android:name="com.kendar.sync.ui.jobslist.JobsListFragment"
@@ -49,7 +38,35 @@
             app:destination="@id/jobsListFragment"
             app:popUpTo="@id/jobsListFragment"
             app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_addJobFragment_to_directoryBrowserFragment"
+            app:destination="@id/directoryBrowserFragment" />
+        <action
+            android:id="@+id/action_addJobFragment_to_remoteTargetBrowserFragment"
+            app:destination="@id/remoteTargetBrowserFragment" />
+        <action
+            android:id="@+id/action_addJobFragment_to_scheduleFragment"
+            app:destination="@id/scheduleFragment" />
     </fragment>
+
+
+    <fragment
+        android:id="@+id/directoryBrowserFragment"
+        android:name="com.kendar.sync.ui.browser.DirectoryBrowserFragment"
+        android:label="Select Directory"
+        tools:layout="@layout/fragment_directory_browser" />
+
+    <fragment
+        android:id="@+id/remoteTargetBrowserFragment"
+        android:name="com.kendar.sync.ui.browser.RemoteTargetBrowserFragment"
+        android:label="Select Target"
+        tools:layout="@layout/fragment_remote_target_browser" />
+
+    <fragment
+        android:id="@+id/scheduleFragment"
+        android:name="com.kendar.sync.ui.schedule.ScheduleFragment"
+        android:label="Set Schedule"
+        tools:layout="@layout/fragment_schedule" />
 
     <fragment
         android:id="@+id/editJobFragment"

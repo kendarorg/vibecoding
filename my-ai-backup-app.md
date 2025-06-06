@@ -108,3 +108,36 @@ java.lang.IllegalArgumentException: Navigation destination com.kendar.sync:id/ad
 
 TOTALLY USELESS
 
+### Prompt A03
+
+#file:AddJobFragment.java #file:fragment_add_job.xml #file:JobsAdapter.java #file:JobsFileUtil.java 
+
+Implement the addition of a job. Should show
+
+* The UUID of the new job random (not changeable)
+* A textbox for the Job Name
+* A textbox for the Server Address
+* A textbox for the Server Port (default to 13856)
+* A textbox for the login 
+* A textbox for the password
+* A textbox with a button to select the Local Source
+** Will show the Phone Directory Browser fragment that
+*** Will show a textbox to insert a path
+*** Pressing ok will set the Local Source to the textbox content
+*** Pressing cancel will set the Local Source to null
+* A textbox with a button to select the Target Destination
+** The button is enabled only when login, password, server address and port are set
+** Will show the Remote Target Browser fragment that
+*** will call a REST API, assume a POST to /api/test with a Json string "{}" that will return a list of Strings
+*** Will show the list of strings and allow to chose one
+*** Pressing ok will set the Target Destination to the select string from REST API call
+*** Pressing cancel will set the Target Destination to null
+* A textbox with a button to select the Schedule Time
+** Will show the Schedule fragment that
+*** Will show a textbox to insert a string
+*** Pressing ok will set the Schedule Time to the textbox content
+*** Pressing cancel will set the Schedule Time to null
+* A button to save the job
+* A button to cancel the operation
+
+Write even the layouts
