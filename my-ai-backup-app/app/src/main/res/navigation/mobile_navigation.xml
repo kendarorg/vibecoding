@@ -27,14 +27,57 @@
         android:name="com.kendar.sync.ui.jobslist.JobsListFragment"
         android:label="Jobs List"
         tools:layout="@layout/fragment_jobs_list">
+            <action
+                android:id="@+id/action_jobsListFragment_to_addJobFragment"
+                app:destination="@id/addJobFragment" />
+            <action
+                android:id="@+id/action_jobsListFragment_to_editJobFragment"
+                app:destination="@id/editJobFragment" />
+            <action
+                android:id="@+id/action_jobsListFragment_to_showJobFragment"
+                app:destination="@id/showJobFragment" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/addJobFragment"
+        android:name="com.kendar.sync.ui.jobslist.AddJobFragment"
+        android:label="Add Job"
+        tools:layout="@layout/fragment_add_job">
         <action
-            android:id="@+id/action_jobsListFragment_to_addJobFragment"
-            app:destination="@id/addJobFragment" />
+            android:id="@+id/action_addJobFragment_to_jobsListFragment"
+            app:destination="@id/jobsListFragment"
+            app:popUpTo="@id/jobsListFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/editJobFragment"
+        android:name="com.kendar.sync.ui.jobslist.EditJobFragment"
+        android:label="Edit Job"
+        tools:layout="@layout/fragment_edit_job">
         <action
-            android:id="@+id/action_jobsListFragment_to_editJobFragment"
-            app:destination="@id/editJobFragment" />
+            android:id="@+id/action_editJobFragment_to_jobsListFragment"
+            app:destination="@id/jobsListFragment"
+            app:popUpTo="@id/jobsListFragment"
+            app:popUpToInclusive="true" />
+        <argument
+            android:name="jobId"
+            app:argType="string" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/showJobFragment"
+        android:name="com.kendar.sync.ui.jobslist.ShowJobFragment"
+        android:label="Show Job"
+        tools:layout="@layout/fragment_show_job">
         <action
-            android:id="@+id/action_jobsListFragment_to_showJobFragment"
-            app:destination="@id/showJobFragment" />
+            android:id="@+id/action_showJobFragment_to_jobsListFragment"
+            app:destination="@id/jobsListFragment"
+            app:popUpTo="@id/jobsListFragment"
+            app:popUpToInclusive="true" />
+        <argument
+            android:name="jobId"
+            app:argType="string" />
     </fragment>
 </navigation>

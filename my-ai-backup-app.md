@@ -102,3 +102,9 @@ THIS WAS MOSTLY OK
 
 Just had to "merge" the whole thing and add the views on the menus
 
+### Prompt A02
+
+java.lang.IllegalArgumentException: Navigation destination com.kendar.sync:id/addJobFragment referenced from action com.kendar.sync:id/action_jobsListFragment_to_addJobFragment cannot be found from the current destination Destination(com.kendar.sync:id/jobsListFragment) label=Jobs List class=com.kendar.sync.ui.jobslist.JobsListFragment
+
+TOTALLY USELESS
+
