@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.kendar.sync.api.BackupClient;
 import com.kendar.sync.databinding.ActivityRemoteTargetExplorerBinding;
+import com.kendar.sync.model.BackupJob;
 
 import java.util.ArrayList;
 import java.util.Arrays;

@@ -48,4 +48,39 @@ This is a client application to backup and synchronize to a server
   * Wait the end of the backup operation
   * If specified from the settings call the fake stop function when not on wifi or not anymore charging
 </background-operations>
-	
+
+GENERATED LOADS OF USELESSS STUFFS
+
+Add the following missing implementations
+* ActivityDirectoryExplorerBinding
+* ActivityJobEditBinding
+* ActivityScheduleEditBinding
+* ActivityRemoteTargetExplorerBinding
+
+Generated the xml but not the classes
+
+Took only the permission
+
+GENERATED LOADS OF USELESSS STUFFS (not used)
+
+Fix the compilation problems
+
+GENERATED THE DATA BINDINGS
+
+* Some random classes GENERATED
+* Not usable...
+
+Fix the compilation erros
+
+NO GOOD ANSWER
+
+#file:ActivityDirectoryExplorerBinding.java #file:ActivityJobEditBinding.java #file:ActivityRemoteTargetExplorerBinding.java #file:ActivityScheduleEditBinding.java  
+the view models are missing
+
+=========================================
+
+RETURNING BACK ON START
+
+
+
+
