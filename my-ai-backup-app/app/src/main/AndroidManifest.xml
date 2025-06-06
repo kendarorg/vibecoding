@@ -18,38 +18,23 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-<!--    &lt;!&ndash; Permission to check battery status &ndash;&gt;-->
-<!--    &lt;!&ndash; Internet access for remote server communications &ndash;&gt;-->
-<!--    <uses-permission android:name="android.permission.INTERNET" />-->
-<!--    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />-->
-
     <!-- Access to external storage for backup files -->
-<!--    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />-->
-<!--    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />-->
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
 
     <!-- For Android 13+, specific media permissions -->
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-<!--    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />-->
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
 
     <!-- Background processing permissions -->
-<!--    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />-->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-<!--    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />-->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-
-    <!-- For checking battery/charging state -->
-    <!-- TODO -->
-<!--    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />-->
-<!--    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />-->
-<!--    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />-->
-<!--    <uses-permission android:name="android.permission.BATTERY_STATS" />-->
-
-    <!-- For checking WiFi connection state -->
-<!--    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />-->
 
     <application
         android:allowBackup="true"
@@ -61,7 +46,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MyAiBackupApp"
         tools:targetApi="31">
-
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -69,34 +53,10 @@
             android:theme="@style/Theme.MyAiBackupApp.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <activity android:name=".ui.job.JobDetailActivity" />
-        <activity android:name=".ui.job.JobEditActivity" />
-        <activity android:name=".ui.directory.DirectoryExplorerActivity" />
-        <activity android:name=".ui.target.RemoteTargetExplorerActivity" />
-        <activity android:name=".ui.schedule.ScheduleEditActivity" />
-
-        <service
-            android:name=".service.BackupService"
-            android:enabled="true"
-            android:exported="false" />
-
-        <receiver
-            android:name=".receiver.BootReceiver"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
-
-        <receiver
-            android:name=".receiver.AlarmReceiver"
-            android:enabled="true"
-            android:exported="false" />
     </application>
 
 </manifest>
