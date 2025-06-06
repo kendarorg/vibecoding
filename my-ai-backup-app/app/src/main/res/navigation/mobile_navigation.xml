@@ -11,15 +11,30 @@
         android:label="@string/menu_home"
         tools:layout="@layout/fragment_home" />
 
-    <fragment
-        android:id="@+id/nav_gallery"
-        android:name="com.kendar.sync.ui.gallery.GalleryFragment"
-        android:label="@string/menu_gallery"
-        tools:layout="@layout/fragment_gallery" />
+<!--    <fragment-->
+<!--        android:id="@+id/nav_gallery"-->
+<!--        android:name="com.kendar.sync.ui.gallery.GalleryFragment"-->
+<!--        android:label="@string/menu_gallery"-->
+<!--        tools:layout="@layout/fragment_gallery" />-->
 
+<!--    <fragment-->
+<!--        android:id="@+id/nav_slideshow"-->
+<!--        android:name="com.kendar.sync.ui.slideshow.SlideshowFragment"-->
+<!--        android:label="@string/menu_slideshow"-->
+<!--        tools:layout="@layout/fragment_slideshow" />-->
     <fragment
-        android:id="@+id/nav_slideshow"
-        android:name="com.kendar.sync.ui.slideshow.SlideshowFragment"
-        android:label="@string/menu_slideshow"
-        tools:layout="@layout/fragment_slideshow" />
+        android:id="@+id/jobsListFragment"
+        android:name="com.kendar.sync.ui.jobslist.JobsListFragment"
+        android:label="Jobs List"
+        tools:layout="@layout/fragment_jobs_list">
+        <action
+            android:id="@+id/action_jobsListFragment_to_addJobFragment"
+            app:destination="@id/addJobFragment" />
+        <action
+            android:id="@+id/action_jobsListFragment_to_editJobFragment"
+            app:destination="@id/editJobFragment" />
+        <action
+            android:id="@+id/action_jobsListFragment_to_showJobFragment"
+            app:destination="@id/showJobFragment" />
+    </fragment>
 </navigation>

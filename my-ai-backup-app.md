@@ -81,6 +81,24 @@ the view models are missing
 
 RETURNING BACK ON START
 
+Just kept the permissions
 
+### Prompt A01
 
+* Use Java as language
+* Given a jobs.json file on the application storage containing a list of object with the following fields
+** UUID id
+** String name
+** String lastExecution
+** int lastTransferred
+* Create a new fragment, view model, layout in package com.kendar.sync.ui.jobslist that 
+** Show the list of items with a button to Edit/Delete/Show the item
+** Show a "+" button on top to Add
+* If not existing the file will be created and contains an empty list
+* Prepare empty fragments for the Add/Edit/Show
+* For the Delete ask confirmation
+
+THIS WAS MOSTLY OK
+
+Just had to "merge" the whole thing and add the views on the menus
 
