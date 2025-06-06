@@ -17,6 +17,7 @@ import androidx.navigation.Navigation;
 
 import com.kendar.sync.R;
 import com.kendar.sync.model.Job;
+import com.kendar.sync.util.JobsFileUtil;
 
 import java.util.UUID;
 
@@ -196,7 +197,8 @@ public class AddJobFragment extends Fragment {
         job.setTargetDestination(targetDestinationEditText.getText().toString());
         job.setScheduleTime(scheduleTimeEditText.getText().toString());
 
-        // TODO: Save job to database/repository
+        var jfu = new JobsFileUtil(requireContext());
+        jfu.addJob(job);
 
         // Navigate back to job list
         Navigation.findNavController(requireView()).navigateUp();

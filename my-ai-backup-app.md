@@ -147,3 +147,5 @@ Write even the layouts
 * Adding com.squareup.retrofit2:retrofit:2.9.0 and com.squareup.retrofit2:converter-gson:2.9.0
 * Fixing mixing UUID and strings...
 * Fixing the missing passing of data between fragments
+* Fixing reloading the data on list jobs
+* Fixing the missing "save" of inserted jobs!

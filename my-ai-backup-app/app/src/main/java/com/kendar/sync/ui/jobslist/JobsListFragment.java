@@ -80,6 +80,12 @@ public class JobsListFragment extends Fragment implements JobsAdapter.OnJobActio
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        viewModel.loadJobs();
+    }
+
+    @Override
     public void onDeleteJob(Job job) {
         new AlertDialog.Builder(requireContext())
                 .setTitle("Delete Job")
