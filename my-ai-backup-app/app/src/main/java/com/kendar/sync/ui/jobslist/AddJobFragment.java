@@ -12,6 +12,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentResultListener;
 import androidx.navigation.Navigation;
 
 import com.kendar.sync.R;
@@ -36,12 +37,12 @@ public class AddJobFragment extends Fragment {
     private Button saveButton;
     private Button cancelButton;
 
-    private String jobUuid;
+    private UUID jobUuid;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        jobUuid = UUID.randomUUID().toString();
+        jobUuid = UUID.randomUUID();
     }
 
     @Nullable
@@ -61,7 +62,7 @@ public class AddJobFragment extends Fragment {
         serverPortEditText.setText("13856");
 
         // Display UUID (not editable)
-        uuidTextView.setText(jobUuid);
+        uuidTextView.setText(jobUuid.toString());
     }
 
     private void initViews(View view) {
@@ -106,6 +107,33 @@ public class AddJobFragment extends Fragment {
 
         cancelButton.setOnClickListener(v -> {
             Navigation.findNavController(requireView()).navigateUp();
+        });
+
+        getParentFragmentManager().setFragmentResultListener("remoteTargetBrowserResult", this, new FragmentResultListener() {
+            @Override
+            public void onFragmentResult(@NonNull String requestKey, @NonNull Bundle bundle) {
+                // We use a String here, but any type that can be put in a Bundle is supported.
+                targetDestinationEditText.setText(bundle.getString("targetDestination"));
+                // Do something with the result.
+            }
+        });
+
+        getParentFragmentManager().setFragmentResultListener("directoryBrowserResult", this, new FragmentResultListener() {
+            @Override
+            public void onFragmentResult(@NonNull String requestKey, @NonNull Bundle bundle) {
+                // We use a String here, but any type that can be put in a Bundle is supported.
+                localSourceEditText.setText(bundle.getString("localSource"));
+                // Do something with the result.
+            }
+        });
+
+        getParentFragmentManager().setFragmentResultListener("scheduleResult", this, new FragmentResultListener() {
+            @Override
+            public void onFragmentResult(@NonNull String requestKey, @NonNull Bundle bundle) {
+                // We use a String here, but any type that can be put in a Bundle is supported.
+                scheduleTimeEditText.setText(bundle.getString("scheduleTime"));
+                // Do something with the result.
+            }
         });
     }
 
@@ -158,7 +186,7 @@ public class AddJobFragment extends Fragment {
 
     private void saveJob() {
         Job job = new Job();
-        job.setUuid(jobUuid);
+        job.setId(jobUuid);
         job.setName(jobNameEditText.getText().toString());
         job.setServerAddress(serverAddressEditText.getText().toString());
         job.setServerPort(Integer.parseInt(serverPortEditText.getText().toString()));

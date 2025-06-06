@@ -94,7 +94,24 @@ public class RemoteTargetBrowserFragment extends Fragment implements RemotePathA
         });
     }
 
+    private void fakeFetchRemotePaths() {
+        // This method is a placeholder for the actual network call.
+        // In a real application, you would replace this with the actual network request.
+        List<String> fakePaths = new ArrayList<>();
+        fakePaths.add("First");
+        fakePaths.add("Second");
+        fakePaths.add("Third");
+
+        adapter.updatePaths(fakePaths);
+    }
+
+    private boolean fakeApi= true;
+
     private void fetchRemotePaths() {
+        if (fakeApi) {
+            fakeFetchRemotePaths();
+            return;
+        }
         progressBar.setVisibility(View.VISIBLE);
 
         // Create Retrofit instance

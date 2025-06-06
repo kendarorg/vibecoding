@@ -141,3 +141,9 @@ Implement the addition of a job. Should show
 * A button to cancel the operation
 
 Write even the layouts
+
+### Fix A03
+
+* Adding com.squareup.retrofit2:retrofit:2.9.0 and com.squareup.retrofit2:converter-gson:2.9.0
+* Fixing mixing UUID and strings...
+* Fixing the missing passing of data between fragments
