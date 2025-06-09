@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -13,6 +14,8 @@ import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
 
 import com.kendar.sync.R;
+import com.kendar.sync.cron.InvalidExpressionException;
+import com.kendar.sync.cron.Schedule;
 
 public class ScheduleFragment extends Fragment {
 
@@ -43,6 +46,14 @@ public class ScheduleFragment extends Fragment {
         }
 
         okButton.setOnClickListener(v -> {
+            var scheduleText = scheduleEditText.getText().toString();
+            try {
+                Schedule.create(scheduleText);
+            } catch (InvalidExpressionException e) {
+                Toast.makeText(requireContext(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                return;
+            }
+
             Bundle result = new Bundle();
             result.putString("scheduleTime", scheduleEditText.getText().toString());
             getParentFragmentManager().setFragmentResult("scheduleResult", result);
