@@ -153,3 +153,11 @@ Write even the layouts
 ### Prompt A04
 
 Modify the fragment that will show all the media directories on the phone (Downloads, Music, DCIM, Whatsapp images and so on) and allow selecting one, setting the value on the pathEditText
+
+### Prompt A05
+
+On the Directory Browser Fragment 
+* add a button "Browse Storage" on top of the fragment that allow navigating all the storage of the phone, 
+** add a fragment to navigate it
+** Show the files and directories 
+** Add a button near the directories to select it and to put the path in the "Browse Storage"
