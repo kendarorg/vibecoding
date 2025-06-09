@@ -39,6 +39,7 @@ public class AddJobFragment extends Fragment {
     private Button cancelButton;
 
     private UUID jobUuid;
+    private boolean isEditing = false; // Flag to check if we are editing an existing job
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -55,15 +56,38 @@ public class AddJobFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
+        isEditing=false;
         initViews(view);
         setupListeners();
 
-        // Set default port
         serverPortEditText.setText("13856");
 
         // Display UUID (not editable)
         uuidTextView.setText(jobUuid.toString());
+
+        String jobId = null;
+
+        try {
+            jobId = getArguments().getString("jobId");
+        }catch (Exception ex){}
+        if(jobId!=null && !jobId.isEmpty()) {
+            // If editing an existing job, load its details
+            JobsFileUtil jfu = new JobsFileUtil(requireContext());
+            Job job = jfu.getJobById(UUID.fromString(jobId));
+            if (job != null) {
+                isEditing= true;
+                jobUuid = job.getId();
+                uuidTextView.setText(jobUuid.toString());
+                jobNameEditText.setText(job.getName());
+                serverAddressEditText.setText(job.getServerAddress());
+                serverPortEditText.setText(String.valueOf(job.getServerPort()));
+                loginEditText.setText(job.getLogin());
+                passwordEditText.setText(job.getPassword());
+                localSourceEditText.setText(job.getLocalSource());
+                targetDestinationEditText.setText(job.getTargetDestination());
+                scheduleTimeEditText.setText(job.getScheduleTime());
+            }
+        }
     }
 
     private void initViews(View view) {
@@ -198,7 +222,11 @@ public class AddJobFragment extends Fragment {
         job.setScheduleTime(scheduleTimeEditText.getText().toString());
 
         var jfu = new JobsFileUtil(requireContext());
-        jfu.addJob(job);
+        if(isEditing){
+            jfu.updateJob(job);
+        }else {
+            jfu.addJob(job);
+        }
 
         // Navigate back to job list
         Navigation.findNavController(requireView()).navigateUp();

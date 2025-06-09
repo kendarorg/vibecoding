@@ -20,9 +20,6 @@
                 android:id="@+id/action_jobsListFragment_to_addJobFragment"
                 app:destination="@id/addJobFragment" />
             <action
-                android:id="@+id/action_jobsListFragment_to_editJobFragment"
-                app:destination="@id/editJobFragment" />
-            <action
                 android:id="@+id/action_jobsListFragment_to_showJobFragment"
                 app:destination="@id/showJobFragment" />
 
@@ -68,20 +65,6 @@
         android:label="Set Schedule"
         tools:layout="@layout/fragment_schedule" />
 
-    <fragment
-        android:id="@+id/editJobFragment"
-        android:name="com.kendar.sync.ui.jobslist.EditJobFragment"
-        android:label="Edit Job"
-        tools:layout="@layout/fragment_edit_job">
-        <action
-            android:id="@+id/action_editJobFragment_to_jobsListFragment"
-            app:destination="@id/jobsListFragment"
-            app:popUpTo="@id/jobsListFragment"
-            app:popUpToInclusive="true" />
-        <argument
-            android:name="jobId"
-            app:argType="string" />
-    </fragment>
 
     <fragment
         android:id="@+id/showJobFragment"

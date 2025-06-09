@@ -76,7 +76,7 @@ public class JobsListFragment extends Fragment implements JobsAdapter.OnJobActio
         NavController navController = Navigation.findNavController(requireView());
         Bundle args = new Bundle();
         args.putString("jobId", job.getId().toString());
-        navController.navigate(R.id.action_jobsListFragment_to_editJobFragment, args);
+        navController.navigate(R.id.action_jobsListFragment_to_addJobFragment, args);
     }
 
     @Override
