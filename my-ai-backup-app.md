@@ -149,3 +149,7 @@ Write even the layouts
 * Fixing the missing passing of data between fragments
 * Fixing reloading the data on list jobs
 * Fixing the missing "save" of inserted jobs!
+
+### Prompt A04
+
+Modify the fragment that will show all the media directories on the phone (Downloads, Music, DCIM, Whatsapp images and so on) and allow selecting one, setting the value on the pathEditText
