@@ -204,3 +204,12 @@ If not valid expression a Toast will be issued and the schedule will be set to n
 
 Given the format of the schedule should add a function to generate the next scheduled time
 
+### Prompt A07
+
+At startup the application must load all jobs and then (even if it is in background)
+* Should start jobs with wifi only at the moment wifi is connected
+* Should start jobs with charge only at the moment battery charge is connected
+* Should start the other jobs according to the scheduled time
+* If a job is running should wait its end to start again (no overlapping of the same job)
+
+
