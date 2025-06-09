@@ -63,6 +63,7 @@ public class ScheduleFragment extends Fragment {
     private View periodicView, dailyView, weeklyView, monthlyView;
     private List<CheckBox> weekdayCheckboxes = new ArrayList<>();
     private List<CheckBox> monthDateCheckboxes = new ArrayList<>();
+    private CheckBox onWifiCheckbox, onChargingCheckbox;
 
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
     private final SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
@@ -92,6 +93,8 @@ public class ScheduleFragment extends Fragment {
         nextScheduleText = view.findViewById(R.id.text_next_schedule);
         saveButton = view.findViewById(R.id.button_save);
         cancelButton = view.findViewById(R.id.button_cancel);
+        onWifiCheckbox = view.findViewById(R.id.checkbox_on_wifi);
+        onChargingCheckbox= view.findViewById(R.id.checkbox_on_charging);
 
         // Initialize schedule type spinner
         ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, SCHEDULE_TYPES);
@@ -565,12 +568,23 @@ public class ScheduleFragment extends Fragment {
 
     private void parseScheduleString(String scheduleString) {
         try {
-            // Example: M:DAILY W:12:30 P:2023-05-01 12:00/2023-12-31 23:59 R:true/01:00
+            // Example: M:DAILY W:12:30 P:2023-05-01 12:00/2023-12-31 23:59 R:true/01:00 WIFI CHARGE
             Pattern modePattern = Pattern.compile("M:([A-Z]+)");
             Pattern timePattern = Pattern.compile("W:([0-9:]+)(?:/([0-9,]+))?");
             Pattern periodPattern = Pattern.compile("P:([0-9-: ]+)(?:/([0-9-: ]+))?");
             Pattern retryPattern = Pattern.compile("R:(true|false)/([0-9:]+)");
+            Pattern wifiPattern = Pattern.compile("WIFI");
+            Pattern chargePattern = Pattern.compile("CHARGE");
 
+            //WIFI and CHARGE
+            Matcher wifiMatcher = wifiPattern.matcher(scheduleString);
+            if(wifiMatcher.find()){
+                this.onWifiCheckbox.setChecked(true);
+            }
+            Matcher chargeMatcher = chargePattern.matcher(scheduleString);
+            if(chargeMatcher.find()){
+                this.onChargingCheckbox.setChecked(true);
+            }
             // Parse mode
             Matcher modeMatcher = modePattern.matcher(scheduleString);
             if (modeMatcher.find()) {
@@ -857,6 +871,14 @@ public class ScheduleFragment extends Fragment {
             sb.append("/").append(retryHours).append(":").append(retryMins);
         } else {
             sb.append("/00:00");
+        }
+
+
+        if(this.onWifiCheckbox.isChecked()){
+            sb.append(" WIFI");
+        }
+        if(this.onChargingCheckbox.isChecked()){
+            sb.append(" CHARGE");
         }
 
         return sb.toString();
