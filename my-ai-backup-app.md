@@ -165,3 +165,38 @@ On the Directory Browser Fragment
 ### Fix A05
 
 Allowing access to "generic" storage
+
+### Prompt A06
+
+Design a user interface form titled "Backup Schedule" that allows users to configure and manage backup task schedules. The form should include the following sections and functionality:
+
+Show the fields based on the dropdown selection. All fields show the following (optional) fields
+
+* Start datetime (default now)
+* End datetime (default null, meaning never)
+* Retry attemps (default 0)
+* Wait between retries HH:MM (when attempts is greater than 0)
+* Next schedule according to the selection currently shown
+
+Provide dropdown to select one of the following modes:
+
+* Periodic
+	* HH:MM Between executiob
+* Daily
+	* HH:MM At wich the job start
+* Weekly
+	* checkboxes for days of the week (Sun to Sat) . Multiple allowed
+	* HH:MM At wich the job start
+* Monthly
+	* checkbox grid to select dates (1–31) . Multiple allowed
+	* HH:MM At wich the job start
+* On startup
+
+The storage format of the data will be
+
+M:[MODE] W:[TIME]/[DAY1,DAY2...] P:[STARTDATE]/[ENDDATE] R:[RETRYTRUE_FALSE]/[RETRYWAIT]
+
+Opening the schedule page with a schedule defined will show the correct dropdown selection and data
+
+If not valid expression a Toast will be issued and the schedule will be set to null
+
