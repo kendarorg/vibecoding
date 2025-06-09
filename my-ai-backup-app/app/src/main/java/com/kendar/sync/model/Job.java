@@ -1,5 +1,8 @@
 package com.kendar.sync.model;
 
+import com.kendar.sync.util.ScheduleUtil;
+
+import java.util.Calendar;
 import java.util.UUID;
 
 public class Job {
@@ -14,6 +17,22 @@ public class Job {
     private String scheduleTime;
     private String lastExecution;
     private int lastTransferred;
+
+    public Calendar retrieveNextScheduleTime(){
+        return ScheduleUtil.getNextScheduledTime(scheduleTime);
+    }
+
+    public boolean retrieveIsOnWifiOnly() {
+        return ScheduleUtil.isOnWifiOnly(scheduleTime);
+    }
+
+    public boolean retrieveIsOnChargeOnly() {
+        return ScheduleUtil.isOnChargeOnly(scheduleTime);
+    }
+
+    public boolean retrieveIsOnStartup() {
+        return ScheduleUtil.isOnStartup(scheduleTime);
+    }
 
     public Job() {
         // Default constructor
@@ -114,4 +133,5 @@ public class Job {
     public void setLastTransferred(int lastTransferred) {
         this.lastTransferred = lastTransferred;
     }
+
 }

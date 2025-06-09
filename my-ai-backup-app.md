@@ -200,3 +200,7 @@ Opening the schedule page with a schedule defined will show the correct dropdown
 
 If not valid expression a Toast will be issued and the schedule will be set to null
 
+### Prompt A07
+
+Given the format of the schedule should add a function to generate the next scheduled time
+
