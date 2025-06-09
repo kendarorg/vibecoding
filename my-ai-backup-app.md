@@ -213,3 +213,6 @@ At startup the application must load all jobs and then (even if it is in backgro
 * If a job is running should wait its end to start again (no overlapping of the same job)
 
 
+### FIx A07
+
+Clarifyng the schedule service run style
