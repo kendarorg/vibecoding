@@ -104,4 +104,9 @@ public class JobsListFragment extends Fragment implements JobsAdapter.OnJobActio
         args.putString("jobId", job.getId().toString());
         navController.navigate(R.id.action_jobsListFragment_to_showJobFragment, args);
     }
+
+    @Override
+    public void onRunJob(Job job) {
+        //TODO implement job execution logic
+    }
 }

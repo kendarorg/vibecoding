@@ -65,6 +65,13 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Show job details"
                 android:src="@android:drawable/ic_menu_view" />
+            <ImageButton
+                android:id="@+id/button_run"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Run job"
+                android:src="@android:drawable/ic_media_play" />
         </LinearLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView>
