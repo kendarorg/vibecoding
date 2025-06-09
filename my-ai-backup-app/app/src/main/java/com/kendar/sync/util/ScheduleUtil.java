@@ -301,7 +301,7 @@ public class ScheduleUtil {
 
             return next;
         }catch (Exception e){
-            throw new RuntimeException("Error parsing schedule string: " + scheduleString, e);
+            return null;
         }
     }
 

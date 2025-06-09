@@ -168,7 +168,8 @@ public class JobSchedulerService extends Service {
     private void checkAndRunWifiJobs() {
         List<Job> jobs = jobsFileUtil.readJobs();
         for (Job job : jobs) {
-            if (job.retrieveIsOnWifiOnly() && !isJobRunning(job.getId())) {
+            var nextScheduleTime = job.retrieveNextScheduleTime();
+            if (nextScheduleTime==null && job.retrieveIsOnWifiOnly() && !isJobRunning(job.getId())) {
                 executeJob(job);
             }
         }
@@ -177,7 +178,8 @@ public class JobSchedulerService extends Service {
     private void checkAndRunChargingJobs() {
         List<Job> jobs = jobsFileUtil.readJobs();
         for (Job job : jobs) {
-            if (job.retrieveIsOnChargeOnly() && !isJobRunning(job.getId())) {
+            var nextScheduleTime = job.retrieveNextScheduleTime();
+            if (nextScheduleTime == null && job.retrieveIsOnChargeOnly() && !isJobRunning(job.getId())) {
                 executeJob(job);
             }
         }
@@ -188,17 +190,23 @@ public class JobSchedulerService extends Service {
         Calendar now = Calendar.getInstance();
 
         for (Job job : jobs) {
-            if (isJobRunning(job.getId())) {
+            if (isJobRunning(job.getId()) || job.retrieveIsOnStartup()) {
                 continue; // Skip if already running
             }
 
+            Calendar nextRun = job.retrieveNextScheduleTime();
+            if(nextRun == null) {
+                continue; // Skip if no next run time is set
+            }
             // Skip jobs that are wifi-only or charge-only as they're handled separately
-            if (job.retrieveIsOnWifiOnly() || job.retrieveIsOnChargeOnly() || job.retrieveIsOnStartup()) {
+            if (job.retrieveIsOnWifiOnly() && !isWifiConnected()) {
+                continue;
+            }
+            if (job.retrieveIsOnChargeOnly() && !isCharging()) {
                 continue;
             }
 
-            Calendar nextRun = job.retrieveNextScheduleTime();
-            if (nextRun != null && !nextRun.after(now)) {
+            if (!nextRun.after(now)) {
                 executeJob(job);
             }
         }
