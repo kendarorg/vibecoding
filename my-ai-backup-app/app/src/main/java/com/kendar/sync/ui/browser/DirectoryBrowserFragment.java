@@ -3,6 +3,7 @@ package com.kendar.sync.ui.browser;
 import android.content.Context;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.storage.StorageManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -60,10 +61,20 @@ public class DirectoryBrowserFragment extends Fragment implements DirectoryAdapt
             }
         }
 
+
         // Add browse storage button click listener
         browseStorageButton.setOnClickListener(v -> {
+
+            StorageManager storageManager = (StorageManager) getContext().getSystemService(Context.STORAGE_SERVICE);
+            var sv = storageManager.getStorageVolumes();
             Bundle args = new Bundle();
-            args.putString("initialPath", Environment.getDataDirectory().getAbsolutePath());
+            args.putString("initialPath",
+                    //Environment.getExternalStorageDirectory().getAbsolutePath()
+                    "/storage"
+                   //storageManager.getPrimaryStorageVolume().getDirectory().getAbsolutePath()
+                    //"/storage/sdcard1" // Default path for testing, replace with actual storage path if needed
+                    //System.getenv("SECONDARY_STORAGE")
+                    );
             Navigation.findNavController(requireView()).navigate(
                     R.id.action_directoryBrowserFragment_to_storageBrowserFragment, args);
         });

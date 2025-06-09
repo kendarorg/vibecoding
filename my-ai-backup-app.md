@@ -161,3 +161,7 @@ On the Directory Browser Fragment
 ** add a fragment to navigate it
 ** Show the files and directories 
 ** Add a button near the directories to select it and to put the path in the "Browse Storage"
+
+### Fix A05
+
+Allowing access to "generic" storage
