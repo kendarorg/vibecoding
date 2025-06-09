@@ -51,7 +51,11 @@
         android:id="@+id/directoryBrowserFragment"
         android:name="com.kendar.sync.ui.browser.DirectoryBrowserFragment"
         android:label="Select Directory"
-        tools:layout="@layout/fragment_directory_browser" />
+        tools:layout="@layout/fragment_directory_browser" >
+        <action
+            android:id="@+id/action_directoryBrowserFragment_to_storageBrowserFragment"
+            app:destination="@id/storageBrowserFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/remoteTargetBrowserFragment"
@@ -80,4 +84,11 @@
             android:name="jobId"
             app:argType="string" />
     </fragment>
+
+
+
+    <fragment
+        android:id="@+id/storageBrowserFragment"
+        android:name="com.kendar.sync.ui.browser.StorageBrowserFragment"
+        android:label="Storage Browser" />
 </navigation>

@@ -45,6 +45,7 @@ public class DirectoryBrowserFragment extends Fragment implements DirectoryAdapt
         okButton = view.findViewById(R.id.button_ok);
         cancelButton = view.findViewById(R.id.button_cancel);
         directoryRecyclerView = view.findViewById(R.id.directory_recycler_view);
+        Button browseStorageButton = view.findViewById(R.id.button_browse_storage);
 
         // Setup RecyclerView
         directoryRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -58,6 +59,23 @@ public class DirectoryBrowserFragment extends Fragment implements DirectoryAdapt
                 pathEditText.setText(currentPath);
             }
         }
+
+        // Add browse storage button click listener
+        browseStorageButton.setOnClickListener(v -> {
+            Bundle args = new Bundle();
+            args.putString("initialPath", Environment.getDataDirectory().getAbsolutePath());
+            Navigation.findNavController(requireView()).navigate(
+                    R.id.action_directoryBrowserFragment_to_storageBrowserFragment, args);
+        });
+
+        // Register fragment result listener for the storage browser
+        getParentFragmentManager().setFragmentResultListener("storageBrowserResult",
+                this, (requestKey, result) -> {
+                    String selectedPath = result.getString("selectedPath");
+                    if (selectedPath != null) {
+                        pathEditText.setText(selectedPath);
+                    }
+                });
 
         okButton.setOnClickListener(v -> {
             Bundle result = new Bundle();
