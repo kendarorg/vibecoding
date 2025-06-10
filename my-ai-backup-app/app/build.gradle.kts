@@ -36,10 +36,9 @@ android {
 }
 
 dependencies {
-    implementation("org.slf4j:slf4j-api:2.0.17")
     runtimeOnly("org.slf4j:jul-to-slf4j:2.0.17")
     runtimeOnly("org.slf4j:slf4j-android:1.7.36")
-    testImplementation("org.slf4j:slf4j-simple:2.0.17")
+    implementation("org.slf4j:slf4j-api:2.0.17")
     implementation("com.google.code.gson:gson:2.11.0")
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
@@ -53,7 +52,10 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.ktx)
     implementation(libs.navigation.fragment)
     implementation(libs.navigation.ui)
-    testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+    testImplementation(libs.junit)
+    testImplementation("org.slf4j:slf4j-simple:2.0.17")
+    testImplementation("org.testcontainers:testcontainers:1.2.0")
+    testImplementation("org.testcontainers:junit-jupiter:1.2.0")
 }

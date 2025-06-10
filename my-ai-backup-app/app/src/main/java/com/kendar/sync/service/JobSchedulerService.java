@@ -21,13 +21,17 @@ import androidx.annotation.Nullable;
 import com.kendar.sync.model.Job;
 import com.kendar.sync.util.JobsFileUtil;
 
+import org.kendar.sync.client.CommandLineArgs;
+import org.kendar.sync.client.SyncClient;
+
 import java.util.Calendar;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class JobSchedulerService extends Service {
     private static final String TAG = "JobSchedulerService";
@@ -36,7 +40,8 @@ public class JobSchedulerService extends Service {
     private JobsFileUtil jobsFileUtil;
     private ExecutorService executorService;
     private Handler handler;
-    private Set<UUID> runningJobs = new HashSet<>();
+    private AtomicReference<UUID> runningJobId = new AtomicReference<>(null);
+    private ConcurrentLinkedQueue<UUID> toRunJob = new ConcurrentLinkedQueue<>();
     private ConnectivityManager connectivityManager;
     private boolean isWifiConnected = false;
     private boolean isCharging = false;
@@ -210,30 +215,40 @@ public class JobSchedulerService extends Service {
                 executeJob(job);
             }
         }
-    }
+        Semaphore jobSemaphore = new Semaphore(1);
+        while(!toRunJob.isEmpty()) {
+            try {
+                jobSemaphore.acquire();
+                UUID jobId = toRunJob.poll();
+                if (jobId != null) {
+                    runningJobId.set(jobId);
+                    Job job = jobsFileUtil.getJobById(jobId);
+                    if (job != null) {
+                        runJobInternal(job,jobSemaphore);
+                    }
+                }
 
-    private synchronized boolean isJobRunning(UUID jobId) {
-        return runningJobs.contains(jobId);
-    }
-
-    private void executeJob(Job job) {
-        if (isJobRunning(job.getId())) {
-            return;
+            } catch (InterruptedException e) {
+                jobSemaphore.release();
+            }
         }
+    }
 
-        UUID jobId = job.getId();
-        runningJobs.add(jobId);
-
+    private void runJobInternal(Job job, Semaphore jobSemaphore) {
         executorService.execute(() -> {
             try {
                 Log.d(TAG, "Starting job: " + job.getName());
 
-                // Here is where you'd implement the actual job execution logic
-                // For example, connecting to the server, transferring files, etc.
-
-                // Simulate job execution
-                // TODO: Replace with actual implementation
-                Thread.sleep(5000); // Simulate work for 5 seconds
+                var command = new CommandLineArgs();
+                command.setBackup(true);
+                command.setPassword(job.getPassword());
+                command.setUsername(job.getName());
+                command.setServerAddress(job.getServerAddress());
+                command.setServerPort(job.getServerPort());
+                command.setSourceFolder(job.getLocalSource());
+                command.setTargetFolder(job.getTargetDestination());
+                var sc = new SyncClient();
+                sc.doSync(command);
 
                 // Update job with execution details
                 job.setLastExecution(Calendar.getInstance().getTime().toString());
@@ -244,10 +259,23 @@ public class JobSchedulerService extends Service {
             } catch (Exception e) {
                 Log.e(TAG, "Error executing job: " + job.getName(), e);
             } finally {
-                synchronized (JobSchedulerService.this) {
-                    runningJobs.remove(jobId);
-                }
+               jobSemaphore.release();
             }
         });
+    }
+
+    private synchronized boolean isJobRunning(UUID jobId) {
+        return toRunJob.contains(jobId) || runningJobId.get() != null && runningJobId.get().equals(jobId);
+    }
+
+    private void executeJob(Job job) {
+        if (isJobRunning(job.getId())) {
+            return;
+        }
+
+        UUID jobId = job.getId();
+        toRunJob.add(jobId);
+
+
     }
 }
