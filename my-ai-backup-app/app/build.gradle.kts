@@ -56,6 +56,6 @@ dependencies {
     androidTestImplementation(libs.espresso.core)
     testImplementation(libs.junit)
     testImplementation("org.slf4j:slf4j-simple:2.0.17")
-    testImplementation("org.testcontainers:testcontainers:1.2.0")
-    testImplementation("org.testcontainers:junit-jupiter:1.2.0")
+    testImplementation("org.testcontainers:testcontainers:1.21.1")
+    testImplementation("org.testcontainers:junit-jupiter:1.21.1")
 }
