@@ -1,4 +1,4 @@
-package com.kendar.sync.ui.browser;
+package com.kendar.sync.ui.browser.local;
 
 public class StorageItem {
     private final String name;

@@ -1,0 +1,49 @@
+{
+  "port": 8090,
+  "webPort": 8089,
+  "maxPacketSize": 1048576,
+  "maxConnections": 5,
+  "users": [
+    {
+      "id": "6acf1fe9-dac4-4859-8a30-7595b4cfe118",
+      "username": "admin",
+      "password": "admin",
+      "admin": true
+    },
+    {
+      "id": "44793d21-ba55-4565-9968-2e9ca95a2c08",
+      "password": "user",
+      "username": "user",
+      "admin": false
+    }
+  ],
+  "backupFolders": [
+    {
+      "virtualName": "dates-backup",
+      "realPath": "/test/dates-backup",
+      "backupType": "DATE_SEPARATED",
+      "allowedUsers": [
+        "6acf1fe9-dac4-4859-8a30-7595b4cfe118",
+        "44793d21-ba55-4565-9968-2e9ca95a2c08"
+      ]
+    },
+    {
+      "virtualName": "sync-backup",
+      "realPath": "/test/sync-backup",
+      "backupType": "TWO_WAY_SYNC",
+      "allowedUsers": [
+        "6acf1fe9-dac4-4859-8a30-7595b4cfe118",
+        "44793d21-ba55-4565-9968-2e9ca95a2c08"
+      ]
+    },
+    {
+      "virtualName": "mirror-backup",
+      "realPath": "/test/mirror-backup",
+      "backupType": "MIRROR",
+      "allowedUsers": [
+        "6acf1fe9-dac4-4859-8a30-7595b4cfe118",
+        "44793d21-ba55-4565-9968-2e9ca95a2c08"
+      ]
+    }
+  ]
+}

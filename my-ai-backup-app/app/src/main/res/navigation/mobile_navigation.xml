@@ -49,7 +49,7 @@
 
     <fragment
         android:id="@+id/directoryBrowserFragment"
-        android:name="com.kendar.sync.ui.browser.DirectoryBrowserFragment"
+        android:name="com.kendar.sync.ui.browser.local.DirectoryBrowserFragment"
         android:label="Select Directory"
         tools:layout="@layout/fragment_directory_browser" >
         <action
@@ -59,7 +59,7 @@
 
     <fragment
         android:id="@+id/remoteTargetBrowserFragment"
-        android:name="com.kendar.sync.ui.browser.RemoteTargetBrowserFragment"
+        android:name="com.kendar.sync.ui.browser.remote.RemoteTargetBrowserFragment"
         android:label="Select Target"
         tools:layout="@layout/fragment_remote_target_browser" />
 
@@ -89,6 +89,6 @@
 
     <fragment
         android:id="@+id/storageBrowserFragment"
-        android:name="com.kendar.sync.ui.browser.StorageBrowserFragment"
+        android:name="com.kendar.sync.ui.browser.local.StorageBrowserFragment"
         android:label="Storage Browser" />
 </navigation>

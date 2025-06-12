@@ -1,10 +1,9 @@
-package com.kendar.sync.ui.browser;
+package com.kendar.sync.ui.browser.local;
 
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.storage.StorageManager;
@@ -29,7 +28,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.Semaphore;
 
 public class StorageBrowserFragment extends Fragment implements StorageBrowserAdapter.StorageItemClickListener {

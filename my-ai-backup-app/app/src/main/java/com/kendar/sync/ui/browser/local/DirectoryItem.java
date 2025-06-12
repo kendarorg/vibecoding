@@ -1,4 +1,4 @@
-package com.kendar.sync.ui.browser;
+package com.kendar.sync.ui.browser.local;
 
 public class DirectoryItem {
     private final String displayName;

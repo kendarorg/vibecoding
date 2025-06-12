@@ -79,7 +79,7 @@ public abstract class BaseImage<T extends BaseImage, K extends GenericContainer>
         if (!isStarted()) throw new RuntimeException("Container not started " + String.join(",", aliases));
     }
 
-    protected boolean isStarted() {
+    public boolean isStarted() {
         if (container != null) return container.isRunning();
         return false;
     }

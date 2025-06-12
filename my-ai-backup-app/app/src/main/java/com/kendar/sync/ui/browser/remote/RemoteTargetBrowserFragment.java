@@ -1,4 +1,4 @@
-package com.kendar.sync.ui.browser;
+package com.kendar.sync.ui.browser.remote;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -15,12 +15,16 @@ import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.kendar.sync.R;
 import com.kendar.sync.api.RemoteApiService;
 
 import org.json.JSONObject;
+import org.kendar.sync.lib.model.ServerSettings;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import retrofit2.Call;
@@ -128,6 +132,46 @@ public class RemoteTargetBrowserFragment extends Fragment implements RemotePathA
             requestBody.put("login", login);
             requestBody.put("password", password);
 
+            apiService.doLogin(requestBody.toString()).enqueue(new Callback<>() {
+                @Override
+                public void onResponse(Call<String> call, Response<String> response) {
+                    try {
+                        if (response.isSuccessful() && response.body() != null) {
+                            var result = new JSONObject(response.body());
+                            apiService.getRemotePaths(result.getString("token")).enqueue(new Callback<String>() {
+                                @Override
+                                public void onResponse(Call<String> call, Response<String> response) {
+                                    progressBar.setVisibility(View.GONE);
+                                    Gson gson = new GsonBuilder().create();
+                                    var result = gson.fromJson(response.body(), ServerSettings.BackupFolder[].class);
+                                    var paths = Arrays.stream(result).map(ServerSettings.BackupFolder::getVirtualName).toList();
+                                    adapter.updatePaths(paths);
+                                }
+
+                                @Override
+                                public void onFailure(Call<String> call, Throwable t) {
+                                    progressBar.setVisibility(View.GONE);
+                                    Toast.makeText(requireContext(), "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        } else {
+                            progressBar.setVisibility(View.GONE);
+                            Toast.makeText(requireContext(), "Login failed", Toast.LENGTH_SHORT).show();
+                        }
+                    }catch (Exception e){
+                        progressBar.setVisibility(View.GONE);
+                        Toast.makeText(requireContext(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<String> call, Throwable t) {
+                    progressBar.setVisibility(View.GONE);
+                    Toast.makeText(requireContext(), "Failed to connect to server", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+/*
             apiService.getRemotePaths(requestBody.toString()).enqueue(new Callback<List<String>>() {
                 @Override
                 public void onResponse(Call<List<String>> call, Response<List<String>> response) {
@@ -145,7 +189,7 @@ public class RemoteTargetBrowserFragment extends Fragment implements RemotePathA
                     progressBar.setVisibility(View.GONE);
                     Toast.makeText(requireContext(), "Failed to connect to server", Toast.LENGTH_SHORT).show();
                 }
-            });
+            });*/
         } catch (Exception e) {
             progressBar.setVisibility(View.GONE);
             Toast.makeText(requireContext(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();

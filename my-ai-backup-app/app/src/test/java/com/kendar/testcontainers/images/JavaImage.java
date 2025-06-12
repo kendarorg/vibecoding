@@ -1,5 +1,6 @@
 package com.kendar.testcontainers.images;
 
+
 import com.kendar.testcontainers.utils.BaseImage;
 
 import org.testcontainers.containers.GenericContainer;
@@ -45,7 +46,7 @@ public class JavaImage extends BaseImage<JavaImage, GenericContainer> {
                 new ImageFromDockerfile()
                         .withDockerfileFromBuilder(builder -> {
                                     builder
-                                            .from("amazoncorretto:11.0.23");
+                                            .from("amazoncorretto:17");
                                     for (var dir : dirs) {
                                         builder.run("mkdir -p " + dir);
                                     }

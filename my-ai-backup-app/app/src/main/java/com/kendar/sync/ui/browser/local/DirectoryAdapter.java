@@ -1,4 +1,4 @@
-package com.kendar.sync.ui.browser;
+package com.kendar.sync.ui.browser.local;
 
 import android.view.LayoutInflater;
 import android.view.View;
