@@ -184,11 +184,11 @@ public class RemoteTargetBrowserFragment extends Fragment implements RemotePathA
                 client.setRequestProperty("Content-Type", "application/json");
                 //client.setFixedLengthStreamingMode(0);
                // client.setChunkedStreamingMode(0);
-                client.setDoOutput(true);
+               /* client.setDoOutput(true);
                 outputPost = new BufferedOutputStream(client.getOutputStream());
                 outputPost.flush();
                 outputPost.close();
-
+*/
                 br = null;
                 if (client.getResponseCode()!= HttpURLConnection.HTTP_OK) {
                     this.getView().post(()->{
