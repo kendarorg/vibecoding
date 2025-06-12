@@ -27,6 +27,7 @@ public class AddJobFragment extends Fragment {
     private EditText jobNameEditText;
     private EditText serverAddressEditText;
     private EditText serverPortEditText;
+    private EditText uiServerPortEditText;
     private EditText loginEditText;
     private EditText passwordEditText;
     private EditText localSourceEditText;
@@ -60,7 +61,11 @@ public class AddJobFragment extends Fragment {
         initViews(view);
         setupListeners();
 
-        serverPortEditText.setText("13856");
+        serverPortEditText.setText("8090");
+        uiServerPortEditText.setText("8089");
+        serverAddressEditText.setText("192.168.1.20");
+        loginEditText.setText("admin");
+        passwordEditText.setText("admin");
 
         // Display UUID (not editable)
         uuidTextView.setText(jobUuid.toString());
@@ -81,6 +86,7 @@ public class AddJobFragment extends Fragment {
                 jobNameEditText.setText(job.getName());
                 serverAddressEditText.setText(job.getServerAddress());
                 serverPortEditText.setText(String.valueOf(job.getServerPort()));
+                uiServerPortEditText.setText(String.valueOf(job.getUiServerPort()));
                 loginEditText.setText(job.getLogin());
                 passwordEditText.setText(job.getPassword());
                 localSourceEditText.setText(job.getLocalSource());
@@ -95,6 +101,7 @@ public class AddJobFragment extends Fragment {
         jobNameEditText = view.findViewById(R.id.edit_job_name);
         serverAddressEditText = view.findViewById(R.id.edit_server_address);
         serverPortEditText = view.findViewById(R.id.edit_server_port);
+        uiServerPortEditText = view.findViewById(R.id.edit_ui_server_port);
         loginEditText = view.findViewById(R.id.edit_login);
         passwordEditText = view.findViewById(R.id.edit_password);
         localSourceEditText = view.findViewById(R.id.edit_local_source);
@@ -178,7 +185,7 @@ public class AddJobFragment extends Fragment {
     private void navigateToRemoteTargetBrowser() {
         Bundle args = new Bundle();
         args.putString("serverAddress", serverAddressEditText.getText().toString());
-        args.putString("serverPort", serverPortEditText.getText().toString());
+        args.putString("serverPort", uiServerPortEditText.getText().toString());
         args.putString("login", loginEditText.getText().toString());
         args.putString("password", passwordEditText.getText().toString());
         Navigation.findNavController(requireView()).navigate(R.id.action_addJobFragment_to_remoteTargetBrowserFragment, args);

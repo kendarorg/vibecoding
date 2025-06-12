@@ -68,7 +68,16 @@
             android:layout_height="wrap_content"
             android:hint="Enter server port"
             android:inputType="number"
-            android:text="13856" />
+            android:text="8090" />
+
+
+        <EditText
+            android:id="@+id/edit_ui_server_port"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Enter UI server port"
+            android:inputType="number"
+            android:text="8089" />
 
         <TextView
             android:layout_width="wrap_content"

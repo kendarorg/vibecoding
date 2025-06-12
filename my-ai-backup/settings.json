@@ -12,16 +12,34 @@
     },
     {
       "id": "44793d21-ba55-4565-9968-2e9ca95a2c08",
-      "username": "pasticcio",
-      "password": "pasticcio",
+      "password": "user",
+      "username": "user",
       "admin": false
     }
   ],
   "backupFolders": [
     {
-      "virtualName": "test",
-      "realPath": "C:\\test\\prova",
+      "virtualName": "dates-backup",
+      "realPath": "C:/Tmp/sync/dates-backup",
+      "backupType": "DATE_SEPARATED",
+      "allowedUsers": [
+        "6acf1fe9-dac4-4859-8a30-7595b4cfe118",
+        "44793d21-ba55-4565-9968-2e9ca95a2c08"
+      ]
+    },
+    {
+      "virtualName": "sync-backup",
+      "realPath": "C:/Tmp/sync/sync-backup",
       "backupType": "TWO_WAY_SYNC",
+      "allowedUsers": [
+        "6acf1fe9-dac4-4859-8a30-7595b4cfe118",
+        "44793d21-ba55-4565-9968-2e9ca95a2c08"
+      ]
+    },
+    {
+      "virtualName": "mirror-backup",
+      "realPath": "C:/Tmp/sync/mirror-backup",
+      "backupType": "MIRROR",
       "allowedUsers": [
         "6acf1fe9-dac4-4859-8a30-7595b4cfe118",
         "44793d21-ba55-4565-9968-2e9ca95a2c08"

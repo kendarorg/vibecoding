@@ -17,6 +17,7 @@ public class Job {
     private String scheduleTime;
     private String lastExecution;
     private int lastTransferred;
+    private int uiServerPort;
 
     public Calendar retrieveNextScheduleTime(){
         return ScheduleUtil.getNextScheduledTime(scheduleTime);
@@ -134,4 +135,11 @@ public class Job {
         this.lastTransferred = lastTransferred;
     }
 
+    public int getUiServerPort() {
+        return uiServerPort;
+    }
+
+    public void setUiServerPort(int uiServerPort) {
+        this.uiServerPort = uiServerPort;
+    }
 }
