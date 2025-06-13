@@ -21,4 +21,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "My Ai Backup App"
 include(":app")
-include(":lib")
