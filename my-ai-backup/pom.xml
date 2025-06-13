@@ -9,11 +9,7 @@
     <version>1.0.0</version>
     <packaging>pom</packaging>
 
-    <modules>
-        <module>sync-lib</module>
-        <module>sync-client</module>
-        <module>sync-server</module>
-    </modules>
+
 
 
     <properties>
@@ -92,10 +88,18 @@
             <activation>
                 <activeByDefault>true</activeByDefault>
             </activation>
+            <modules>
+                <module>sync-lib</module>
+                <module>sync-client</module>
+                <module>sync-server</module>
+            </modules>
         </profile>
 
         <profile>
             <id>deploy</id>
+            <modules>
+                <module>sync-lib</module>
+            </modules>
             <activation>
                 <activeByDefault>true</activeByDefault>
             </activation>

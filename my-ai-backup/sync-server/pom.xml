@@ -22,7 +22,7 @@
         <dependency>
             <groupId>org.kendar.sync</groupId>
             <artifactId>sync-lib</artifactId>
-            <version>${project.version}</version>
+            <version>1.0.1</version>
         </dependency>
 
         <!-- Spring Boot for REST API -->
