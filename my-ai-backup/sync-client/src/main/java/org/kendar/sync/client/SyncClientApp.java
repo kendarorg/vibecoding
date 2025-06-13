@@ -119,6 +119,12 @@ public class SyncClientApp {
                 case "-b":
                     commandLineArgs.setBackup(true);
                     break;
+                case "--ignore-hidden":
+                    commandLineArgs.setIgnoreHiddenFiles(true);
+                    break;
+                case "--ignore-system":
+                    commandLineArgs.setIgnoreSystemFiles(true);
+                    break;
                 case "--restore":
                 case "-r":
                     commandLineArgs.setBackup(false);
@@ -189,6 +195,8 @@ public class SyncClientApp {
         System.out.println("  --username, -u <username>   Username for authentication");
         System.out.println("  --password, -pw <password>  Password for authentication");
         System.out.println("  --dry-run, -d               Perform a dry run (no actual file operations)");
+        System.out.println("  --ignore-hidden             Ignore hidden files");
+        System.out.println("  --ignore-system             Ignore system files (e.g., .DS_Store)");
         System.out.println("  --type <type>               Backup type: PRESERVE, MIRROR, DATE_SEPARATED (default: PRESERVE)");
     }
 
