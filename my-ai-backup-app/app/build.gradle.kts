@@ -4,11 +4,11 @@ plugins {
 
 
 android {
-    namespace = "com.kendar.sync"
+    namespace = "org.kendar.sync"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.kendar.sync"
+        applicationId = "org.kendar.sync"
         minSdk = 34
         targetSdk = 35
         versionCode = 1

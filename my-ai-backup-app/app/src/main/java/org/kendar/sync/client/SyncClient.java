@@ -6,11 +6,16 @@ import org.kendar.sync.lib.utils.Sleeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class SyncClient {
 

@@ -1,6 +1,6 @@
 package org.kendar.sync.lib.twoway;
 
-import com.kendar.sync.util.FilesUtils;
+import org.kendar.sync.util.FilesUtils;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;

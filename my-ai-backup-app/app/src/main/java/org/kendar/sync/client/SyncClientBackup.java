@@ -88,7 +88,7 @@ public class SyncClientBackup extends BaseSyncClientProcess {
                 TcpConnection currentConnection = null;
                 try {
 
-                    //semaphore.acquire();
+                    semaphore.acquire();
                     currentConnection = connections.poll();
                     if (currentConnection == null) {
                         throw new RuntimeException("[CLIENT] No connection available");
@@ -99,7 +99,7 @@ public class SyncClientBackup extends BaseSyncClientProcess {
                     log.error("[CLIENT] Error transferring file 2 {}: {}", file.getRelativePath(), e.getMessage());
                 } finally {
                     if (currentConnection != null) connections.add(currentConnection);
-                    //semaphore.release();
+                    semaphore.release();
                     completionLatch.countDown();
                 }
             });

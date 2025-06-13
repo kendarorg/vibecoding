@@ -7,13 +7,13 @@
 
     <fragment
         android:id="@+id/nav_home"
-        android:name="com.kendar.sync.ui.home.HomeFragment"
+        android:name="org.kendar.sync.ui.home.HomeFragment"
         android:label="@string/menu_home"
         tools:layout="@layout/fragment_home" />
 
     <fragment
         android:id="@+id/jobsListFragment"
-        android:name="com.kendar.sync.ui.jobslist.JobsListFragment"
+        android:name="org.kendar.sync.ui.jobslist.JobsListFragment"
         android:label="Jobs List"
         tools:layout="@layout/fragment_jobs_list">
             <action
@@ -27,7 +27,7 @@
 
     <fragment
         android:id="@+id/addJobFragment"
-        android:name="com.kendar.sync.ui.jobslist.AddJobFragment"
+        android:name="org.kendar.sync.ui.jobslist.AddJobFragment"
         android:label="Add Job"
         tools:layout="@layout/fragment_add_job">
         <action
@@ -49,7 +49,7 @@
 
     <fragment
         android:id="@+id/directoryBrowserFragment"
-        android:name="com.kendar.sync.ui.browser.local.DirectoryBrowserFragment"
+        android:name="org.kendar.sync.ui.browser.local.DirectoryBrowserFragment"
         android:label="Select Directory"
         tools:layout="@layout/fragment_directory_browser" >
         <action
@@ -59,20 +59,20 @@
 
     <fragment
         android:id="@+id/remoteTargetBrowserFragment"
-        android:name="com.kendar.sync.ui.browser.remote.RemoteTargetBrowserFragment"
+        android:name="org.kendar.sync.ui.browser.remote.RemoteTargetBrowserFragment"
         android:label="Select Target"
         tools:layout="@layout/fragment_remote_target_browser" />
 
     <fragment
         android:id="@+id/scheduleFragment"
-        android:name="com.kendar.sync.ui.schedule.ScheduleFragment"
+        android:name="org.kendar.sync.ui.schedule.ScheduleFragment"
         android:label="Set Schedule"
         tools:layout="@layout/fragment_schedule" />
 
 
     <fragment
         android:id="@+id/showJobFragment"
-        android:name="com.kendar.sync.ui.jobslist.ShowJobFragment"
+        android:name="org.kendar.sync.ui.jobslist.ShowJobFragment"
         android:label="Show Job"
         tools:layout="@layout/fragment_show_job">
         <action
@@ -89,6 +89,6 @@
 
     <fragment
         android:id="@+id/storageBrowserFragment"
-        android:name="com.kendar.sync.ui.browser.local.StorageBrowserFragment"
+        android:name="org.kendar.sync.ui.browser.local.StorageBrowserFragment"
         android:label="Storage Browser" />
 </navigation>
