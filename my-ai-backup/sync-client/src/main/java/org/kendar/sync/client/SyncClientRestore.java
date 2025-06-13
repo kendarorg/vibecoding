@@ -39,7 +39,7 @@ public class SyncClientRestore extends BaseSyncClientProcess {
         }
 
         // Recursively scan the source directory
-        scanDirectory(sourceDir, sourceDir.getAbsolutePath(), files);
+        scanDirectory(sourceDir, sourceDir.getAbsolutePath(), files, args.isIgnoreHiddenFiles(), args.isIgnoreSystemFiles());
 
         log.debug("[CLIENT] 2 Found {} files to backup", files.size());
 

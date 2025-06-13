@@ -1,5 +1,7 @@
 package org.kendar.sync.lib.twoway;
 
+import org.kendar.sync.lib.utils.FileUtils;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -246,7 +248,7 @@ public class StatusAnalyzer {
         }
 
         try {
-            String content = Files.readString(lastCompactLogPath).trim();
+            String content = FileUtils.readFile(lastCompactLogPath).trim();
             if (content.isEmpty()) {
                 return Optional.empty();
             }
@@ -435,7 +437,7 @@ public class StatusAnalyzer {
         }
 
         try {
-            String content = Files.readString(lastUpdateLogPath).trim();
+            String content = FileUtils.readFile(lastUpdateLogPath).trim();
             if (content.isEmpty()) {
                 return Optional.empty();
             }

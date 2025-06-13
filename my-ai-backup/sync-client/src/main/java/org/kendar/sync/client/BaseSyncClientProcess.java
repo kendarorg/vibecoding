@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,12 +27,14 @@ public class BaseSyncClientProcess {
     /**
      * Recursively scans a directory and adds all files to the list.
      *
-     * @param directory The directory to scan
-     * @param basePath  The base path for calculating relative paths
-     * @param files     The list to add files to
+     * @param directory         The directory to scan
+     * @param basePath          The base path for calculating relative paths
+     * @param files             The list to add files to
+     * @param ignoreHiddenFiles
+     * @param ignoreSystemFiles
      * @throws IOException If an I/O error occurs
      */
-    protected void scanDirectory(File directory, String basePath, List<FileInfo> files) throws IOException {
+    protected void scanDirectory(File directory, String basePath, List<FileInfo> files, boolean ignoreHiddenFiles, boolean ignoreSystemFiles) throws IOException {
         // Add the directory itself
         files.add(FileInfo.fromFile(directory, basePath));
 
@@ -39,8 +42,12 @@ public class BaseSyncClientProcess {
         File[] children = directory.listFiles();
         if (children != null) {
             for (File child : children) {
+                if(child.isHidden() && ignoreHiddenFiles) continue;
+                BasicFileAttributes attr = Files.readAttributes(child.toPath(), BasicFileAttributes.class);
+                if(attr.isSymbolicLink()) continue;
+                if(child.getName().startsWith(".") && ignoreSystemFiles) continue;
                 if (child.isDirectory()) {
-                    scanDirectory(child, basePath, files);
+                    scanDirectory(child, basePath, files, ignoreHiddenFiles, ignoreSystemFiles);
                 } else {
                     files.add(FileInfo.fromFile(child, basePath));
                 }

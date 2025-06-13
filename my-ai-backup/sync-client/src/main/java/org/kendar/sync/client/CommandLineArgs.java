@@ -20,6 +20,24 @@ public class CommandLineArgs {
     private int maxConnections = 0;
     private int maxSize;
     private String hostName;
+    private boolean ignoreSystemFiles = true;
+    private boolean ignoreHiddenFiles = true;
+
+    public boolean isIgnoreHiddenFiles() {
+        return ignoreHiddenFiles;
+    }
+
+    public void setIgnoreHiddenFiles(boolean ignoreHiddenFiles) {
+        this.ignoreHiddenFiles = ignoreHiddenFiles;
+    }
+
+    public boolean isIgnoreSystemFiles() {
+        return ignoreSystemFiles;
+    }
+
+    public void setIgnoreSystemFiles(boolean ignoreSystemFiles) {
+        this.ignoreSystemFiles = ignoreSystemFiles;
+    }
 
     public String getSourceFolder() {
         return sourceFolder;
