@@ -49,7 +49,7 @@ public class MirrorBackupHandler extends BackupHandler {
         var removedFiles = new ArrayList<String>();
 
         for (var file : allFiles) {
-            var fts = FileUtils.makeUniformPath(FileUtils.makeUniformPath(file.toString()).replace(session.getFolder().getRealPath(), ""));
+            var fts = FileUtils.makeUniformPath(file.toString()).replace(FileUtils.makeUniformPath(session.getFolder().getRealPath()), "");
             var filePath = session.getFolder().getRealPath() + "/" + fts;
             var fp = Path.of(filePath);
             BasicFileAttributes attr = Files.readAttributes(fp, BasicFileAttributes.class);

@@ -140,8 +140,8 @@ public class SyncClient {
 
                 // Wait for sync end ack
                 response = connection.receiveMessage();
-                if (response.getMessageType() != MessageType.SYNC_END_ACK) {
-                    log.error("[CLIENT] Unexpected response 2: {}", response.getMessageType());
+                if (response ==null || response.getMessageType() != MessageType.SYNC_END_ACK) {
+                    log.warn("[CLIENT] Unexpected response 2: {}", response.getMessageType());
                     return;
                 }
 

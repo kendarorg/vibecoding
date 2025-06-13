@@ -57,11 +57,13 @@ public class DateSeparatedBackupHandler extends BackupHandler {
 
         var allFiles = listAllFiles(Path.of(session.getFolder().getRealPath()));
         for (var file : allFiles) {
-            var fts = FileUtils.makeUniformPath(FileUtils.makeUniformPath(file.toString()).toString().replace(session.getFolder().getRealPath(), ""));
+            var fts = FileUtils.makeUniformPath(file.toString()).replace(FileUtils.makeUniformPath(session.getFolder().getRealPath()), "");
+            if(fts.startsWith("/"))fts=fts.substring(1);
             var filePath = session.getFolder().getRealPath() + File.separator + fts;
             BasicFileAttributes attr = Files.readAttributes(Path.of(filePath), BasicFileAttributes.class);
 
             if (!fts.matches(".*\\d{4}-\\d{2}-\\d{2}.*")) {
+
                 if (shouldUpdate(filesOnClient.get(fts), file, attr)) {
                     filesOnClient.remove(fts);
                 }
@@ -71,7 +73,8 @@ public class DateSeparatedBackupHandler extends BackupHandler {
                     }
                 }
             } else {
-                var newFts = fts.substring(11); // Remove the date prefix
+                var newFts = fts.substring(11);
+                //if(newFts.startsWith("/"))newFts=newFts.substring(1);// Remove the date prefix
                 if (shouldUpdate(filesOnClient.get(newFts), file, attr)) {
                     filesOnClient.remove(fts);
                 }

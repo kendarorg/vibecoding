@@ -44,7 +44,7 @@ public class PreserveBackupHandler extends BackupHandler {
         var allFiles = listAllFiles(Path.of(session.getFolder().getRealPath()));
 
         for (var file : allFiles) {
-            var fts = FileUtils.makeUniformPath(FileUtils.makeUniformPath(file.toString()).toString().replace(session.getFolder().getRealPath(), ""));
+            var fts = FileUtils.makeUniformPath(file.toString()).replace(FileUtils.makeUniformPath(session.getFolder().getRealPath()), "");
             var filePath = session.getFolder().getRealPath() + "/" + fts;
             BasicFileAttributes attr = Files.readAttributes(Path.of(filePath), BasicFileAttributes.class);
 

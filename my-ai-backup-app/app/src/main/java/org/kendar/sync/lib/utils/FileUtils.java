@@ -46,8 +46,8 @@ public class FileUtils {
         return content;
     }
 
-    public static String readFile(Path lastCompactLogPath) {
-        return readFile(lastCompactLogPath.toAbsolutePath());
+    public static String readFile(Path lastCompactLogPath) throws IOException {
+        return readFile(lastCompactLogPath.toAbsolutePath().normalize().toString());
     }
     /**
      * Lists all files in a directory recursively.
