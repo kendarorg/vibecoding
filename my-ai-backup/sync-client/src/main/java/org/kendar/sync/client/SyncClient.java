@@ -69,6 +69,7 @@ public class SyncClient {
         return valid;
     }
 
+
     public void doSync(CommandLineArgs commandLineArgs) {
         // Validate arguments
         if (!validateArgs(commandLineArgs)) {

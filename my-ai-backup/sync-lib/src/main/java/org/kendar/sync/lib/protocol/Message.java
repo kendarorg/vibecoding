@@ -63,6 +63,7 @@ public abstract class Message {
         buffer.resetReadCursor();
         buffer.resetWriteCursor();
         String type = buffer.readType(String.class);
+
         try {
             var clazz = Class.forName("org.kendar.sync.lib.protocol."+type);
             var instance = (Message) clazz.getDeclaredConstructor().newInstance();

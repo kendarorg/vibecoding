@@ -257,6 +257,8 @@ public class JobSchedulerService extends Service {
                 command.setServerPort(job.getServerPort());
                 command.setSourceFolder(job.getLocalSource());
                 command.setTargetFolder(job.getTargetDestination());
+                command.setIgnoreHiddenFiles(true);
+                command.setIgnoreSystemFiles(true);
                 command.setHostName("ANDROID"); //TODO Should set it on main form
                 var sc = new SyncClient();
                 sc.doSync(command);

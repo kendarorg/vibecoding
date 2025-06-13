@@ -42,7 +42,7 @@ public class SyncClientBackup extends BaseSyncClientProcess {
         }
 
         // Recursively scan the source directory
-        scanDirectory(sourceDir, sourceDir.getAbsolutePath(), files);
+        scanDirectory(sourceDir, sourceDir.getAbsolutePath(), files,args.isIgnoreHiddenFiles(),args.isIgnoreSystemFiles());
 
         log.debug("[CLIENT] 4 Found {} files to backup", files.size());
 
