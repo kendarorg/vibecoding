@@ -62,6 +62,8 @@ public class DateSeparatedBackupHandler extends BackupHandler {
             var filePath = session.getFolder().getRealPath() + File.separator + fts;
             BasicFileAttributes attr = Files.readAttributes(Path.of(filePath), BasicFileAttributes.class);
 
+            if (shouldIgnoreFileByAttrAndPattern(session, file, attr)) continue;
+
             if (!fts.matches(".*\\d{4}-\\d{2}-\\d{2}.*")) {
 
                 if (shouldUpdate(filesOnClient.get(fts), file, attr)) {

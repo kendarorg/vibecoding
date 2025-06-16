@@ -1,5 +1,10 @@
 package org.kendar.sync.lib.utils;
 
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.PathMatcher;
+import java.util.regex.Pattern;
 import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.protocol.BackupType;
 import org.slf4j.Logger;
@@ -17,6 +22,8 @@ import java.nio.file.attribute.FileTime;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -307,5 +314,31 @@ public class FileUtils {
         Files.delete(directory);
 
         return success;
+    }
+
+    private static ConcurrentHashMap<String, Pattern> regexPatterns = new ConcurrentHashMap<>();
+    private static ConcurrentHashMap<String, PathMatcher> globPatterns = new ConcurrentHashMap<>();
+
+    /**
+     * Checks if a given path matches a specified pattern.
+     * The pattern can be a glob pattern or a regex pattern (prefixed with '@').
+     *
+     * @param path    The path to check
+     * @param pattern The pattern to match against
+     * @return true if the path matches the pattern, false otherwise
+     */
+    public static boolean matches(String path,String pattern){
+        try {
+            path = makeUniformPath(path);
+            if (pattern.startsWith("@")) {
+                regexPatterns.computeIfAbsent(pattern, p -> Pattern.compile(p.substring(1)));
+                return regexPatterns.get(pattern).matcher(path).matches();
+            } else {
+                globPatterns.computeIfAbsent(pattern, p -> FileSystems.getDefault().getPathMatcher("glob:" + p));
+                return globPatterns.get(pattern).matches(Path.of(path));
+            }
+        }catch (Exception e){
+            return false;
+        }
     }
 }

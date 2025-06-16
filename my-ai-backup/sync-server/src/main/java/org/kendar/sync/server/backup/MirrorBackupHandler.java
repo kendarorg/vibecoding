@@ -54,6 +54,9 @@ public class MirrorBackupHandler extends BackupHandler {
             var fp = Path.of(filePath);
             BasicFileAttributes attr = Files.readAttributes(fp, BasicFileAttributes.class);
 
+            if (shouldIgnoreFileByAttrAndPattern(session, file, attr)) continue;
+
+
             if (file.toFile().isDirectory()) {
                 filesOnClient.remove(fts);
                 filesToRemove.remove(fts);

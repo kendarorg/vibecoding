@@ -3,6 +3,7 @@ package org.kendar.sync.server.backup;
 import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
+import org.kendar.sync.lib.utils.FileUtils;
 import org.kendar.sync.server.server.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -235,6 +236,24 @@ public abstract class BackupHandler {
                 blockNumber++;
             }
         }
+    }
+
+    protected static boolean shouldIgnoreFileByAttrAndPattern(ClientSession session, Path file, BasicFileAttributes attr) {
+        if(attr.isSymbolicLink()){
+            return true;
+        }
+        if(file.toFile().isHidden() && session.isIgnoreHiddenFiles()){
+            return true;
+        }
+        if(file.getFileName().toString().startsWith(".") &&
+                session.isIgnoreSystemFiles()){
+            return true;
+        }
+        if(session.getIgnoredPatterns().stream()
+                .anyMatch(pattern -> FileUtils.matches(file.toString(),pattern))){
+            return true;
+        }
+        return false;
     }
 
     protected List<Path> listAllFiles(Path sourcePath) throws IOException {

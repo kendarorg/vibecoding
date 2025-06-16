@@ -48,6 +48,8 @@ public class PreserveBackupHandler extends BackupHandler {
             var filePath = session.getFolder().getRealPath() + "/" + fts;
             BasicFileAttributes attr = Files.readAttributes(Path.of(filePath), BasicFileAttributes.class);
 
+            if (shouldIgnoreFileByAttrAndPattern(session, file, attr)) continue;
+
             if (message.isBackup() && shouldUpdate(filesOnClient.get(fts), file, attr)) {
                 filesOnClient.remove(fts);
             } else if (!message.isBackup()) {
@@ -69,6 +71,7 @@ public class PreserveBackupHandler extends BackupHandler {
 
         handleFileRestore(connection, session, filesToSend);
     }
+
 
     @Override
     public void handleFileDescriptor(TcpConnection connection, ClientSession session, FileDescriptorMessage message) throws IOException {
