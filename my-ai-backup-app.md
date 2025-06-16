@@ -215,4 +215,6 @@ At startup the application must load all jobs and then (even if it is in backgro
 
 ### FIx A07
 
-Clarifyng the schedule service run style
+* Clarifyng the schedule service run style
+* Some cleanup
+* Lib included as library from maven central

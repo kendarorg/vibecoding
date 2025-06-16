@@ -336,3 +336,10 @@ Given the APIs listed in context
 * Restructure the auth (was not working at all)
 * Prot client and lib to java 11 (for android compatibility)
   
+### Fix 025
+
+* Clean up
+* Moved lib to maven
+* Added hidden files,system and patterns parameters
+
+### Prompt 026
