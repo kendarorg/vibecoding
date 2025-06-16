@@ -13,6 +13,7 @@ import java.io.InputStreamReader;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -101,7 +102,10 @@ public class SyncClient {
                         DEFAULT_MAX_PACKET_SIZE,
                         DEFAULT_MAX_CONNECTIONS,
                         commandLineArgs.isDryRun(),
-                        commandLineArgs.getHostName()
+                        commandLineArgs.getHostName(),
+                        commandLineArgs.isIgnoreSystemFiles(),
+                        commandLineArgs.isIgnoreHiddenFiles(),
+                        commandLineArgs.getIgnoredPatterns() != null ? commandLineArgs.getIgnoredPatterns() : List.of()
                 );
 
                 connection.sendMessage(connectMessage);
@@ -128,11 +132,20 @@ public class SyncClient {
 
                 // Perform backup or restore
                 if (connectResponse.getBackupType() == BackupType.TWO_WAY_SYNC) {
-                    new SyncClientSync().performSync(connection, commandLineArgs, maxConnections, maxPacketSize);
+                    new SyncClientSync().performSync(connection, commandLineArgs, maxConnections, maxPacketSize,
+                            connectResponse.isIgnoreSystemFiles(),
+                            connectResponse.isIgnoreHiddenFiles(),
+                            connectResponse.getIgnoredPatterns());
                 } else if (commandLineArgs.isBackup()) {
-                    new SyncClientBackup().performBackup(connection, commandLineArgs, maxConnections, maxPacketSize);
+                    new SyncClientBackup().performBackup(connection, commandLineArgs, maxConnections, maxPacketSize,
+                            connectResponse.isIgnoreSystemFiles(),
+                            connectResponse.isIgnoreHiddenFiles(),
+                            connectResponse.getIgnoredPatterns());
                 } else {
-                    new SyncClientRestore().performRestore(connection, commandLineArgs, maxConnections, maxPacketSize);
+                    new SyncClientRestore().performRestore(connection, commandLineArgs, maxConnections, maxPacketSize,
+                            connectResponse.isIgnoreSystemFiles(),
+                            connectResponse.isIgnoreHiddenFiles(),
+                            connectResponse.getIgnoredPatterns());
                 }
                 Sleeper.sleep(200);
                 // Send sync end message

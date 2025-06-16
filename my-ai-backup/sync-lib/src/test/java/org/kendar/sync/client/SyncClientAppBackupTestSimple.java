@@ -128,7 +128,8 @@ class SyncClientAppBackupTestSimple {
         mockConnection.addMessageToReturn(FileEndAckMessage.success(sourceDir.getName() + "/subdir/testFile2.txt"));
 
         // Call the performBackup method
-        syncClientBackup.performBackup(mockConnection, (CommandLineArgs) commandLineArgs, 1, 1024);
+        syncClientBackup.performBackup(mockConnection, (CommandLineArgs) commandLineArgs, 1, 1024
+                ,false, false, new ArrayList<>());
 
         // Get the sent messages
         List<Message> sentMessages = mockConnection.getSentMessages();
@@ -189,7 +190,8 @@ class SyncClientAppBackupTestSimple {
         mockConnection.addMessageToReturn(FileEndAckMessage.success(sourceDir.getName() + "/subdir/testFile2.txt"));
 
         // Call the performBackup method
-        syncClientBackup.performBackup(mockConnection, (CommandLineArgs) commandLineArgs, 1, 1024);
+        syncClientBackup.performBackup(mockConnection, (CommandLineArgs) commandLineArgs, 1, 1024
+                ,false, false, new ArrayList<>());
 
         // Get the sent messages
         List<Message> sentMessages = mockConnection.getSentMessages();
@@ -231,7 +233,8 @@ class SyncClientAppBackupTestSimple {
         mockConnection.addMessageToReturn(FileEndAckMessage.failure(sourceDir.getName() + "/subdir/testFile2.txt", "Failed to write file"));
 
         // Call the performBackup method
-        syncClientBackup.performBackup(mockConnection, (CommandLineArgs) commandLineArgs, 1, 1024);
+        syncClientBackup.performBackup(mockConnection, (CommandLineArgs) commandLineArgs, 1, 1024
+                ,false, false, new ArrayList<>());
 
         // Get the sent messages
         List<Message> sentMessages = mockConnection.getSentMessages();

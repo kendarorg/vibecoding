@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -184,6 +185,14 @@ public class Server {
 
             var folder = folderOpt.get();
 
+            var ignoreHiddenFiles = connectMessage.isIgnoreHiddenFiles();
+            if(folder.isIgnoreHiddenFiles())ignoreHiddenFiles = true;
+            var ignoreSystemFiles = connectMessage.isIgnoreSystemFiles();
+            if(folder.isIgnoreSystemFiles())ignoreSystemFiles = true;
+            var ignoredPatterns = new HashSet<String>();
+            ignoredPatterns.addAll(folder.getIgnoredPatterns());
+            ignoredPatterns.addAll(connectMessage.getIgnoredPatterns());
+
             // Create session
             ClientSession session = new ClientSession(
                     sessionId,
@@ -194,6 +203,9 @@ public class Server {
                     TIMEOUT_SECONDS
             );
             sessions.put(sessionId, session);
+            session.setIgnoreHiddenFiles(ignoreHiddenFiles);
+            session.setIgnoreSystemFiles(ignoreSystemFiles);
+            session.setIgnoredPatterns(ignoredPatterns);
             session.setMainConnection(connection);
 
             // Set the session in the connection and touch it
@@ -201,7 +213,8 @@ public class Server {
 
             // Send connect response
             connection.sendMessage(new ConnectResponseMessage(true, null, settings.getMaxPacketSize(),
-                    settings.getMaxConnections(), session.getBackupType()));
+                    settings.getMaxConnections(), session.getBackupType(),
+                    ignoreSystemFiles, ignoreHiddenFiles,ignoredPatterns.stream().toList()));
 
             // Handle messages
             while (true) {

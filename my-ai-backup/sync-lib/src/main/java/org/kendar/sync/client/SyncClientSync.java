@@ -22,7 +22,8 @@ public class SyncClientSync extends BaseSyncClientProcess {
 
     private static final Logger log = LoggerFactory.getLogger(SyncClientSync.class);
 
-    public void performSync(TcpConnection connection, CommandLineArgs args, int maxConnections, int maxPacketSize) throws IOException {
+    public void performSync(TcpConnection connection, CommandLineArgs args, int maxConnections, int maxPacketSize,
+                            boolean ignoreSystemFiles,boolean ignoreHiddenFiles,List<String> patternsToIgnore) throws IOException {
         log.debug("[CLIENT] Starting backup from {} to {}", args.getSourceFolder(), args.getTargetFolder());
 
         // Get the list of files to back up

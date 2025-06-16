@@ -29,7 +29,8 @@ public class SyncClientBackup extends BaseSyncClientProcess {
      * @param maxPacketSize  Maximum packet size for transfers
      * @throws IOException If an I/O error occurs
      */
-    public void performBackup(TcpConnection connection, CommandLineArgs args, int maxConnections, int maxPacketSize) throws IOException {
+    public void performBackup(TcpConnection connection, CommandLineArgs args, int maxConnections, int maxPacketSize,
+                              boolean ignoreSystemFiles,boolean ignoreHiddenFiles,List<String> patternsToIgnore) throws IOException {
         log.debug("[CLIENT] Starting backup from {} to {}", args.getSourceFolder(), args.getTargetFolder());
 
         // Get the list of files to back up

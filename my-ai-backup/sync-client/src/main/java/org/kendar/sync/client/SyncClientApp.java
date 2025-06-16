@@ -160,6 +160,12 @@ public class SyncClientApp {
                 case "-d":
                     commandLineArgs.setDryRun(true);
                     break;
+                case "--ignore-pattern":
+                case "-ip":
+                    if (i + 1 < args.length) {
+                        commandLineArgs.getIgnoredPatterns().add(args[++i]);
+                    }
+                    break;
                 case "--type":
                     if (i + 1 < args.length) {
                         String typeArg = args[++i].toUpperCase();
@@ -183,20 +189,23 @@ public class SyncClientApp {
     private static void printHelp() {
         System.out.println("Usage: java -jar sync-client.jar [options]");
         System.out.println("Options:");
-        System.out.println("  --help, -h                  Show this help message");
-        System.out.println("  --source, -s <folder>       Source folder");
-        System.out.println("  --target, -t <folder>       Target folder (virtual folder on server)");
-        System.out.println("  --backup, -b                Perform backup (default)");
-        System.out.println("  --restore, -r               Perform restore");
-        System.out.println("  --conn, -c                  Max connections");
-        System.out.println("  --size, -z                  Max packet size in bytes");
-        System.out.println("  --server <address>          Server address");
-        System.out.println("  --port, -p <port>           Server port (default: 8090)");
-        System.out.println("  --username, -u <username>   Username for authentication");
-        System.out.println("  --password, -pw <password>  Password for authentication");
-        System.out.println("  --dry-run, -d               Perform a dry run (no actual file operations)");
-        System.out.println("  --ignore-hidden             Ignore hidden files");
-        System.out.println("  --ignore-system             Ignore system files (e.g., .DS_Store)");
+        System.out.println("  --help, -h                      Show this help message");
+        System.out.println("  --source, -s <folder>           Source folder");
+        System.out.println("  --target, -t <folder>           Target folder (virtual folder on server)");
+        System.out.println("  --backup, -b                    Perform backup (default)");
+        System.out.println("  --restore, -r                   Perform restore");
+        System.out.println("  --conn, -c                      Max connections");
+        System.out.println("  --size, -z                      Max packet size in bytes");
+        System.out.println("  --server <address>              Server address");
+        System.out.println("  --port, -p <port>               Server port (default: 8090)");
+        System.out.println("  --username, -u <username>       Username for authentication");
+        System.out.println("  --password, -pw <password>      Password for authentication");
+        System.out.println("  --dry-run, -d                   Perform a dry run (no actual file operations)");
+        System.out.println("  --ignore-hidden                 Ignore hidden files");
+        System.out.println("  --ignore-system                 Ignore system files (e.g., .DS_Store)");
+        System.out.println("  --ignore-pattern, -ip <pattern> Ignore pattern (multiple)");
+        System.out.println("                                  * Java regex @pattern");
+        System.out.println("                                  * Contains pattern");
         System.out.println("  --type <type>               Backup type: PRESERVE, MIRROR, DATE_SEPARATED (default: PRESERVE)");
     }
 

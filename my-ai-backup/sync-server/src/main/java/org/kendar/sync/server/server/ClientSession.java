@@ -27,6 +27,9 @@ public class ClientSession {
     private final AtomicLong lastOperationTimestamp = new AtomicLong(0);
     private boolean isBackup = false;
     private TcpConnection mainConnection;
+    private boolean ignoreHiddenFiles;
+    private boolean ignoreSystemFiles;
+    private HashSet<String> ignoredPatterns;
 
     public ClientSession(UUID sessionId, ServerSettings.User user, ServerSettings.BackupFolder folder,
                          BackupType backupType, boolean dryRun,
@@ -167,4 +170,27 @@ public class ClientSession {
     }
 
 
+    public void setIgnoreHiddenFiles(boolean ignoreHiddenFiles) {
+        this.ignoreHiddenFiles = ignoreHiddenFiles;
+    }
+
+    public boolean isIgnoreHiddenFiles() {
+        return ignoreHiddenFiles;
+    }
+
+    public void setIgnoreSystemFiles(boolean ignoreSystemFiles) {
+        this.ignoreSystemFiles = ignoreSystemFiles;
+    }
+
+    public boolean isIgnoreSystemFiles() {
+        return ignoreSystemFiles;
+    }
+
+    public void setIgnoredPatterns(HashSet<String> ignoredPatterns) {
+        this.ignoredPatterns = ignoredPatterns;
+    }
+
+    public HashSet<String> getIgnoredPatterns() {
+        return ignoredPatterns;
+    }
 }

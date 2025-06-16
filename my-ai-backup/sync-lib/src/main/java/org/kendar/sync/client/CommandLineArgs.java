@@ -2,6 +2,8 @@ package org.kendar.sync.client;
 
 import org.kendar.sync.lib.protocol.BackupType;
 
+import java.util.List;
+
 /**
  * Class to hold command line arguments.
  */
@@ -22,6 +24,7 @@ public class CommandLineArgs {
     private String hostName;
     private boolean ignoreSystemFiles = true;
     private boolean ignoreHiddenFiles = true;
+    private List<String> ignoredPatterns = List.of();
 
     public boolean isIgnoreHiddenFiles() {
         return ignoreHiddenFiles;
@@ -141,5 +144,13 @@ public class CommandLineArgs {
 
     public void setHostName(String hostName) {
         this.hostName = hostName;
+    }
+
+    public List<String> getIgnoredPatterns() {
+        return ignoredPatterns;
+    }
+
+    public void setIgnoredPatterns(List<String> ignoredPatterns) {
+        this.ignoredPatterns = ignoredPatterns;
     }
 }

@@ -28,7 +28,10 @@ class ProtocolMessagesTest {
                 1024 * 1024,
                 5,
                 false,
-                "test-hostname"
+                "test-hostname",
+                true,
+                true,
+                List.of()
         );
 
         // Serialize the message
@@ -56,7 +59,10 @@ class ProtocolMessagesTest {
                 null,
                 1024 * 1024,
                 5,
-                BackupType.NONE
+                BackupType.NONE,
+                true,
+                true,
+                List.of()
         );
 
         // Serialize the message
@@ -79,7 +85,10 @@ class ProtocolMessagesTest {
                 "Authentication failed",
                 1024 * 1024,
                 5,
-                BackupType.NONE
+                BackupType.NONE,
+                true,
+                true,
+                List.of()
         );
 
         byte[] errorSerialized = errorMessage.serialize();

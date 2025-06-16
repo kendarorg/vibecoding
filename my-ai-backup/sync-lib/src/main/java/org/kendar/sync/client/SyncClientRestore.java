@@ -26,7 +26,8 @@ public class SyncClientRestore extends BaseSyncClientProcess {
      * @param maxPacketSize  Maximum packet size for transfers
      * @throws IOException If an I/O error occurs
      */
-    public void performRestore(TcpConnection connection, CommandLineArgs args, int maxConnections, int maxPacketSize) throws IOException {
+    public void performRestore(TcpConnection connection, CommandLineArgs args, int maxConnections, int maxPacketSize,
+                               boolean ignoreSystemFiles,boolean ignoreHiddenFiles,List<String> patternsToIgnore) throws IOException {
         log.debug("[CLIENT] Starting restore from {} to {}", args.getTargetFolder(), args.getSourceFolder());
 
         // Get the list of files to back up
