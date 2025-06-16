@@ -229,7 +229,7 @@ public class SettingsController {
             return ResponseEntity.notFound().build();
         }
         var user = serverSettings.getUsers().stream().filter(u -> u.getUsername().equalsIgnoreCase(principal.getName())).findFirst().get();
-        if (!folder.get().getAllowedUsers().contains(user.getId()) || user.isAdmin()) {
+        if (!folder.get().getAllowedUsers().contains(user.getId()) && !user.isAdmin()) {
             return ResponseEntity.status(403).build();
         }
 
