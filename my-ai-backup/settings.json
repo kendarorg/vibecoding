@@ -1,49 +1,50 @@
 {
-  "port": 8090,
-  "webPort": 8089,
-  "maxPacketSize": 10485760,
-  "maxConnections": 5,
-  "users": [
-    {
-      "id": "6acf1fe9-dac4-4859-8a30-7595b4cfe118",
-      "username": "admin",
-      "password": "admin",
-      "admin": true
-    },
-    {
-      "id": "44793d21-ba55-4565-9968-2e9ca95a2c08",
-      "password": "user",
-      "username": "user",
-      "admin": false
-    }
-  ],
-  "backupFolders": [
-    {
-      "virtualName": "dates-backup",
-      "realPath": "C:/Tmp/sync/dates-backup",
-      "backupType": "DATE_SEPARATED",
-      "allowedUsers": [
-        "6acf1fe9-dac4-4859-8a30-7595b4cfe118",
-        "44793d21-ba55-4565-9968-2e9ca95a2c08"
-      ]
-    },
-    {
-      "virtualName": "sync-backup",
-      "realPath": "C:/Tmp/sync/sync-backup",
-      "backupType": "TWO_WAY_SYNC",
-      "allowedUsers": [
-        "6acf1fe9-dac4-4859-8a30-7595b4cfe118",
-        "44793d21-ba55-4565-9968-2e9ca95a2c08"
-      ]
-    },
-    {
-      "virtualName": "mirror-backup",
-      "realPath": "C:/Tmp/sync/mirror-backup",
-      "backupType": "MIRROR",
-      "allowedUsers": [
-        "6acf1fe9-dac4-4859-8a30-7595b4cfe118",
-        "44793d21-ba55-4565-9968-2e9ca95a2c08"
-      ]
-    }
-  ]
+  "port" : 8090,
+  "webPort" : 8089,
+  "maxPacketSize" : 10485760,
+  "maxConnections" : 5,
+  "users" : [ {
+    "id" : "6acf1fe9-dac4-4859-8a30-7595b4cfe118",
+    "username" : "admin",
+    "password" : "admin",
+    "admin" : true
+  }, {
+    "id" : "44793d21-ba55-4565-9968-2e9ca95a2c08",
+    "username" : "user",
+    "password" : "user",
+    "admin" : false
+  } ],
+  "backupFolders" : [ {
+    "virtualName" : "dates-backup",
+    "realPath" : "C:/Tmp/sync/dates-backup",
+    "backupType" : "DATE_SEPARATED",
+    "allowedUsers" : [ "6acf1fe9-dac4-4859-8a30-7595b4cfe118", "44793d21-ba55-4565-9968-2e9ca95a2c08" ],
+    "ignoreSystemFiles" : true,
+    "ignoreHiddenFiles" : true,
+    "ignoredPatterns" : [ ]
+  }, {
+    "virtualName" : "sync-backup",
+    "realPath" : "C:/Tmp/sync/sync-backup",
+    "backupType" : "TWO_WAY_SYNC",
+    "allowedUsers" : [ "6acf1fe9-dac4-4859-8a30-7595b4cfe118", "44793d21-ba55-4565-9968-2e9ca95a2c08" ],
+    "ignoreSystemFiles" : true,
+    "ignoreHiddenFiles" : true,
+    "ignoredPatterns" : [ ]
+  }, {
+    "virtualName" : "mirror-backup",
+    "realPath" : "C:/Tmp/sync/mirror-backup",
+    "backupType" : "MIRROR",
+    "allowedUsers" : [ "6acf1fe9-dac4-4859-8a30-7595b4cfe118", "44793d21-ba55-4565-9968-2e9ca95a2c08" ],
+    "ignoreSystemFiles" : true,
+    "ignoreHiddenFiles" : true,
+    "ignoredPatterns" : [ ]
+  }, {
+    "virtualName" : "asfa",
+    "realPath" : "asfas",
+    "backupType" : "MIRROR",
+    "allowedUsers" : [ "6acf1fe9-dac4-4859-8a30-7595b4cfe118" ],
+    "ignoreSystemFiles" : false,
+    "ignoreHiddenFiles" : false,
+    "ignoredPatterns" : [ "asdfas", "aaaaa" ]
+  } ]
 }

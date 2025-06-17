@@ -312,3 +312,48 @@ table tr:hover {
         transform: rotate(360deg);
     }
 }
+
+.pattern-list {
+    margin-bottom: 10px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.pattern-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 10px;
+    margin-bottom: 5px;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+}
+
+.pattern-input-group {
+    display: flex;
+    margin-bottom: 5px;
+}
+
+.pattern-input-group input {
+    flex-grow: 1;
+    margin-right: 5px;
+}
+
+.no-patterns {
+    color: #888;
+    font-style: italic;
+    padding: 5px 0;
+}
+
+.form-hint {
+    color: #666;
+    display: block;
+    margin-top: 5px;
+}
+
+.btn-small {
+    padding: 0 5px;
+    font-size: 16px;
+    min-width: 24px;
+    height: 24px;
+}

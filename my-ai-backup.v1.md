@@ -343,3 +343,16 @@ Given the APIs listed in context
 * Added hidden files,system and patterns parameters
 
 ### Prompt 026
+
+Generate a FilePattern class that 
+* Given a -string- pattern with **, * and ?, following the standard simple patterns for files return true if the input path matches 
+* Gienv a string pattern starting wiht @ check if the following regex matches the file
+
+### Prompt 027
+
+* Add to the folders.html, during editing, the following fields
+** ignore hidden files (checkbox)
+** ignore system files (checkbox)
+** ignore patterns (editable list of strings)
+* Add the new parameter to the relevant api
+

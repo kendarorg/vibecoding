@@ -286,6 +286,9 @@ public class SettingsController {
         folderToUpdate.setRealPath(folder.getRealPath());
         folderToUpdate.setBackupType(folder.getBackupType());
         folderToUpdate.setAllowedUsers(folder.getAllowedUsers());
+        folderToUpdate.setIgnoredPatterns(folder.getIgnoredPatterns() == null ? new ArrayList<>() : folder.getIgnoredPatterns());
+        folderToUpdate.setIgnoreSystemFiles(folder.isIgnoreSystemFiles());
+        folderToUpdate.setIgnoreHiddenFiles(folder.isIgnoreHiddenFiles());
 
         serverSettings.save(serverConfig.getSettingsFile());
 
