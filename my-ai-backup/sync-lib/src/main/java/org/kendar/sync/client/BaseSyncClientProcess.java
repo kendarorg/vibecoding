@@ -3,6 +3,7 @@ package org.kendar.sync.client;
 import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
+import org.kendar.sync.lib.utils.Attributes;
 import org.kendar.sync.lib.utils.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,7 +14,6 @@ import java.io.IOException;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,7 +43,7 @@ public class BaseSyncClientProcess {
         if (children != null) {
             for (File child : children) {
                 if(child.isHidden() && ignoreHiddenFiles) continue;
-                BasicFileAttributes attr = Files.readAttributes(child.toPath(), BasicFileAttributes.class);
+                var attr = FileUtils.readFileAttributes(child.toPath());
                 if(attr.isSymbolicLink()) continue;
                 if(child.getName().startsWith(".") && ignoreSystemFiles) continue;
                 if (child.isDirectory()) {
@@ -87,7 +87,7 @@ public class BaseSyncClientProcess {
         }
 
         // If it's a directory, no need to send data
-        if (file.isDirectory()) {
+        if (Attributes.isDirectory(file.getExtendedUmask())) {
             log.debug("[CLIENT-{}] Created directory: {}", connectionId, file.getRelativePath());
             return;
         }
@@ -187,8 +187,7 @@ public class BaseSyncClientProcess {
 
             // Create the file or directory
             File targetFile = new File(args.getSourceFolder(), fileInfo.getRelativePath());
-
-            if (fileInfo.isDirectory()) {
+            if (Attributes.isDirectory(fileInfo.getExtendedUmask())) {
                 if (!args.isDryRun()) {
                     //noinspection ResultOfMethodCallIgnored
                     targetFile.mkdirs();

@@ -3,6 +3,7 @@ package org.kendar.sync.server.backup;
 import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
+import org.kendar.sync.lib.utils.Attributes;
 import org.kendar.sync.lib.utils.FileUtils;
 import org.kendar.sync.server.server.ClientSession;
 import org.slf4j.Logger;
@@ -13,7 +14,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
@@ -52,7 +52,7 @@ public class MirrorBackupHandler extends BackupHandler {
             var fts = FileUtils.makeUniformPath(file.toString()).replace(FileUtils.makeUniformPath(session.getFolder().getRealPath()), "");
             var filePath = session.getFolder().getRealPath() + "/" + fts;
             var fp = Path.of(filePath);
-            BasicFileAttributes attr = Files.readAttributes(fp, BasicFileAttributes.class);
+            var attr = FileUtils.readFileAttributes(fp);
 
             if (shouldIgnoreFileByAttrAndPattern(session, file, attr)) continue;
 
@@ -86,7 +86,8 @@ public class MirrorBackupHandler extends BackupHandler {
                 filesOnClient.remove(toRemove);
             }
         }
-        var filesToSend = filesOnClient.values().stream().filter(f -> !f.isDirectory()).collect(Collectors.toList());
+        var filesToSend = filesOnClient.values().stream().filter(f ->
+                !Attributes.isDirectory(f.getExtendedUmask())).collect(Collectors.toList());
 
         connection.sendMessage(new FileListResponseMessage(filesToSend, removedFiles, true, 1, 1));
 

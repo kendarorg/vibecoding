@@ -9,7 +9,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -75,11 +74,11 @@ class FileUtilsTest {
             if (file.getRelativePath().equals("testFile1.txt")) {
                 foundFile1 = true;
                 assertEquals(TEST_CONTENT_1.length(), file.getSize());
-                assertFalse(file.isDirectory());
+                assertFalse(Attributes.isDirectory(file.getExtendedUmask()));
             } else if (file.getRelativePath().equals("testFile2.txt")) {
                 foundFile2 = true;
                 assertEquals(TEST_CONTENT_2.length(), file.getSize());
-                assertFalse(file.isDirectory());
+                assertFalse(Attributes.isDirectory(file.getExtendedUmask()));
             }
         }
 
@@ -104,15 +103,15 @@ class FileUtilsTest {
             if (file.getRelativePath().equals("testFile1.txt")) {
                 foundFile1 = true;
                 assertEquals(TEST_CONTENT_1.length(), file.getSize());
-                assertFalse(file.isDirectory());
+                assertFalse(Attributes.isDirectory(file.getExtendedUmask()));
             } else if (file.getRelativePath().equals("testFile2.txt")) {
                 foundFile2 = true;
                 assertEquals(TEST_CONTENT_2.length(), file.getSize());
-                assertFalse(file.isDirectory());
+                assertFalse(Attributes.isDirectory(file.getExtendedUmask()));
             } else if (file.getRelativePath().equals("subdir/testSubFile.txt")) {
                 foundSubFile = true;
                 assertEquals(TEST_CONTENT_3.length(), file.getSize());
-                assertFalse(file.isDirectory());
+                assertFalse(Attributes.isDirectory(file.getExtendedUmask()));
             }
         }
 
@@ -190,12 +189,12 @@ class FileUtilsTest {
         FileUtils.setFileTimes(testFile, creationTime, modificationTime);
 
         // Verify file times
-        BasicFileAttributes attrs = Files.readAttributes(testFile.toPath(), BasicFileAttributes.class);
+        var attrs = FileUtils.readFileAttributes(testFile.toPath());
 
         // Note: Some file systems might not support setting creation time
         // So we only check modification time
         assertEquals(modificationTime.toEpochMilli() / 1000,
-                attrs.lastModifiedTime().toInstant().toEpochMilli() / 1000);
+                attrs.getModificationTime().toEpochMilli() / 1000);
     }
 
     @Test

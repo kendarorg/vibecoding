@@ -113,7 +113,8 @@ class SyncClientAppBackupTest {
     void testPerformBackup() throws Exception {
         // Set up mock responses
         List<FileInfo> filesToTransfer = List.of(
-                new FileInfo("/test/subdir/testFile2.txt", "subdir/testFile2.txt", 0, Instant.now(), Instant.now(), false));
+                new FileInfo("/test/subdir/testFile2.txt", "subdir/testFile2.txt", 0, Instant.now(), Instant.now(),
+                        7));
         FileListResponseMessage fileListResponse = new FileListResponseMessage(
                 filesToTransfer, new ArrayList<>(), true, 1, 1);
         when(mockConnection.receiveMessage())
@@ -182,8 +183,8 @@ class SyncClientAppBackupTest {
 
         // Set up mock responses
         List<FileInfo> filesToTransfer = List.of(
-                new FileInfo("/test/subdir/testFile2.txt", "subdir/testFile2.txt", 0, Instant.now(), Instant.now(), false),
-                new FileInfo("/test/testFile1.txt", "testFile1.txt", 0, Instant.now(), Instant.now(), false));
+                new FileInfo("/test/subdir/testFile2.txt", "subdir/testFile2.txt", 0, Instant.now(), Instant.now(), 0),
+                new FileInfo("/test/testFile1.txt", "testFile1.txt", 0, Instant.now(), Instant.now(), 0));
         FileListResponseMessage fileListResponse = new FileListResponseMessage(
                 filesToTransfer, new ArrayList<>(), true, 1, 1);
         when(mockConnection.receiveMessage())
@@ -222,8 +223,8 @@ class SyncClientAppBackupTest {
     void testPerformBackupWithErrors() throws Exception {
         // Set up mock responses with errors
         List<FileInfo> filesToTransfer = List.of(
-                new FileInfo("/test/subdir/testFile2.txt", "subdir/testFile2.txt", 0, Instant.now(), Instant.now(), false),
-                new FileInfo("/test/testFile1.txt", "testFile1.txt", 0, Instant.now(), Instant.now(), false));
+                new FileInfo("/test/subdir/testFile2.txt", "subdir/testFile2.txt", 0, Instant.now(), Instant.now(), 0),
+                new FileInfo("/test/testFile1.txt", "testFile1.txt", 0, Instant.now(), Instant.now(), 0));
         FileListResponseMessage fileListResponse = new FileListResponseMessage(
                 filesToTransfer, new ArrayList<>(), true, 1, 1);
 
