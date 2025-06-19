@@ -80,8 +80,8 @@ public class SettingsController {
         if (user.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        var loginUser = serverSettings.getUsers().stream().filter(u->u.getUsername().equalsIgnoreCase(principal.getName())).findFirst().get();
-        if(loginUser.getId().equalsIgnoreCase(user.get().getId()) || loginUser.isAdmin()) {
+        var loginUser = serverSettings.getUsers().stream().filter(u -> u.getUsername().equalsIgnoreCase(principal.getName())).findFirst().get();
+        if (loginUser.getId().equalsIgnoreCase(user.get().getId()) || loginUser.isAdmin()) {
             return ResponseEntity.ok(user.get());
         }
         return ResponseEntity.notFound().build();
@@ -126,12 +126,12 @@ public class SettingsController {
      */
     @PutMapping("/users/{id}")
     @PreAuthorize("hasRole('ADMIN')  or hasRole('USER')")
-    public ResponseEntity<?> updateUser(Principal principal,@PathVariable String id, @RequestBody ServerSettings.User user) throws IOException {
+    public ResponseEntity<?> updateUser(Principal principal, @PathVariable String id, @RequestBody ServerSettings.User user) throws IOException {
         // Find the user
         Optional<ServerSettings.User> existingUser = serverSettings.getUsers().stream()
                 .filter(u -> u.getId().equals(id))
                 .findFirst();
-        var loginUser = serverSettings.getUsers().stream().filter(u->u.getUsername().equalsIgnoreCase(principal.getName())).findFirst().get();
+        var loginUser = serverSettings.getUsers().stream().filter(u -> u.getUsername().equalsIgnoreCase(principal.getName())).findFirst().get();
 
 
         if (existingUser.isEmpty()) {
@@ -152,7 +152,7 @@ public class SettingsController {
         if (loginUser.isAdmin()) {
             userToUpdate.setAdmin(user.isAdmin());
         }
-        if(loginUser.getId().equalsIgnoreCase(userToUpdate.getId()) || loginUser.isAdmin()) {
+        if (loginUser.getId().equalsIgnoreCase(userToUpdate.getId()) || loginUser.isAdmin()) {
             serverSettings.save(serverConfig.getSettingsFile());
             return ResponseEntity.ok(userToUpdate);
         }
@@ -203,9 +203,9 @@ public class SettingsController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     public ResponseEntity<List<ServerSettings.BackupFolder>> getFolders(Principal principal) {
         var result = new ArrayList<ServerSettings.BackupFolder>();
-        var user = serverSettings.getUsers().stream().filter(u->u.getUsername().equalsIgnoreCase(principal.getName())).findFirst().get();
-        for(var bff:serverSettings.getBackupFolders()){
-            if(bff.getAllowedUsers().contains(user.getId())||user.isAdmin()) {
+        var user = serverSettings.getUsers().stream().filter(u -> u.getUsername().equalsIgnoreCase(principal.getName())).findFirst().get();
+        for (var bff : serverSettings.getBackupFolders()) {
+            if (bff.getAllowedUsers().contains(user.getId()) || user.isAdmin()) {
                 result.add(bff);
             }
         }
@@ -220,7 +220,7 @@ public class SettingsController {
      */
     @GetMapping("/folders/{name}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
-    public ResponseEntity<?> getFolder(Principal principal,@PathVariable String name) {
+    public ResponseEntity<?> getFolder(Principal principal, @PathVariable String name) {
         Optional<ServerSettings.BackupFolder> folder = serverSettings.getBackupFolders().stream()
                 .filter(f -> f.getVirtualName().equals(name))
                 .findFirst();
@@ -228,8 +228,8 @@ public class SettingsController {
         if (folder.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        var user = serverSettings.getUsers().stream().filter(u->u.getUsername().equalsIgnoreCase(principal.getName())).findFirst().get();
-        if(!folder.get().getAllowedUsers().contains(user.getId())||user.isAdmin()){
+        var user = serverSettings.getUsers().stream().filter(u -> u.getUsername().equalsIgnoreCase(principal.getName())).findFirst().get();
+        if (!folder.get().getAllowedUsers().contains(user.getId()) && !user.isAdmin()) {
             return ResponseEntity.status(403).build();
         }
 
@@ -286,6 +286,9 @@ public class SettingsController {
         folderToUpdate.setRealPath(folder.getRealPath());
         folderToUpdate.setBackupType(folder.getBackupType());
         folderToUpdate.setAllowedUsers(folder.getAllowedUsers());
+        folderToUpdate.setIgnoredPatterns(folder.getIgnoredPatterns() == null ? new ArrayList<>() : folder.getIgnoredPatterns());
+        folderToUpdate.setIgnoreSystemFiles(folder.isIgnoreSystemFiles());
+        folderToUpdate.setIgnoreHiddenFiles(folder.isIgnoreHiddenFiles());
 
         serverSettings.save(serverConfig.getSettingsFile());
 

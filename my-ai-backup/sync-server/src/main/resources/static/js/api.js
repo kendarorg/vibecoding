@@ -52,7 +52,7 @@ const API = {
     async fetch(endpoint, options = {}) {
         const url = `${this.baseUrl}${endpoint}`;
 
-        // Set up headers with authorization if token exists
+        // Set up headers with authorization if the token exists
         const headers = {
             'Content-Type': 'application/json',
             ...options.headers
@@ -73,19 +73,19 @@ const API = {
                 this.removeToken();
                 this.removeCurrentUser();
                 window.location.href = '/login.html';
-                
+
                 return null;
             }
 
             // For non-JSON responses
             if (response.status === 204) {
-                return { success: true };
+                return {success: true};
             }
 
             // Parse JSON response
             const data = await response.json();
 
-            // Check if request was successful
+            // Check if the request was successful
             if (!response.ok) {
                 throw new Error(data.message || 'An error occurred');
             }
@@ -101,16 +101,17 @@ const API = {
     async login(username, password) {
         const data = await this.fetch('/auth/login', {
             method: 'POST',
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({username, password})
         });
 
-        
+
+        // noinspection JSUnresolvedReference
         if (data && data.token) {
             this.setToken(data.token);
             this.setCurrentUser({
                 username: data.username,
                 userId: data.userId,
-                isAdmin: data.isAdmin
+                isAdmin: data.admin
             });
         }
 
@@ -122,7 +123,7 @@ const API = {
         this.removeToken();
         this.removeCurrentUser();
         window.location.href = '/login.html';
-        
+
     },
 
     // Users

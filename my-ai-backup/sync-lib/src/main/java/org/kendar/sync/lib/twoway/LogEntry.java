@@ -1,18 +1,16 @@
 package org.kendar.sync.lib.twoway;
 
-import org.kendar.sync.lib.model.FileInfo;
-
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.Date;
 
 public class LogEntry {
-     Instant runStartTime;
-     Instant creationTime;
-     Instant modificationTime;
-     long size;
-     String operation;
-     String relativePath;
+    Instant runStartTime;
+    Instant creationTime;
+    Instant modificationTime;
+    long size;
+    String operation;
+    String relativePath;
 
     LogEntry(Instant runStartTime, Instant creationTime, Instant modificationTime, long size, String operation, String relativePath) {
         this.runStartTime = runStartTime;
@@ -21,6 +19,33 @@ public class LogEntry {
         this.size = size;
         this.operation = operation;
         this.relativePath = relativePath;
+    }
+
+    public static LogEntry fromLine(String fileLine) {
+        try {
+            String[] parts = fileLine.split("\t");
+            if (parts.length < 6) {
+                throw new IllegalArgumentException("Invalid file line format: " + fileLine);
+            }
+            var dtf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+
+            Instant runStartTime = dtf.parse(parts[0]).toInstant();
+            Instant creationTime = dtf.parse(parts[1]).toInstant();
+            Instant modificationTime = dtf.parse(parts[2]).toInstant();
+            long size = Long.parseLong(parts[3]);
+            String operation = parts[4];
+            String relativePath = parts[5];
+            return new LogEntry(
+                    runStartTime,
+                    creationTime,
+                    modificationTime,
+                    size,
+                    operation,
+                    relativePath
+            );
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     public Instant getRunStartTime() {
@@ -80,32 +105,5 @@ public class LogEntry {
                 size,
                 operation,
                 relativePath);
-    }
-
-    public static LogEntry fromLine(String fileLine) {
-        try {
-            String[] parts = fileLine.split("\t");
-            if (parts.length < 6) {
-                throw new IllegalArgumentException("Invalid file line format: " + fileLine);
-            }
-            var dtf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
-
-            Instant runStartTime = dtf.parse(parts[0]).toInstant();
-            Instant creationTime = dtf.parse(parts[1]).toInstant();
-            Instant modificationTime = dtf.parse(parts[2]).toInstant();
-            long size = Long.parseLong(parts[3]);
-            String operation = parts[4];
-            String relativePath = parts[5];
-            return new LogEntry(
-                    runStartTime,
-                    creationTime,
-                    modificationTime,
-                    size,
-                    operation,
-                    relativePath
-            );
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
-        }
     }
 }

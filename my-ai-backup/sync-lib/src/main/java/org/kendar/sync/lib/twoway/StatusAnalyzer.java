@@ -1,5 +1,7 @@
 package org.kendar.sync.lib.twoway;
 
+import org.kendar.sync.lib.utils.FileUtils;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -38,9 +40,9 @@ public class StatusAnalyzer {
     }
 
     /**
-     * Analyzes the directory and updates log files with changes since last run
+     * Analyzes the directory and updates log files with changes since the last run
      *
-     * @return
+     * @return List of detected changes as LogEntry objects
      */
     public List<LogEntry> analyze() throws IOException {
         Instant runStartTime = Instant.now();
@@ -54,7 +56,7 @@ public class StatusAnalyzer {
         // Compare and log changes
         List<LogEntry> changes = detectChanges(currentFileStates, runStartTime);
 
-        // Write changes to operation log
+        // Write changes to the operation log
         writeOperationLog(changes);
 
         // Update last update log
@@ -87,7 +89,7 @@ public class StatusAnalyzer {
                 }
             }
 
-            // Write compacted log with only CR operations
+            // Write the compacted log with only CR operations
             try (BufferedWriter writer = Files.newBufferedWriter(operationLogPath,
                     StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
                 for (LogEntry entry : latestCreations.values()) {
@@ -190,19 +192,19 @@ public class StatusAnalyzer {
         }
 
         // File exists in both logs
-        if (localEntry != null && remoteEntry != null) {
+        if (localEntry != null) {
             // Both deleted
             if ("DE".equals(localEntry.operation) && "DE".equals(remoteEntry.operation)) {
                 return new SyncDecision(SyncAction.NO_ACTION, null);
             }
 
             // Local deleted, remote exists
-            if ("DE".equals(localEntry.operation) && !"DE".equals(remoteEntry.operation)) {
+            if ("DE".equals(localEntry.operation)) {
                 return new SyncDecision(SyncAction.DELETE_REMOTE, localEntry);
             }
 
-            // Remote deleted, local exists
-            if (!"DE".equals(localEntry.operation) && "DE".equals(remoteEntry.operation)) {
+            // The Remote is deleted, the local exists
+            if ("DE".equals(remoteEntry.operation)) {
                 return new SyncDecision(SyncAction.DELETE_LOCAL, remoteEntry);
             }
 
@@ -246,7 +248,7 @@ public class StatusAnalyzer {
         }
 
         try {
-            String content = Files.readString(lastCompactLogPath).trim();
+            String content = FileUtils.readFile(lastCompactLogPath).trim();
             if (content.isEmpty()) {
                 return Optional.empty();
             }
@@ -268,7 +270,7 @@ public class StatusAnalyzer {
             while ((line = reader.readLine()) != null) {
                 LogEntry entry = parseLogEntry(line);
                 if (entry != null && !entry.operation.equals("DE")) {
-                    // Only keep non-deleted files in previous state
+                    // Only keep non-deleted files in the previous state
                     previousFileStates.put(entry.relativePath,
                             new FileInfo(entry.creationTime, entry.modificationTime, entry.size));
                 }
@@ -286,9 +288,9 @@ public class StatusAnalyzer {
             return currentStates;
         }
 
-        Files.walkFileTree(baseDirectory, new SimpleFileVisitor<Path>() {
+        Files.walkFileTree(baseDirectory, new SimpleFileVisitor<>() {
             @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
                 // Skip log files
                 if (file.equals(lastUpdateLogPath) || file.equals(operationLogPath) || file.equals(lastCompactLogPath)) {
                     return FileVisitResult.CONTINUE;
@@ -307,7 +309,7 @@ public class StatusAnalyzer {
         return currentStates;
     }
 
-            private List<LogEntry> detectChanges(Map<String, FileInfo> currentStates, Instant runStartTime) {
+    private List<LogEntry> detectChanges(Map<String, FileInfo> currentStates, Instant runStartTime) {
         List<LogEntry> changes = new ArrayList<>();
         Instant now = Instant.now();
 
@@ -408,7 +410,7 @@ public class StatusAnalyzer {
         }
 
         try {
-            // Handle both old format (without runStartTime) and new format
+            // Handle both the old format (without runStartTime) and the  new format
 
             Instant runStartTime = LocalDateTime.parse(parts[0], TIMESTAMP_FORMAT)
                     .atZone(ZoneId.systemDefault()).toInstant();
@@ -435,7 +437,7 @@ public class StatusAnalyzer {
         }
 
         try {
-            String content = Files.readString(lastUpdateLogPath).trim();
+            String content = FileUtils.readFile(lastUpdateLogPath).trim();
             if (content.isEmpty()) {
                 return Optional.empty();
             }
@@ -460,12 +462,10 @@ public class StatusAnalyzer {
         }
 
         @Override
-        public boolean equals(Object obj) {
-            if (this == obj) return true;
-            if (!(obj instanceof FileInfo other)) return false;
-            return Objects.equals(creationTime, other.creationTime) &&
-                    Objects.equals(modificationTime, other.modificationTime) &&
-                    size == other.size;
+        public boolean equals(Object o) {
+            if (!(o instanceof FileInfo)) return false;
+            FileInfo fileInfo = (FileInfo) o;
+            return size == fileInfo.size && Objects.equals(creationTime, fileInfo.creationTime) && Objects.equals(modificationTime, fileInfo.modificationTime);
         }
 
         @Override

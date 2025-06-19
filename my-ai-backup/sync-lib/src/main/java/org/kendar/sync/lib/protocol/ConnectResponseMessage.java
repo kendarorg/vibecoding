@@ -2,6 +2,9 @@ package org.kendar.sync.lib.protocol;
 
 import org.kendar.sync.lib.buffer.ByteContainer;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Message sent by the server in response to a connection request.
  * Indicates whether the connection was accepted or rejected.
@@ -16,6 +19,33 @@ public class ConnectResponseMessage extends Message {
     private int maxPacketSize;
     private int maxConnections;
     private BackupType backupType;
+    private boolean ignoreSystemFiles = true;
+    private boolean ignoreHiddenFiles = true;
+    private List<String> ignoredPatterns = new ArrayList<>();
+
+    public boolean isIgnoreSystemFiles() {
+        return ignoreSystemFiles;
+    }
+
+    public void setIgnoreSystemFiles(boolean ignoreSystemFiles) {
+        this.ignoreSystemFiles = ignoreSystemFiles;
+    }
+
+    public boolean isIgnoreHiddenFiles() {
+        return ignoreHiddenFiles;
+    }
+
+    public void setIgnoreHiddenFiles(boolean ignoreHiddenFiles) {
+        this.ignoreHiddenFiles = ignoreHiddenFiles;
+    }
+
+    public List<String> getIgnoredPatterns() {
+        return ignoredPatterns;
+    }
+
+    public void setIgnoredPatterns(List<String> ignoredPatterns) {
+        this.ignoredPatterns = ignoredPatterns;
+    }
 
     // Default constructor for Jackson
     public ConnectResponseMessage() {
@@ -28,16 +58,20 @@ public class ConnectResponseMessage extends Message {
      * @param errorMessage   Error message if the connection was rejected
      * @param maxPacketSize  The maximum packet size negotiated for the session
      * @param maxConnections The maximum number of parallel connections negotiated for the session
-     * @param backupType
+     * @param backupType     The type of backup requested (e.g., FULL, INCREMENTAL, NONE)
      */
     public ConnectResponseMessage(boolean accepted, String errorMessage,
                                   int maxPacketSize, int maxConnections,
-                                  BackupType backupType) {
+                                  BackupType backupType,
+                                  boolean ignoreSystemFiles, boolean ignoreHiddenFiles, List<String> ignoredPatterns) {
         this.accepted = accepted;
         this.errorMessage = errorMessage;
         this.maxPacketSize = maxPacketSize;
         this.maxConnections = maxConnections;
         this.backupType = backupType;
+        this.ignoreSystemFiles = ignoreSystemFiles;
+        this.ignoreHiddenFiles = ignoreHiddenFiles;
+        this.ignoredPatterns = ignoredPatterns;
     }
 
     /**
@@ -47,8 +81,8 @@ public class ConnectResponseMessage extends Message {
      * @param maxConnections The maximum number of parallel connections negotiated for the session
      * @return A new connection response message
      */
-    public static ConnectResponseMessage accepted(int maxPacketSize, int maxConnections) {
-        return new ConnectResponseMessage(true, null, maxPacketSize, maxConnections,BackupType.NONE );
+    public static ConnectResponseMessage accepted(int maxPacketSize, int maxConnections,boolean ignoreSystemFiles, boolean ignoreHiddenFiles, List<String> ignoredPatterns) {
+        return new ConnectResponseMessage(true, null, maxPacketSize, maxConnections, BackupType.NONE,ignoreSystemFiles, ignoreHiddenFiles, ignoredPatterns);
     }
 
     /**
@@ -58,7 +92,7 @@ public class ConnectResponseMessage extends Message {
      * @return A new connection response message
      */
     public static ConnectResponseMessage rejected(String errorMessage) {
-        return new ConnectResponseMessage(false, errorMessage, 0, 0,BackupType.NONE);
+        return new ConnectResponseMessage(false, errorMessage, 0, 0, BackupType.NONE,true,true, new ArrayList<>());
     }
 
     @Override
@@ -68,6 +102,12 @@ public class ConnectResponseMessage extends Message {
         maxPacketSize = buffer.readType(Integer.class);
         maxConnections = buffer.readType(Integer.class);
         backupType = buffer.readType(BackupType.class);
+        ignoreHiddenFiles = buffer.readType(Boolean.class);
+        ignoreSystemFiles = buffer.readType(Boolean.class);
+        var patterns = buffer.readType(String.class);
+        if(patterns != null && !patterns.isEmpty()) {
+            ignoredPatterns = List.of(patterns.split(","));
+        }
         return this;
     }
 
@@ -84,6 +124,13 @@ public class ConnectResponseMessage extends Message {
         buffer.writeType(maxPacketSize);
         buffer.writeType(maxConnections);
         buffer.writeType(backupType);
+        buffer.writeType(ignoreHiddenFiles);
+        buffer.writeType(ignoreSystemFiles);
+        if (ignoredPatterns != null && !ignoredPatterns.isEmpty()) {
+            buffer.writeType(String.join(",", ignoredPatterns));
+        } else {
+            buffer.writeType("");
+        }
     }
 
     // Getters and setters

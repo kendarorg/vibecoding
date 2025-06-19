@@ -21,7 +21,7 @@ public class SessionMonitor implements AutoCloseable {
     /**
      * Creates a new session monitor.
      *
-     * @param sessions The map of active sessions to monitor
+     * @param sessions               The map of active sessions to monitor
      * @param monitorIntervalSeconds The interval in seconds between checks for expired sessions
      */
     public SessionMonitor(Map<UUID, ClientSession> sessions, long monitorIntervalSeconds) {
@@ -34,9 +34,9 @@ public class SessionMonitor implements AutoCloseable {
      * Starts the session monitor.
      */
     public void start() {
-        scheduler.scheduleAtFixedRate(this::checkSessions, 
-                monitorIntervalSeconds, 
-                monitorIntervalSeconds, 
+        scheduler.scheduleAtFixedRate(this::checkSessions,
+                monitorIntervalSeconds,
+                monitorIntervalSeconds,
                 TimeUnit.SECONDS);
         log.debug("Session monitor started, checking sessions every {} seconds", monitorIntervalSeconds);
     }

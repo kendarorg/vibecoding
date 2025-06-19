@@ -11,17 +11,14 @@ import org.kendar.sync.server.config.ServerConfig;
 import org.kendar.sync.server.server.Server;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.attribute.FileTime;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.kendar.sync.server.TestUtils.*;
 
 /**
@@ -147,7 +144,7 @@ public class BackupIntegrationTest {
 
 
         // Remove a file from the source directory
-        removedFile = removeRandomFile(sourceDir.toPath(),sourceDir.toPath());
+        removedFile = removeRandomFile(sourceDir.toPath(), sourceDir.toPath());
 
         // Perform restore
         System.out.println("================= Performing restore...");
@@ -191,7 +188,7 @@ public class BackupIntegrationTest {
 
 
         // Remove a file from the source directory
-        removedFile = removeRandomFile(sourceDir.toPath(),sourceDir.toPath());
+        removedFile = removeRandomFile(sourceDir.toPath(), sourceDir.toPath());
 
         // Perform restore
         System.out.println("================= Performing restore...");
@@ -220,7 +217,7 @@ public class BackupIntegrationTest {
         assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
 
         // Remove a file from the source directory
-        removedFile = removeRandomFile(sourceDir.toPath(),sourceDir.toPath());
+        removedFile = removeRandomFile(sourceDir.toPath(), sourceDir.toPath());
 
         // Perform backup with deleted file
         target.doSync(commandLineArgs);
@@ -230,7 +227,7 @@ public class BackupIntegrationTest {
         assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
 
         // Remove a file from the source directory
-        removedFile = removeRandomFile(sourceDir.toPath(),targetDir.toPath());
+        removedFile = removeRandomFile(sourceDir.toPath(), targetDir.toPath());
 
         // Perform backup with deleted file
         target.doSync(commandLineArgs);
@@ -240,7 +237,7 @@ public class BackupIntegrationTest {
         assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
 
         // Delete a file from the target directory
-        removedFile = removeRandomFile(sourceDir.toPath(),targetDir.toPath());
+        removedFile = removeRandomFile(sourceDir.toPath(), targetDir.toPath());
 
         System.out.println("================= Adding file on target...");
         Files.writeString(Path.of(targetDir.toPath() + "/atest.txt"), "testBackup");

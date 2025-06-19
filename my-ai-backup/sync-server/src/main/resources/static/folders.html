@@ -2,250 +2,340 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>Backup Folders - Sync Server</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <link href="css/styles.css" rel="stylesheet">
 </head>
 <body>
-    <header>
-        <div class="header-container">
-            <div class="logo">Sync Server</div>
-            <nav>
-                <ul>
-                    <li class="admin-nav"><a href="users.html">Users</a></li>
-                    <li class="user-nav"><a href="profile.html">My Profile</a></li>
-                    <li><a href="login.html?action=logout" id="logout-btn">Logout</a></li>
-                    <li>Welcome, <span id="current-username">User</span></li>
-                </ul>
-            </nav>
+<header>
+    <div class="header-container">
+        <div class="logo">Sync Server</div>
+        <nav>
+            <ul>
+                <li class="admin-nav"><a href="users.html">Users</a></li>
+                <li class="user-nav"><a href="profile.html">My Profile</a></li>
+                <li><a href="login.html?action=logout" id="logout-btn">Logout</a></li>
+                <li>Welcome, <span id="current-username">User</span></li>
+            </ul>
+        </nav>
+    </div>
+</header>
+
+<div class="container">
+    <div class="card">
+        <div class="flex-between mb-20">
+            <h2 class="card-title">Backup Folders</h2>
+            <button class="btn" id="add-folder-btn">Add New Folder</button>
         </div>
-    </header>
 
-    <div class="container">
-        <div class="card">
-            <div class="flex-between mb-20">
-                <h2 class="card-title">Backup Folders</h2>
-                <button class="btn" id="add-folder-btn">Add New Folder</button>
-            </div>
+        <div id="alert-container"></div>
 
-            <div id="alert-container"></div>
-
-            <div class="table-container">
-                <table id="folders-table">
-                    <thead>
-                        <tr>
-                            <th>Virtual Name</th>
-                            <th>Real Path</th>
-                            <th>Backup Type</th>
-                            <th>Allowed Users</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Folder rows will be inserted here -->
-                    </tbody>
-                </table>
-            </div>
+        <div class="table-container">
+            <table id="folders-table">
+                <thead>
+                <tr>
+                    <th>Virtual Name</th>
+                    <th>Real Path</th>
+                    <th>Backup Type</th>
+                    <th>Allowed Users</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <!-- Folder rows will be inserted here -->
+                </tbody>
+            </table>
         </div>
     </div>
+</div>
 
-    <!-- Add/Edit Folder Modal -->
-    <div id="folder-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title" id="folder-modal-title">Add Backup Folder</h3>
-                <span class="close">&times;</span>
-            </div>
-
-            <form id="folder-form">
-                <input type="hidden" id="original-name" name="originalName">
-
-                <div class="form-group">
-                    <label for="virtualName">Virtual Name</label>
-                    <input type="text" id="virtualName" name="virtualName" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="realPath">Real Path</label>
-                    <input type="text" id="realPath" name="realPath" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="backupType">Backup Type</label>
-                    <select id="backupType" name="backupType" required>
-                        <option value="NONE">None</option>
-                        <option value="PRESERVE">Preserve</option>
-                        <option value="MIRROR">Mirror</option>
-                        <option value="DATE_SEPARATED">Date Separated</option>
-                        <option value="TWO_WAY_SYNC">Two-Way Sync</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Allowed Users</label>
-                    <div id="allowed-users-container">
-                        <!-- User checkboxes will be inserted here -->
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-danger" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success">Save</button>
-                </div>
-            </form>
+<!-- Add/Edit Folder Modal -->
+<div class="modal" id="folder-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title" id="folder-modal-title">Add Backup Folder</h3>
+            <span class="close">&times;</span>
         </div>
-    </div>
 
-    <!-- Delete Confirmation Modal -->
-    <div id="delete-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">Confirm Delete</h3>
-                <span class="close">&times;</span>
+        <form id="folder-form">
+            <input id="original-name" name="originalName" type="hidden">
+
+            <div class="form-group">
+                <label for="virtualName">Virtual Name</label>
+                <input id="virtualName" name="virtualName" required type="text">
             </div>
 
-            <p>Are you sure you want to delete backup folder <strong id="delete-folder-name"></strong>?</p>
-            <p>This action cannot be undone and may affect synchronization processes.</p>
+            <div class="form-group">
+                <label for="realPath">Real Path</label>
+                <input id="realPath" name="realPath" required type="text">
+            </div>
+
+            <div class="form-group">
+                <label for="backupType">Backup Type</label>
+                <select id="backupType" name="backupType" required>
+                    <option value="NONE">None</option>
+                    <option value="PRESERVE">Preserve</option>
+                    <option value="MIRROR">Mirror</option>
+                    <option value="DATE_SEPARATED">Date Separated</option>
+                    <option value="TWO_WAY_SYNC">Two-Way Sync</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Allowed Users</label>
+                <div id="allowed-users-container">
+                    <!-- User checkboxes will be inserted here -->
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="ignoreHidden">Ignore Settings</label>
+                <div class="checkbox-group">
+                    <label class="checkbox-label">
+                        <input id="ignoreHidden" name="ignoreHidden" type="checkbox">
+                        Ignore Hidden Files
+                    </label>
+                </div>
+                <div class="checkbox-group">
+                    <label class="checkbox-label">
+                        <input id="ignoreSystem" name="ignoreSystem" type="checkbox">
+                        Ignore System Files
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="pattern-list">Ignore Patterns</label>
+                <div class="pattern-list" id="pattern-list">
+                    <!-- Pattern items will be inserted here -->
+                </div>
+                <div class="pattern-input-group">
+                    <input id="new-pattern" type="text" placeholder="Add a pattern (e.g., *.tmp or @.*\.log$)">
+                    <button class="btn" id="add-pattern-btn" type="button">Add</button>
+                </div>
+                <small class="form-hint">Use * for wildcards, ** for recursive matches, ? for single character, or @ for regex</small>
+            </div>
 
             <div class="modal-footer">
-                <button type="button" class="btn" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirm-delete-btn">Delete</button>
+                <button class="btn btn-danger" data-dismiss="modal" type="button">Cancel</button>
+                <button class="btn btn-success" type="submit">Save</button>
             </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal" id="delete-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Confirm Delete</h3>
+            <span class="close">&times;</span>
+        </div>
+
+        <p>Are you sure you want to delete backup folder <strong id="delete-folder-name"></strong>?</p>
+        <p>This action cannot be undone and may affect synchronization processes.</p>
+
+        <div class="modal-footer">
+            <button class="btn" data-dismiss="modal" type="button">Cancel</button>
+            <button class="btn btn-danger" id="confirm-delete-btn" type="button">Delete</button>
         </div>
     </div>
+</div>
 
-    <script src="js/api.js"></script>
-    <script src="js/utils.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Check if user is authenticated and admin
-            if (!Utils.checkAuth() || !Utils.checkAdmin()) return;
+<script src="js/api.js"></script>
+<script src="js/utils.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Check if user is authenticated and admin
+        if (!Utils.checkAuth() || !Utils.checkAdmin()) return;
 
 
-            // Get elements
-            const foldersTable = document.getElementById('folders-table').querySelector('tbody');
-            const folderForm = document.getElementById('folder-form');
-            const addFolderBtn = document.getElementById('add-folder-btn');
-            const folderModal = document.getElementById('folder-modal');
-            const folderModalTitle = document.getElementById('folder-modal-title');
-            const deleteModal = document.getElementById('delete-modal');
-            const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
-            const deleteFolderName = document.getElementById('delete-folder-name');
-            const allowedUsersContainer = document.getElementById('allowed-users-container');
+        // Get elements
+        const foldersTable = document.getElementById('folders-table').querySelector('tbody');
+        const folderForm = document.getElementById('folder-form');
+        const addFolderBtn = document.getElementById('add-folder-btn');
+        const folderModal = document.getElementById('folder-modal');
+        const folderModalTitle = document.getElementById('folder-modal-title');
+        const deleteModal = document.getElementById('delete-modal');
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+        const deleteFolderName = document.getElementById('delete-folder-name');
+        const allowedUsersContainer = document.getElementById('allowed-users-container');
 
-            // Variables to store current folder name for editing/deleting
-            let currentFolderName = null;
-            let allUsers = [];
+        // Variables to store current folder name and patterns for editing/deleting
+        let currentFolderName = null;
+        let allUsers = [];
+        let currentPatterns = [];
 
-            // Load data
+        // Load data
+        await loadFolders();
+        await loadUsers();
+
+        // Add event listeners
+        addFolderBtn.addEventListener('click', () => {
+            // Reset form and open modal for adding
+            folderForm.reset();
+            folderModalTitle.textContent = 'Add Backup Folder';
+            currentFolderName = null;
+            currentPatterns = [];
+            renderPatterns();
+            populateAllowedUsers([]);
+            Utils.openModal('folder-modal');
+        });
+        // Add event listeners for pattern management
+        document.getElementById('add-pattern-btn').addEventListener('click', addPattern);
+        document.getElementById('new-pattern').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addPattern();
+            }
+        });
+
+
+        // Function to add a new pattern
+        function addPattern() {
+            const patternInput = document.getElementById('new-pattern');
+            const pattern = patternInput.value.trim();
+
+            if (pattern) {
+                currentPatterns.push(pattern);
+                renderPatterns();
+                patternInput.value = '';
+            }
+        }
+
+        // Function to remove a pattern
+        function removePattern(index) {
+            currentPatterns.splice(index, 1);
+            renderPatterns();
+        }
+
+        // Function to render the patterns list
+        function renderPatterns() {
+            const patternList = document.getElementById('pattern-list');
+            patternList.innerHTML = '';
+
+            if (currentPatterns.length === 0) {
+                patternList.innerHTML = '<div class="no-patterns">No patterns added</div>';
+                return;
+            }
+
+            currentPatterns.forEach((pattern, index) => {
+                const patternItem = document.createElement('div');
+                patternItem.className = 'pattern-item';
+                patternItem.innerHTML = `
+            <span class="pattern-text">${pattern}</span>
+            <button class="btn btn-small remove-pattern" data-index="${index}" type="button">×</button>
+        `;
+                patternList.appendChild(patternItem);
+            });
+
+            // Add event listeners to remove buttons
+            document.querySelectorAll('.remove-pattern').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.getAttribute('data-index'));
+                    removePattern(index);
+                });
+            });
+        }
+
+        // Handle modal close buttons
+        document.querySelectorAll('[data-dismiss="modal"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const modalId = btn.closest('.modal').id;
+                Utils.closeModal(modalId);
+            });
+        });
+
+        // Handle folder form submission
+        Utils.handleFormSubmit(folderForm, async (form) => {
+            const formData = Utils.formToObject(form);
+
+            // Collect selected users
+            const allowedUsers = [];
+            document.querySelectorAll('input[name="allowedUser"]:checked').forEach(checkbox => {
+                allowedUsers.push(checkbox.value);
+            });
+
+            // Prepare folder data
+            const folderData = {
+                virtualName: formData.virtualName,
+                realPath: formData.realPath,
+                backupType: formData.backupType,
+                allowedUsers: allowedUsers,
+                ignoreHiddenFiles: formData.ignoreHidden === 'on',
+                ignoreSystemFiles: formData.ignoreSystem === 'on',
+                ignoredPatterns: currentPatterns
+            };
+
+            if (currentFolderName) {
+                // Update existing folder
+                await API.updateBackupFolder(currentFolderName, folderData);
+                Utils.showAlert('Backup folder updated successfully');
+            } else {
+                // Create new folder
+                await API.createBackupFolder(folderData);
+                Utils.showAlert('Backup folder created successfully');
+            }
+
+            // Close modal and reload folders
+            Utils.closeModal('folder-modal');
             await loadFolders();
-            await loadUsers();
+        });
 
-            // Add event listeners
-            addFolderBtn.addEventListener('click', () => {
-                // Reset form and open modal for adding
-                folderForm.reset();
-                folderModalTitle.textContent = 'Add Backup Folder';
-                currentFolderName = null;
-                populateAllowedUsers([]);
-                Utils.openModal('folder-modal');
-            });
-
-            // Handle modal close buttons
-            document.querySelectorAll('[data-dismiss="modal"]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const modalId = btn.closest('.modal').id;
-                    Utils.closeModal(modalId);
-                });
-            });
-
-            // Handle folder form submission
-            Utils.handleFormSubmit(folderForm, async (form) => {
-                const formData = Utils.formToObject(form);
-
-                // Collect selected users
-                const allowedUsers = [];
-                document.querySelectorAll('input[name="allowedUser"]:checked').forEach(checkbox => {
-                    allowedUsers.push(checkbox.value);
-                });
-
-                // Prepare folder data
-                const folderData = {
-                    virtualName: formData.virtualName,
-                    realPath: formData.realPath,
-                    backupType: formData.backupType,
-                    allowedUsers: allowedUsers
-                };
-
-                if (currentFolderName) {
-                    // Update existing folder
-                    await API.updateBackupFolder(currentFolderName, folderData);
-                    Utils.showAlert('Backup folder updated successfully');
-                } else {
-                    // Create new folder
-                    await API.createBackupFolder(folderData);
-                    Utils.showAlert('Backup folder created successfully');
-                }
-
-                // Close modal and reload folders
-                Utils.closeModal('folder-modal');
-                await loadFolders();
-            });
-
-            // Handle delete confirmation
-            confirmDeleteBtn.addEventListener('click', async () => {
-                if (currentFolderName) {
-                    try {
-                        await API.deleteBackupFolder(currentFolderName);
-                        Utils.showAlert('Backup folder deleted successfully');
-                        Utils.closeModal('delete-modal');
-                        await loadFolders();
-                    } catch (error) {
-                        Utils.showAlert('Error deleting backup folder: ' + error.message, 'danger');
-                    }
-                }
-            });
-
-            // Function to load all folders
-            async function loadFolders() {
+        // Handle delete confirmation
+        confirmDeleteBtn.addEventListener('click', async () => {
+            if (currentFolderName) {
                 try {
-                    const folders = await API.getBackupFolders();
-                    renderFolders(folders);
+                    await API.deleteBackupFolder(currentFolderName);
+                    Utils.showAlert('Backup folder deleted successfully');
+                    Utils.closeModal('delete-modal');
+                    await loadFolders();
                 } catch (error) {
-                    Utils.showAlert('Error loading backup folders: ' + error.message, 'danger');
+                    Utils.showAlert('Error deleting backup folder: ' + error.message, 'danger');
                 }
             }
+        });
 
-            // Function to load all users
-            async function loadUsers() {
-                try {
-                    allUsers = await API.getUsers();
-                } catch (error) {
-                    Utils.showAlert('Error loading users: ' + error.message, 'danger');
-                }
+        // Function to load all folders
+        async function loadFolders() {
+            try {
+                const folders = await API.getBackupFolders();
+                renderFolders(folders);
+            } catch (error) {
+                Utils.showAlert('Error loading backup folders: ' + error.message, 'danger');
+            }
+        }
+
+        // Function to load all users
+        async function loadUsers() {
+            try {
+                allUsers = await API.getUsers();
+            } catch (error) {
+                Utils.showAlert('Error loading users: ' + error.message, 'danger');
+            }
+        }
+
+        // Function to render folders in the table
+        function renderFolders(folders) {
+            foldersTable.innerHTML = '';
+
+            if (folders.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="5" class="text-center">No backup folders found</td>';
+                foldersTable.appendChild(row);
+                return;
             }
 
-            // Function to render folders in the table
-            function renderFolders(folders) {
-                foldersTable.innerHTML = '';
+            folders.forEach(folder => {
+                const row = document.createElement('tr');
 
-                if (folders.length === 0) {
-                    const row = document.createElement('tr');
-                    row.innerHTML = '<td colspan="5" class="text-center">No backup folders found</td>';
-                    foldersTable.appendChild(row);
-                    return;
-                }
+                // Get usernames for allowed users
+                const usernames = folder.allowedUsers.map(userId => {
+                    const user = allUsers.find(u => u.id === userId);
+                    return user ? user.username : userId;
+                }).join(', ');
 
-                folders.forEach(folder => {
-                    const row = document.createElement('tr');
-
-                    // Get usernames for allowed users
-                    const usernames = folder.allowedUsers.map(userId => {
-                        const user = allUsers.find(u => u.id === userId);
-                        return user ? user.username : userId;
-                    }).join(', ');
-
-                    row.innerHTML = `
+                row.innerHTML = `
                         <td>${folder.virtualName}</td>
                         <td>${folder.realPath}</td>
                         <td>${formatBackupType(folder.backupType)}</td>
@@ -256,99 +346,111 @@
                         </td>
                     `;
 
-                    foldersTable.appendChild(row);
-                });
+                foldersTable.appendChild(row);
+            });
 
-                // Add event listeners to edit and delete buttons
-                document.querySelectorAll('.edit-folder').forEach(btn => {
-                    btn.addEventListener('click', async () => {
-                        const folderName = btn.getAttribute('data-name');
-                        await editFolder(folderName);
-                    });
+            // Add event listeners to edit and delete buttons
+            document.querySelectorAll('.edit-folder').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const folderName = btn.getAttribute('data-name');
+                    await editFolder(folderName);
                 });
+            });
 
-                document.querySelectorAll('.delete-folder').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const folderName = btn.getAttribute('data-name');
-                        showDeleteConfirmation(folderName);
-                    });
+            document.querySelectorAll('.delete-folder').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const folderName = btn.getAttribute('data-name');
+                    showDeleteConfirmation(folderName);
                 });
+            });
+        }
+
+        // Format backup type for display
+        function formatBackupType(type) {
+            switch (type) {
+                case 'NONE':
+                    return 'None';
+                case 'PRESERVE':
+                    return 'Preserve';
+                case 'MIRROR':
+                    return 'Mirror';
+                case 'DATE_SEPARATED':
+                    return 'Date Separated';
+                case 'TWO_WAY_SYNC':
+                    return 'Two-Way Sync';
+                default:
+                    return type;
+            }
+        }
+
+        // Populate allowed users checkboxes
+        function populateAllowedUsers(selectedUserIds) {
+            allowedUsersContainer.innerHTML = '';
+
+            if (allUsers.length === 0) {
+                allowedUsersContainer.innerHTML = '<p>No users available</p>';
+                return;
             }
 
-            // Format backup type for display
-            function formatBackupType(type) {
-                switch(type) {
-                    case 'NONE': return 'None';
-                    case 'PRESERVE': return 'Preserve';
-                    case 'MIRROR': return 'Mirror';
-                    case 'DATE_SEPARATED': return 'Date Separated';
-                    case 'TWO_WAY_SYNC': return 'Two-Way Sync';
-                    default: return type;
-                }
-            }
+            allUsers.forEach(user => {
+                const isSelected = selectedUserIds.includes(user.id);
 
-            // Populate allowed users checkboxes
-            function populateAllowedUsers(selectedUserIds) {
-                allowedUsersContainer.innerHTML = '';
-
-                if (allUsers.length === 0) {
-                    allowedUsersContainer.innerHTML = '<p>No users available</p>';
-                    return;
-                }
-
-                allUsers.forEach(user => {
-                    const isSelected = selectedUserIds.includes(user.id);
-
-                    const div = document.createElement('div');
-                    div.className = 'checkbox-group';
-                    div.innerHTML = `
+                const div = document.createElement('div');
+                div.className = 'checkbox-group';
+                div.innerHTML = `
                         <label class="checkbox-label">
                             <input type="checkbox" name="allowedUser" value="${user.id}" ${isSelected ? 'checked' : ''}>
                             ${user.username} ${user.admin ? '(Admin)' : ''}
                         </label>
                     `;
 
-                    allowedUsersContainer.appendChild(div);
-                });
-            }
+                allowedUsersContainer.appendChild(div);
+            });
+        }
 
-            // Function to load folder data for editing
-            async function editFolder(folderName) {
-                try {
-                    const folder = await API.getBackupFolder(folderName);
+        // Function to load folder data for editing
+        async function editFolder(folderName) {
+            try {
+                const folder = await API.getBackupFolder(folderName);
 
-                    // Fill form with folder data
-                    folderForm.elements.originalName.value = folder.virtualName;
-                    folderForm.elements.virtualName.value = folder.virtualName;
-                    folderForm.elements.realPath.value = folder.realPath;
-                    folderForm.elements.backupType.value = folder.backupType;
+                // Fill form with folder data
+                folderForm.elements.originalName.value = folder.virtualName;
+                folderForm.elements.virtualName.value = folder.virtualName;
+                folderForm.elements.realPath.value = folder.realPath;
+                folderForm.elements.backupType.value = folder.backupType;
+                folderForm.elements.ignoreHidden.checked = folder.ignoreHiddenFiles || false;
+                folderForm.elements.ignoreSystem.checked = folder.ignoreSystemFiles || false;
 
-                    // Set allowed users
-                    populateAllowedUsers(folder.allowedUsers || []);
+                // Set ignore patterns
+                currentPatterns = folder.ignoredPatterns || [];
+                renderPatterns();
 
-                    // Set current folder name for form submission
-                    currentFolderName = folderName;
+                // Set allowed users
+                populateAllowedUsers(folder.allowedUsers || []);
 
-                    // Update modal title and open it
-                    folderModalTitle.textContent = 'Edit Backup Folder';
-                    Utils.openModal('folder-modal');
-
-                } catch (error) {
-                    Utils.showAlert('Error loading backup folder: ' + error.message, 'danger');
-                }
-            }
-
-            // Function to show delete confirmation
-            function showDeleteConfirmation(folderName) {
+                // Set current folder name for form submission
                 currentFolderName = folderName;
-                deleteFolderName.textContent = folderName;
-                Utils.openModal('delete-modal');
+
+                // Update modal title and open it
+                folderModalTitle.textContent = 'Edit Backup Folder';
+                Utils.openModal('folder-modal');
+
+            } catch (error) {
+                Utils.showAlert('Error loading backup folder: ' + error.message, 'danger');
             }
+        }
+
+        // Function to show delete confirmation
+        function showDeleteConfirmation(folderName) {
+            currentFolderName = folderName;
+            deleteFolderName.textContent = folderName;
+            Utils.openModal('delete-modal');
+        }
 
 
-            // Initialize page
-            Utils.initPage();
-        });
-    </script>
+        // Initialize page
+        Utils.initPage();
+    });
+</script>
 </body>
 </html>

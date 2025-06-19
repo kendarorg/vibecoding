@@ -36,7 +36,7 @@ const Utils = {
 
     // Initialize modals
     initModals() {
-        // Close modal when clicking outside of it
+        // Close modal when clicking outside it
         document.querySelectorAll('.modal').forEach(modal => {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
@@ -74,17 +74,17 @@ const Utils = {
         }
     },
 
-    // Check if user is authenticated, redirect if not
+    // Check if the user is authenticated, redirect if not
     checkAuth() {
         if (!API.isAuthenticated()) {
             window.location.href = '/login.html';
-            
+
             return false;
         }
         return true;
     },
 
-    // Check if user is admin, redirect if not
+    // Check if the user is admin, redirect if not
     checkAdmin() {
         if (!API.isAdmin()) {
             window.location.href = '/profile.html';
@@ -93,7 +93,7 @@ const Utils = {
         return true;
     },
 
-    // Update navigation based on user role
+    // Update navigation based on the user role
     updateNavigation() {
         const user = API.getCurrentUser();
         const adminNav = document.getElementsByClassName('admin-nav');
@@ -101,7 +101,7 @@ const Utils = {
         const usernameEl = document.getElementById('current-username');
 
         if (user) {
-            Array.prototype.forEach.call(adminNav, function(el) {
+            Array.prototype.forEach.call(adminNav, function (el) {
                 el.style.display = user.isAdmin ? 'block' : 'none';
             });
 
@@ -111,15 +111,15 @@ const Utils = {
             }
 
             // Show user nav
-            Array.prototype.forEach.call(userNav, function(el) {
-                el.style.display =  'block';
+            Array.prototype.forEach.call(userNav, function (el) {
+                el.style.display = 'block';
             });
         } else {
-            Array.prototype.forEach.call(adminNav, function(el) {
-                el.style.display =  'none';
+            Array.prototype.forEach.call(adminNav, function (el) {
+                el.style.display = 'none';
             });
-            Array.prototype.forEach.call(userNav, function(el) {
-                el.style.display =  'none';
+            Array.prototype.forEach.call(userNav, function (el) {
+                el.style.display = 'none';
             });
         }
     },

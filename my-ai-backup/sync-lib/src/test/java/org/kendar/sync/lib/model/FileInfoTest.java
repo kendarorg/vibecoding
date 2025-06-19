@@ -3,12 +3,13 @@ package org.kendar.sync.lib.model;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.kendar.sync.lib.utils.Attributes;
+import org.kendar.sync.lib.utils.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -48,12 +49,10 @@ class FileInfoTest {
         assertEquals(testFile.getAbsolutePath(), fileInfo.getPath());
         assertTrue(fileInfo.getRelativePath().endsWith("testDir/testFile.txt"));
         assertEquals(TEST_CONTENT.length(), fileInfo.getSize());
-        assertFalse(fileInfo.isDirectory());
-
-        // Get file attributes to verify timestamps
-        BasicFileAttributes attrs = Files.readAttributes(testFile.toPath(), BasicFileAttributes.class);
-        assertEquals(attrs.creationTime().toInstant(), fileInfo.getCreationTime());
-        assertEquals(attrs.lastModifiedTime().toInstant(), fileInfo.getModificationTime());
+        var attrs = FileUtils.readFileAttributes(testFile.toPath());
+        assertFalse(attrs.isDirectory());
+        assertEquals(attrs.getCreationTime(), fileInfo.getCreationTime());
+        assertEquals(attrs.getModificationTime(), fileInfo.getModificationTime());
     }
 
     @Test
@@ -64,7 +63,7 @@ class FileInfoTest {
         // Verify properties
         assertEquals(testDir.getAbsolutePath(), dirInfo.getPath());
         assertTrue(dirInfo.getRelativePath().endsWith("testDir"));
-        assertTrue(dirInfo.isDirectory());
+        assertTrue(Attributes.isDirectory(dirInfo.getExtendedUmask()));
     }
 
     @Test
@@ -91,7 +90,7 @@ class FileInfoTest {
                 fileInfo1.getSize(),
                 fileInfo1.getCreationTime(),
                 fileInfo1.getModificationTime(),
-                fileInfo1.isDirectory()
+                fileInfo1.getExtendedUmask()
         );
 
         // Create a third FileInfo with a different relative path
@@ -101,7 +100,7 @@ class FileInfoTest {
                 fileInfo1.getSize(),
                 fileInfo1.getCreationTime(),
                 fileInfo1.getModificationTime(),
-                fileInfo1.isDirectory()
+                fileInfo1.getExtendedUmask()
         );
 
         // Test equals
@@ -121,7 +120,7 @@ class FileInfoTest {
         long size = 100L;
         Instant creationTime = Instant.now().minusSeconds(3600);
         Instant modificationTime = Instant.now();
-        boolean isDirectory = false;
+        int isDirectory = 0000;
 
         FileInfo fileInfo = new FileInfo(path, relativePath, size, creationTime, modificationTime, isDirectory);
 
@@ -131,7 +130,7 @@ class FileInfoTest {
         assertEquals(size, fileInfo.getSize());
         assertEquals(creationTime, fileInfo.getCreationTime());
         assertEquals(modificationTime, fileInfo.getModificationTime());
-        assertEquals(isDirectory, fileInfo.isDirectory());
+        assertEquals(isDirectory, fileInfo.getExtendedUmask());
 
         // Test setters
         String newPath = "/new/path.txt";
@@ -139,21 +138,21 @@ class FileInfoTest {
         long newSize = 200L;
         Instant newCreationTime = Instant.now().minusSeconds(7200);
         Instant newModificationTime = Instant.now().plusSeconds(3600);
-        boolean newIsDirectory = true;
+        int newIsDirectory = 8000;
 
         fileInfo.setPath(newPath);
         fileInfo.setRelativePath(newRelativePath);
         fileInfo.setSize(newSize);
         fileInfo.setCreationTime(newCreationTime);
         fileInfo.setModificationTime(newModificationTime);
-        fileInfo.setDirectory(newIsDirectory);
+        fileInfo.setExtendedUmask(newIsDirectory);
 
         assertEquals(newPath, fileInfo.getPath());
         assertEquals(newRelativePath, fileInfo.getRelativePath());
         assertEquals(newSize, fileInfo.getSize());
         assertEquals(newCreationTime, fileInfo.getCreationTime());
         assertEquals(newModificationTime, fileInfo.getModificationTime());
-        assertEquals(newIsDirectory, fileInfo.isDirectory());
+        assertEquals(newIsDirectory, fileInfo.getExtendedUmask());
     }
 
     @Test

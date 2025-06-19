@@ -40,7 +40,17 @@ Backup client and server with Junie, spring-boot, binary tcp protocol and web-ui
 	* Second issue the return of mkdirs() when uploading the files is not usefule: many files can create it at once, and if the file exists false is returned
 * Will now leave to the AI the fix of Client tests (changed due to the new messages)
 * I tried to generate the ui, that was decent BUT there was an unsolvable (by AI) problem with the authentication that manage to solve in only one evening
+* I adapted manually a bit the parameters for the connection to merge remote and local settings. Doing it by AI caused major disruption to the whole architecture
 
+### my-ai-backup-app
+
+Time to start the client for android, i converted all the client and lib to java 11 and prepared a Java 11/API 34 Android application.
+After a loong time downloading virtual environments, sdks, gradles, any kind of stuffs, finally can start the development.
+* Took a while to define a -loooong- first prompt that is definitively the most important. A long while
+* The development was smooth. Even if the parameter names where often misaligned
+* Handling correctly the permissions was not easy to spot even with ui
+* The AI wanted retrofit but i was not able to find any way to let it work
+* Several methods were "left to the reader" and for most of them the AI was helpless
 
 ### my-ai-cms according to Claude
 

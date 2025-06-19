@@ -18,6 +18,8 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestUtils {
+    private static List<String> conflicts = new ArrayList<>();
+
     public static String getTestFolder(TestInfo testInfo) {
         if (testInfo != null && testInfo.getTestClass().isPresent() &&
                 testInfo.getTestMethod().isPresent()) {
@@ -41,23 +43,21 @@ public class TestUtils {
         }
     }
 
-    private static List<String> conflicts = new ArrayList<>();
-
     public static void assertDirectoriesEqual(Path dir1, Path dir2) throws IOException {
-        if(Files.exists(Path.of(dir1.toString(),".conflicts.log"))){
-            conflicts= Files.readAllLines(Path.of(dir1.toString(),".conflicts.log"));
+        if (Files.exists(Path.of(dir1.toString(), ".conflicts.log"))) {
+            conflicts = Files.readAllLines(Path.of(dir1.toString(), ".conflicts.log"));
         }
-        if(Files.exists(Path.of(dir2.toString(),".conflicts.log"))){
-            conflicts= Files.readAllLines(Path.of(dir2.toString(),".conflicts.log"));
+        if (Files.exists(Path.of(dir2.toString(), ".conflicts.log"))) {
+            conflicts = Files.readAllLines(Path.of(dir2.toString(), ".conflicts.log"));
         }
         var diffferent = new ArrayList<String>();
         if (!areDirectoriesEqual(dir1, dir2, diffferent)) {
-            for(var d:diffferent){
-                if(conflicts.contains(d)){
+            for (var d : diffferent) {
+                if (conflicts.contains(d)) {
                     conflicts.remove(d);
                 }
             }
-            if(!conflicts.isEmpty()){
+            if (!conflicts.isEmpty()) {
                 fail("Directories are not equal: " + dir1 + " and " + dir2);
             }
 
@@ -78,16 +78,16 @@ public class TestUtils {
         Set<Path> dir1Files = Files.walk(dir1)
                 .filter(p -> !Files.isDirectory(p))
                 .filter(p -> !p.getFileName().toString().startsWith("."))
-                .filter(p->!conflicts.contains(
-                        FileUtils.makeUniformPath(p.toString().replace(dir1.toString(),""))))
+                .filter(p -> !conflicts.contains(
+                        FileUtils.makeUniformPath(p.toString().replace(dir1.toString(), ""))))
                 .map(dir1::relativize)
                 .collect(Collectors.toSet());
 
         Set<Path> dir2Files = Files.walk(dir2)
                 .filter(p -> !Files.isDirectory(p))
                 .filter(p -> !p.getFileName().toString().startsWith("."))
-                .filter(p->!conflicts.contains(
-                        FileUtils.makeUniformPath(p.toString().replace(dir2.toString(),""))))
+                .filter(p -> !conflicts.contains(
+                        FileUtils.makeUniformPath(p.toString().replace(dir2.toString(), ""))))
                 .map(dir2::relativize)
                 .collect(Collectors.toSet());
 
@@ -102,9 +102,9 @@ public class TestUtils {
             Path file2 = dir2.resolve(relativePath);
             if (backupType == BackupType.DATE_SEPARATED) {
                 if (!Files.exists(file2)) {
-                    BasicFileAttributes attrs = Files.readAttributes(file1, BasicFileAttributes.class);
+                    var attrs = FileUtils.readFileAttributes(file1);
                     String date = new SimpleDateFormat("yyyy-MM-dd").
-                            format(new Date(attrs.creationTime().toMillis()));
+                            format(new Date(attrs.getCreationTime().toEpochMilli()));
                     file2 = dir2.resolve(Path.of(date, relativePath.toString()));
                 }
             }
@@ -126,10 +126,10 @@ public class TestUtils {
                 continue;
             }
             var dtf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
-            var attr1 = Files.readAttributes(file1, BasicFileAttributes.class);
-            var attr2 = Files.readAttributes(file2, BasicFileAttributes.class);
-            var lmt1 = dtf.format(new Date(attr1.lastModifiedTime().toInstant().getEpochSecond() * 1000));
-            var lmt2 = dtf.format(new Date(attr2.lastModifiedTime().toInstant().getEpochSecond() * 1000));
+            var attr1 = FileUtils.readFileAttributes(file1);
+            var attr2 = FileUtils.readFileAttributes(file2);
+            var lmt1 = dtf.format(new Date(attr1.getModificationTime().getEpochSecond() * 1000));
+            var lmt2 = dtf.format(new Date(attr2.getModificationTime().getEpochSecond() * 1000));
             if (!lmt1.equals(lmt2)) {
                 System.err.println("Different modification: " +
                         file1 + " " + lmt1 + " " +
@@ -137,8 +137,8 @@ public class TestUtils {
                 different.add(file1.toString());
                 continue;
             }
-            var lct1 = dtf.format(new Date(attr1.creationTime().toInstant().getEpochSecond() * 1000));
-            var lct2 = dtf.format(new Date(attr2.creationTime().toInstant().getEpochSecond() * 1000));
+            var lct1 = dtf.format(new Date(attr1.getCreationTime().getEpochSecond() * 1000));
+            var lct2 = dtf.format(new Date(attr2.getCreationTime().getEpochSecond() * 1000));
             if (!lct1.equals(lct2)) {
                 System.err.println("Different creation: " +
                         file1 + " " + lct1 + " " +
@@ -255,7 +255,7 @@ public class TestUtils {
      * @return The removed file
      * @throws IOException If an I/O error occurs
      */
-    public static File removeRandomFile(Path sourceDir,Path fromDir) throws IOException {
+    public static File removeRandomFile(Path sourceDir, Path fromDir) throws IOException {
 
         var allFiles = Files.walk(fromDir)
                 .filter(path -> !Files.isDirectory(path))
@@ -272,7 +272,7 @@ public class TestUtils {
         return fileToRemove;
     }
 
-    public static File touchRandomFile(Path sourceDir,Path fromDir) throws IOException {
+    public static File touchRandomFile(Path sourceDir, Path fromDir) throws IOException {
 
         var allFiles = Files.walk(fromDir)
                 .filter(path -> !Files.isDirectory(path))
@@ -283,7 +283,7 @@ public class TestUtils {
 
         // Remove a random file
         File fileToRemove = allFiles.get(rand).toFile();
-        Files.writeString(fileToRemove.toPath(),"CHANGED CONTENT " + UUID.randomUUID());
+        Files.writeString(fileToRemove.toPath(), "CHANGED CONTENT " + UUID.randomUUID());
         System.out.println("================= Changed file: " + getRelativePath(fileToRemove, sourceDir.toFile()));
 
         return fileToRemove;

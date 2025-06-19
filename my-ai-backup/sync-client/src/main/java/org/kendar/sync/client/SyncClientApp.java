@@ -28,7 +28,7 @@ public class SyncClientApp {
             printHelp();
             return;
         }
-        var hostname= getHostname();
+        var hostname = getHostname();
         var syncClient = new SyncClient();
         commandLineArgs.setHostName(hostname);
 
@@ -45,23 +45,23 @@ public class SyncClientApp {
             String inputLine;
             while ((inputLine = in.readLine()) != null) {
                 var trimmed = inputLine.trim().toUpperCase();
-                if(isValid(trimmed))continue;
+                if (isValid(trimmed)) continue;
                 hostnames.add(inputLine);
             }
             in.close();
-        }catch (Exception ex){
-
+        } catch (Exception ex) {
+            log.trace("[SERVER] error on `hostname` call", ex);
         }
-        try{
-            var hostname =  InetAddress.getLocalHost().getHostName()
+        try {
+            var hostname = InetAddress.getLocalHost().getHostName()
                     .trim().toUpperCase();
-            if(!isValid(hostname) && !hostnames.contains(hostname)){
+            if (!isValid(hostname) && !hostnames.contains(hostname)) {
                 hostnames.add(hostname);
             }
-        }catch (Exception ex){
-
+        } catch (Exception ex) {
+            log.trace("[SERVER] error on getHostname", ex);
         }
-        if(hostnames.isEmpty()) {
+        if (hostnames.isEmpty()) {
             hostnames.add("localhost");
         }
         return hostnames.get(0);
@@ -119,6 +119,12 @@ public class SyncClientApp {
                 case "-b":
                     commandLineArgs.setBackup(true);
                     break;
+                case "--ignore-hidden":
+                    commandLineArgs.setIgnoreHiddenFiles(true);
+                    break;
+                case "--ignore-system":
+                    commandLineArgs.setIgnoreSystemFiles(true);
+                    break;
                 case "--restore":
                 case "-r":
                     commandLineArgs.setBackup(false);
@@ -154,6 +160,12 @@ public class SyncClientApp {
                 case "-d":
                     commandLineArgs.setDryRun(true);
                     break;
+                case "--ignore-pattern":
+                case "-ip":
+                    if (i + 1 < args.length) {
+                        commandLineArgs.getIgnoredPatterns().add(args[++i]);
+                    }
+                    break;
                 case "--type":
                     if (i + 1 < args.length) {
                         String typeArg = args[++i].toUpperCase();
@@ -177,18 +189,23 @@ public class SyncClientApp {
     private static void printHelp() {
         System.out.println("Usage: java -jar sync-client.jar [options]");
         System.out.println("Options:");
-        System.out.println("  --help, -h                  Show this help message");
-        System.out.println("  --source, -s <folder>       Source folder");
-        System.out.println("  --target, -t <folder>       Target folder (virtual folder on server)");
-        System.out.println("  --backup, -b                Perform backup (default)");
-        System.out.println("  --restore, -r               Perform restore");
-        System.out.println("  --conn, -c                  Max connections");
-        System.out.println("  --size, -z                  Max packet size in bytes");
-        System.out.println("  --server <address>          Server address");
-        System.out.println("  --port, -p <port>           Server port (default: 8090)");
-        System.out.println("  --username, -u <username>   Username for authentication");
-        System.out.println("  --password, -pw <password>  Password for authentication");
-        System.out.println("  --dry-run, -d               Perform a dry run (no actual file operations)");
+        System.out.println("  --help, -h                      Show this help message");
+        System.out.println("  --source, -s <folder>           Source folder");
+        System.out.println("  --target, -t <folder>           Target folder (virtual folder on server)");
+        System.out.println("  --backup, -b                    Perform backup (default)");
+        System.out.println("  --restore, -r                   Perform restore");
+        System.out.println("  --conn, -c                      Max connections");
+        System.out.println("  --size, -z                      Max packet size in bytes");
+        System.out.println("  --server <address>              Server address");
+        System.out.println("  --port, -p <port>               Server port (default: 8090)");
+        System.out.println("  --username, -u <username>       Username for authentication");
+        System.out.println("  --password, -pw <password>      Password for authentication");
+        System.out.println("  --dry-run, -d                   Perform a dry run (no actual file operations)");
+        System.out.println("  --ignore-hidden                 Ignore hidden files");
+        System.out.println("  --ignore-system                 Ignore system files (e.g., .DS_Store)");
+        System.out.println("  --ignore-pattern, -ip <pattern> Ignore pattern (multiple)");
+        System.out.println("                                  * Java regex @pattern");
+        System.out.println("                                  * Contains pattern");
         System.out.println("  --type <type>               Backup type: PRESERVE, MIRROR, DATE_SEPARATED (default: PRESERVE)");
     }
 

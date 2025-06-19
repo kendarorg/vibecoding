@@ -2,189 +2,196 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>My Profile - Sync Server</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <link href="css/styles.css" rel="stylesheet">
 </head>
 <body>
-    <header>
-        <div class="header-container">
-            <div class="logo">Sync Server</div>
-            <nav>
-                <ul>
-                    <li class="admin-nav"><a href="users.html">Users</a></li>
-                    <li class="admin-nav"><a href="folders.html">Backup Folders</a></li>
-                    <li><a href="login.html?action=logout" id="logout-btn">Logout</a></li>
-                    <li>Welcome, <span id="current-username">User</span></li>
-                </ul>
-            </nav>
-        </div>
-    </header>
+<header>
+    <div class="header-container">
+        <div class="logo">Sync Server</div>
+        <nav>
+            <ul>
+                <li class="admin-nav"><a href="users.html">Users</a></li>
+                <li class="admin-nav"><a href="folders.html">Backup Folders</a></li>
+                <li><a href="login.html?action=logout" id="logout-btn">Logout</a></li>
+                <li>Welcome, <span id="current-username">User</span></li>
+            </ul>
+        </nav>
+    </div>
+</header>
 
 
-    <div class="container">
-        <div class="card">
-            <h2 class="card-title">My Profile</h2>
+<div class="container">
+    <div class="card">
+        <h2 class="card-title">My Profile</h2>
 
-            <div id="alert-container"></div>
+        <div id="alert-container"></div>
 
-            <form id="profile-form">
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" name="username" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="password">New Password (leave blank to keep current)</label>
-                    <input type="password" id="password" name="password">
-                </div>
-
-                <div class="form-group">
-                    <button type="submit" class="btn">Update Profile</button>
-                </div>
-            </form>
-        </div>
-
-        <div class="card mt-20" id="accessible-folders-card">
-            <h2 class="card-title">Accessible Backup Folders</h2>
-
-            <div class="table-container">
-                <table id="folders-table">
-                    <thead>
-                        <tr>
-                            <th>Virtual Name</th>
-                            <th>Real Path</th>
-                            <th>Backup Type</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Folder rows will be inserted here -->
-                    </tbody>
-                </table>
+        <form id="profile-form">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input id="username" name="username" required type="text">
             </div>
-        </div>
+
+            <div class="form-group">
+                <label for="password">New Password (leave blank to keep current)</label>
+                <input id="password" name="password" type="password">
+            </div>
+
+            <div class="form-group">
+                <button class="btn" type="submit">Update Profile</button>
+            </div>
+        </form>
     </div>
 
-    <script src="js/api.js"></script>
-    <script src="js/utils.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Check if user is authenticated
-            if (!Utils.checkAuth()) return;
+    <div class="card mt-20" id="accessible-folders-card">
+        <h2 class="card-title">Accessible Backup Folders</h2>
+
+        <div class="table-container">
+            <table id="folders-table">
+                <thead>
+                <tr>
+                    <th>Virtual Name</th>
+                    <th>Real Path</th>
+                    <th>Backup Type</th>
+                </tr>
+                </thead>
+                <tbody>
+                <!-- Folder rows will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/utils.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Check if the user is authenticated
+        if (!Utils.checkAuth()) return;
 
 
-            // Get elements
-            const profileForm = document.getElementById('profile-form');
-            const foldersTable = document.getElementById('folders-table').querySelector('tbody');
+        // Get elements
+        const profileForm = document.getElementById('profile-form');
+        const foldersTable = document.getElementById('folders-table').querySelector('tbody');
 
-            // Get current user
-            const currentUser = API.getCurrentUser();
-            if (!currentUser) {
-                Utils.showAlert('Error loading user profile', 'danger');
+        // Get current user
+        const currentUser = API.getCurrentUser();
+        if (!currentUser) {
+            Utils.showAlert('Error loading user profile', 'danger');
+            return;
+        }
+
+        // Load user data
+        await loadUserProfile();
+        await loadAccessibleFolders();
+
+        // Handle profile form submission
+        Utils.handleFormSubmit(profileForm, async (form) => {
+            const formData = Utils.formToObject(form);
+
+            // Prepare user data
+            const userData = {
+                username: formData.username,
+                password: formData.password || null,  // Don't update if empty
+                admin: currentUser.isAdmin  // Preserve admin status
+            };
+
+            // Remove null/empty password to avoid changing it
+            if (!userData.password) {
+                delete userData.password;
+            }
+
+            // Update user profile
+            await API.updateUser(currentUser.userId, userData);
+
+            // Update local storage with the new username if changed
+            if (userData.username !== currentUser.username) {
+                const updatedUser = {
+                    ...currentUser,
+                    username: userData.username
+                };
+            }
+
+            Utils.showAlert('Profile updated successfully');
+        });
+
+        // Function to load user profile
+        async function loadUserProfile() {
+            try {
+                const user = await API.getUser(currentUser.userId);
+
+                // Fill the form with user data
+                profileForm.elements.username.value = user.username;
+            } catch (error) {
+                Utils.showAlert('Error loading profile: ' + error.message, 'danger');
+            }
+        }
+
+        // Function to load accessible folders
+        async function loadAccessibleFolders() {
+            try {
+                // For admin users, load all folders
+                const folders = await API.getBackupFolders();
+
+                // Filter folders for regular users
+                const accessibleFolders = currentUser.isAdmin
+                    ? folders
+                    : folders.filter(folder => folder.allowedUsers.includes(currentUser.userId));
+
+                renderFolders(accessibleFolders);
+            } catch (error) {
+                Utils.showAlert('Error loading folders: ' + error.message, 'danger');
+            }
+        }
+
+        // Function to render folders in the table
+        function renderFolders(folders) {
+            foldersTable.innerHTML = '';
+
+            if (folders.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="3" class="text-center">No accessible backup folders</td>';
+                foldersTable.appendChild(row);
                 return;
             }
 
-            // Load user data
-            await loadUserProfile();
-            await loadAccessibleFolders();
+            folders.forEach(folder => {
+                const row = document.createElement('tr');
 
-            // Handle profile form submission
-            Utils.handleFormSubmit(profileForm, async (form) => {
-                const formData = Utils.formToObject(form);
-
-                // Prepare user data
-                const userData = {
-                    username: formData.username,
-                    password: formData.password || null,  // Don't update if empty
-                    admin: currentUser.isAdmin  // Preserve admin status
-                };
-
-                // Remove null/empty password to avoid changing it
-                if (!userData.password) {
-                    delete userData.password;
-                }
-
-                // Update user profile
-                await API.updateUser(currentUser.userId, userData);
-
-                // Update local storage with new username if changed
-                if (userData.username !== currentUser.username) {
-                    const updatedUser = {
-                        ...currentUser,
-                        username: userData.username
-                    };
-                }
-
-                Utils.showAlert('Profile updated successfully');
-            });
-
-            // Function to load user profile
-            async function loadUserProfile() {
-                try {
-                    const user = await API.getUser(currentUser.userId);
-
-                    // Fill form with user data
-                    profileForm.elements.username.value = user.username;
-                } catch (error) {
-                    Utils.showAlert('Error loading profile: ' + error.message, 'danger');
-                }
-            }
-
-            // Function to load accessible folders
-            async function loadAccessibleFolders() {
-                try {
-                    // For admin users, load all folders
-                    const folders = await API.getBackupFolders();
-
-                    // Filter folders for regular users
-                    const accessibleFolders = currentUser.isAdmin
-                        ? folders
-                        : folders.filter(folder => folder.allowedUsers.includes(currentUser.userId));
-
-                    renderFolders(accessibleFolders);
-                } catch (error) {
-                    Utils.showAlert('Error loading folders: ' + error.message, 'danger');
-                }
-            }
-
-            // Function to render folders in the table
-            function renderFolders(folders) {
-                foldersTable.innerHTML = '';
-
-                if (folders.length === 0) {
-                    const row = document.createElement('tr');
-                    row.innerHTML = '<td colspan="3" class="text-center">No accessible backup folders</td>';
-                    foldersTable.appendChild(row);
-                    return;
-                }
-
-                folders.forEach(folder => {
-                    const row = document.createElement('tr');
-
-                    row.innerHTML = `
+                row.innerHTML = `
                         <td>${folder.virtualName}</td>
                         <td>${folder.realPath}</td>
                         <td>${formatBackupType(folder.backupType)}</td>
                     `;
 
-                    foldersTable.appendChild(row);
-                });
-            }
+                foldersTable.appendChild(row);
+            });
+        }
 
-            // Format backup type for display
-            function formatBackupType(type) {
-                switch(type) {
-                    case 'NONE': return 'None';
-                    case 'PRESERVE': return 'Preserve';
-                    case 'MIRROR': return 'Mirror';
-                    case 'DATE_SEPARATED': return 'Date Separated';
-                    case 'TWO_WAY_SYNC': return 'Two-Way Sync';
-                    default: return type;
-                }
+        // Format backup type for display
+        function formatBackupType(type) {
+            switch (type) {
+                case 'NONE':
+                    return 'None';
+                case 'PRESERVE':
+                    return 'Preserve';
+                case 'MIRROR':
+                    return 'Mirror';
+                case 'DATE_SEPARATED':
+                    return 'Date Separated';
+                case 'TWO_WAY_SYNC':
+                    return 'Two-Way Sync';
+                default:
+                    return type;
             }
-            // Initialize page
-            Utils.initPage();
-        });
-    </script>
+        }
+
+        // Initialize page
+        Utils.initPage();
+    });
+</script>
 </body>
 </html>

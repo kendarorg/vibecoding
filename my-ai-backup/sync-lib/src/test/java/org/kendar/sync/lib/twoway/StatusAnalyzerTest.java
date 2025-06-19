@@ -16,13 +16,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class StatusAnalyzerTest {
 
+    private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     @TempDir
     Path tempDir;
-
     private StatusAnalyzer statusAnalyzer;
     private Path testFile;
     private Path testFile2;
-    private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @BeforeEach
     void setUp() throws IOException {

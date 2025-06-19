@@ -93,7 +93,8 @@ public class DateSeparatedBackupHandlerTest {
     void testHandleFileDescriptor() throws IOException {
         // Create a file descriptor message for a regular file
         Instant modificationTime = Instant.now();
-        FileInfo fileInfo = new FileInfo("test.txt", "test.txt", 100, modificationTime, modificationTime, false);
+        FileInfo fileInfo = new FileInfo("test.txt", "test.txt", 100,
+                modificationTime, modificationTime, 0x7);
         FileDescriptorMessage message = new FileDescriptorMessage(fileInfo);
 
         // Call the method
@@ -111,7 +112,8 @@ public class DateSeparatedBackupHandlerTest {
     @Test
     void testHandleFileDescriptorForDirectory() throws IOException {
         // Create a file descriptor message for a directory
-        FileInfo fileInfo = new FileInfo("testdir", "testdir", 0, Instant.now(), Instant.now(), true);
+        FileInfo fileInfo = new FileInfo("testdir", "testdir", 0,
+                Instant.now(), Instant.now(), 0x8007);
         FileDescriptorMessage message = new FileDescriptorMessage(fileInfo);
 
         // Call the method
@@ -132,7 +134,8 @@ public class DateSeparatedBackupHandlerTest {
         byte[] data = "test data".getBytes();
         FileDataMessage message = new FileDataMessage("test.txt", 0, 1, data);
 
-        FileInfo fileInfo = new FileInfo("test.txt", "test.txt", 0, Instant.now(), Instant.now(), true);
+        FileInfo fileInfo = new FileInfo("test.txt", "test.txt", 0,
+                Instant.now(), Instant.now(), 0x8007);
         handler.getFilesOnClient().put(fileInfo.getRelativePath(), fileInfo);
         // Call the method
         handler.handleFileData(mockConnection, mockSession, message);
@@ -151,7 +154,8 @@ public class DateSeparatedBackupHandlerTest {
         // Create a file end message
         FileEndMessage message = new FileEndMessage("test.txt");
 
-        FileInfo fileInfo = new FileInfo("test.txt", "test.txt", 0, Instant.now(), Instant.now(), true);
+        FileInfo fileInfo = new FileInfo("test.txt", "test.txt", 0,
+                Instant.now(), Instant.now(), 0x8007);
         message.setFileInfo(fileInfo);
 
         String dateDir = new java.text.SimpleDateFormat("yyyy-MM-dd").format(

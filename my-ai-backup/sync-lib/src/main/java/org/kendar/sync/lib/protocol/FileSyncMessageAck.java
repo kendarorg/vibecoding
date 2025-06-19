@@ -20,7 +20,6 @@ public class FileSyncMessageAck extends Message {
     /**
      * Creates a new file end acknowledgment message.
      *
-     * @param relativePath The relative path of the file
      * @param success      Whether the file was successfully received
      * @param errorMessage Error message if the file was not successfully received
      */
@@ -35,7 +34,7 @@ public class FileSyncMessageAck extends Message {
      * @return A new file end acknowledgment message
      */
     public static FileSyncMessageAck success() {
-        return new FileSyncMessageAck( true, null);
+        return new FileSyncMessageAck(true, null);
     }
 
     /**
@@ -44,8 +43,8 @@ public class FileSyncMessageAck extends Message {
      * @param errorMessage The reason for the failure
      * @return A new file end acknowledgment message
      */
-    public static FileSyncMessageAck failure( String errorMessage) {
-        return new FileSyncMessageAck( false, errorMessage);
+    public static FileSyncMessageAck failure(String errorMessage) {
+        return new FileSyncMessageAck(false, errorMessage);
     }
 
 

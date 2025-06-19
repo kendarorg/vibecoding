@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -28,9 +29,9 @@ public class Server {
     private final Map<BackupType, BackupHandler> backupHandlers = new HashMap<>();
     private final boolean dryRun;
     private final ServerConfig serverConfig;
+    private final SessionMonitor sessionMonitor;
     private boolean running = true;
     private ServerSocket mainSocket;
-    private final SessionMonitor sessionMonitor;
 
     public Server(ServerConfig serverConfig, boolean dryRun) {
         this.serverConfig = serverConfig;
@@ -42,7 +43,7 @@ public class Server {
         backupHandlers.put(BackupType.DATE_SEPARATED, new DateSeparatedBackupHandler());
         backupHandlers.put(BackupType.TWO_WAY_SYNC, new SyncBackupHandler());
 
-        // Initialize session monitor to check for hung sessions every 10 seconds
+        // Initialize the session monitor to check for hung sessions every 10 seconds
         this.sessionMonitor = new SessionMonitor(sessions, 10);
     }
 
@@ -69,7 +70,7 @@ public class Server {
                         // Handle client connection in a separate thread
                         executorService.submit(() -> handleClient(clientSocket, settings));
                     } catch (IOException e) {
-                        //TODO log.error("[SERVER] Error accepting client connection: " + e.getMessage());
+                        log.trace("[SERVER] Error accepting client connection: {}", e.getMessage());
                     }
                 }
             }
@@ -108,7 +109,7 @@ public class Server {
                 var session = sessions.get(message.getSessionId());
                 connection.setSessionId(message.getSessionId());
                 connection.setConnectionId(message.getConnectionId());
-                connection.setSession(()->session.touch());
+                connection.setSession(session::touch);
                 session.setConnection(connection);
                 connection.sendMessage(new StartRestoreAck());
                 return;
@@ -119,8 +120,8 @@ public class Server {
                         if (message == null) return;
                         connection.setSessionId(message.getSessionId());
                         connection.setConnectionId(message.getConnectionId());
-                        var sess= session;
-                        connection.setSession(()->sess.touch());
+                        var sess = session;
+                        connection.setSession(sess::touch);
                         session.setConnection(connection);
                         log.debug("[SERVER-{}] Receiving header {}", connection.getConnectionId(),
                                 ((FileDescriptorMessage) message).getFileInfo().getRelativePath());
@@ -133,7 +134,7 @@ public class Server {
                             handleFileData(connection, session, (FileDataMessage) message);
                             message = connection.receiveMessage();
                         }
-                        if(message.getMessageType()!=MessageType.FILE_END){
+                        if (message.getMessageType() != MessageType.FILE_END) {
                             log.error("[SERVER] Unexpected message 1: {}", message.getMessageType());
                             return;
                         }
@@ -184,6 +185,14 @@ public class Server {
 
             var folder = folderOpt.get();
 
+            var ignoreHiddenFiles = connectMessage.isIgnoreHiddenFiles();
+            if(folder.isIgnoreHiddenFiles())ignoreHiddenFiles = true;
+            var ignoreSystemFiles = connectMessage.isIgnoreSystemFiles();
+            if(folder.isIgnoreSystemFiles())ignoreSystemFiles = true;
+            var ignoredPatterns = new HashSet<String>();
+            ignoredPatterns.addAll(folder.getIgnoredPatterns());
+            ignoredPatterns.addAll(connectMessage.getIgnoredPatterns());
+
             // Create session
             ClientSession session = new ClientSession(
                     sessionId,
@@ -194,19 +203,23 @@ public class Server {
                     TIMEOUT_SECONDS
             );
             sessions.put(sessionId, session);
+            session.setIgnoreHiddenFiles(ignoreHiddenFiles);
+            session.setIgnoreSystemFiles(ignoreSystemFiles);
+            session.setIgnoredPatterns(ignoredPatterns);
             session.setMainConnection(connection);
 
             // Set the session in the connection and touch it
-            connection.setSession(()->session.touch());
+            connection.setSession(session::touch);
 
             // Send connect response
             connection.sendMessage(new ConnectResponseMessage(true, null, settings.getMaxPacketSize(),
-                    settings.getMaxConnections(), session.getBackupType()));
+                    settings.getMaxConnections(), session.getBackupType(),
+                    ignoreSystemFiles, ignoreHiddenFiles,ignoredPatterns.stream().toList()));
 
             // Handle messages
             while (true) {
                 message = connection.receiveMessage();
-                if(message==null){
+                if (message == null) {
                     break;
                 }
                 switch (message.getMessageType()) {
@@ -228,7 +241,7 @@ public class Server {
                 }
             }
         } catch (IOException e) {
-            //TODO log.error("[SERVER] Error handling client: " + e.getMessage());
+            log.trace("[SERVER] Error handling client: {}", e.getMessage());
             try {
                 clientSocket.close();
             } catch (IOException ex) {

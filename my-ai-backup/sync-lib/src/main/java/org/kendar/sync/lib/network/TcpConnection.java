@@ -43,9 +43,11 @@ public class TcpConnection implements AutoCloseable {
         this.maxPacketSize = maxPacketSize;
     }
 
+
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof TcpConnection that)) return false;
+        if (!(o instanceof TcpConnection)) return false;
+        TcpConnection that = (TcpConnection) o;
         return Objects.equals(socket, that.socket);
     }
 
@@ -79,7 +81,7 @@ public class TcpConnection implements AutoCloseable {
 
         // Touch the session to indicate activity
         if (sessionTouch != null) {
-            sessionTouch.run(); // 30 second timeout
+            sessionTouch.run(); // 30-second timeout
         }
     }
 
@@ -92,7 +94,7 @@ public class TcpConnection implements AutoCloseable {
     public Message receiveMessage() throws IOException {
         // Touch the session before reading to indicate activity
         if (sessionTouch != null) {
-            sessionTouch.run(); // 30 second timeout
+            sessionTouch.run(); // 30-second timeout
         }
 
         // Read the packet length

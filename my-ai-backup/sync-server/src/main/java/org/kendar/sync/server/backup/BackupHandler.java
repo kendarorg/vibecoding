@@ -3,6 +3,8 @@ package org.kendar.sync.server.backup;
 import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
+import org.kendar.sync.lib.utils.Attributes;
+import org.kendar.sync.lib.utils.FileUtils;
 import org.kendar.sync.server.server.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +14,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
@@ -33,7 +34,7 @@ public abstract class BackupHandler {
      * @param message    The file list message
      * @throws IOException If an I/O error occurs
      */
-    public void handleFileList(TcpConnection connection, ClientSession session, FileListMessage message) throws IOException{
+    public void handleFileList(TcpConnection connection, ClientSession session, FileListMessage message) throws IOException {
         throw new RuntimeException("Invalid operation for this handler type. This handler does not support file sync operations.");
     }
 
@@ -106,12 +107,12 @@ public abstract class BackupHandler {
                 new LinkedBlockingQueue<>());
 
         var onlyFilesToTransfer = filesToSend.stream()
-                .filter(f -> !f.isDirectory())
+                .filter(f -> !Attributes.isDirectory(f.getExtendedUmask()))
                 .collect(Collectors.toMap(FileInfo::getRelativePath, f -> f));
         CountDownLatch completionLatch = new CountDownLatch(onlyFilesToTransfer.size());
 
         for (var file : filesToSend) {
-            if (file.isDirectory()) {
+            if (Attributes.isDirectory(file.getExtendedUmask())) {
                 continue;
             }
             executorService.submit(() -> transferFile(connections, session, file, completionLatch));
@@ -158,7 +159,7 @@ public abstract class BackupHandler {
                 return;
             }
 
-            if (file.isDirectory()) {
+            if (Attributes.isDirectory(file.getExtendedUmask())) {
                 log.debug("[SERVER] Created directory: {}", file.getRelativePath());
                 return;
             }
@@ -237,6 +238,24 @@ public abstract class BackupHandler {
         }
     }
 
+    protected static boolean shouldIgnoreFileByAttrAndPattern(ClientSession session, Path file, Attributes attr) {
+        if(attr.isSymbolicLink()){
+            return true;
+        }
+        if(file.toFile().isHidden() && session.isIgnoreHiddenFiles()){
+            return true;
+        }
+        if(file.getFileName().toString().startsWith(".") &&
+                session.isIgnoreSystemFiles()){
+            return true;
+        }
+        if(session.getIgnoredPatterns().stream()
+                .anyMatch(pattern -> FileUtils.matches(file.toString(),pattern))){
+            return true;
+        }
+        return false;
+    }
+
     protected List<Path> listAllFiles(Path sourcePath) throws IOException {
         if (!Files.exists(sourcePath) || !Files.isDirectory(sourcePath)) {
             return new ArrayList<>();
@@ -258,11 +277,11 @@ public abstract class BackupHandler {
         }
     }
 
-    protected boolean shouldUpdate(FileInfo fileInfo, Path file, BasicFileAttributes attr) {
+    protected boolean shouldUpdate(FileInfo fileInfo, Path file, Attributes attr) {
         if (fileInfo == null) return false;
-        if (fileInfo.getModificationTime().isAfter(attr.lastModifiedTime().toInstant())) return false;
-        if (fileInfo.getCreationTime().isAfter(attr.creationTime().toInstant())) return false;
-        return fileInfo.getSize() == attr.size();
+        if (fileInfo.getModificationTime().isAfter(attr.getModificationTime())) return false;
+        if (fileInfo.getCreationTime().isAfter(attr.getCreationTime())) return false;
+        return fileInfo.getSize() == attr.getSize();
     }
 
     public void handleFileSync(TcpConnection connection, ClientSession session, FileSyncMessage message) {

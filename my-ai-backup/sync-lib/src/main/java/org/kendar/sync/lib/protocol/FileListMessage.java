@@ -5,6 +5,7 @@ import org.kendar.sync.lib.model.FileInfo;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Message sent by the client to the server with a list of files in the source directory.
@@ -64,7 +65,7 @@ public class FileListMessage extends Message {
     protected void serialize(ByteContainer buffer) {
         var filesLines = files.stream()
                 .map(FileInfo::toLine)
-                .toList();
+                .collect(Collectors.toList());
         buffer.writeType(String.join("\n", filesLines));
         buffer.writeType(isBackup);
         buffer.writeType(partNumber);
