@@ -102,9 +102,9 @@ public class TestUtils {
             Path file2 = dir2.resolve(relativePath);
             if (backupType == BackupType.DATE_SEPARATED) {
                 if (!Files.exists(file2)) {
-                    BasicFileAttributes attrs = Files.readAttributes(file1, BasicFileAttributes.class);
+                    var attrs = FileUtils.readFileAttributes(file1);
                     String date = new SimpleDateFormat("yyyy-MM-dd").
-                            format(new Date(attrs.creationTime().toMillis()));
+                            format(new Date(attrs.getCreationTime().toEpochMilli()));
                     file2 = dir2.resolve(Path.of(date, relativePath.toString()));
                 }
             }
@@ -126,10 +126,10 @@ public class TestUtils {
                 continue;
             }
             var dtf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
-            var attr1 = Files.readAttributes(file1, BasicFileAttributes.class);
-            var attr2 = Files.readAttributes(file2, BasicFileAttributes.class);
-            var lmt1 = dtf.format(new Date(attr1.lastModifiedTime().toInstant().getEpochSecond() * 1000));
-            var lmt2 = dtf.format(new Date(attr2.lastModifiedTime().toInstant().getEpochSecond() * 1000));
+            var attr1 = FileUtils.readFileAttributes(file1);
+            var attr2 = FileUtils.readFileAttributes(file2);
+            var lmt1 = dtf.format(new Date(attr1.getModificationTime().getEpochSecond() * 1000));
+            var lmt2 = dtf.format(new Date(attr2.getModificationTime().getEpochSecond() * 1000));
             if (!lmt1.equals(lmt2)) {
                 System.err.println("Different modification: " +
                         file1 + " " + lmt1 + " " +
@@ -137,8 +137,8 @@ public class TestUtils {
                 different.add(file1.toString());
                 continue;
             }
-            var lct1 = dtf.format(new Date(attr1.creationTime().toInstant().getEpochSecond() * 1000));
-            var lct2 = dtf.format(new Date(attr2.creationTime().toInstant().getEpochSecond() * 1000));
+            var lct1 = dtf.format(new Date(attr1.getCreationTime().getEpochSecond() * 1000));
+            var lct2 = dtf.format(new Date(attr2.getCreationTime().getEpochSecond() * 1000));
             if (!lct1.equals(lct2)) {
                 System.err.println("Different creation: " +
                         file1 + " " + lct1 + " " +

@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.kendar.sync</groupId>
         <artifactId>my-ai-backup</artifactId>
-        <version>${revision}</version>
+        <version>1.0.1</version>
     </parent>
 
     <artifactId>sync-server</artifactId>
@@ -22,7 +22,7 @@
         <dependency>
             <groupId>org.kendar.sync</groupId>
             <artifactId>sync-lib</artifactId>
-            <version>${project.version}</version>
+            <version>1.0.1</version>
         </dependency>
 
         <!-- Spring Boot for REST API -->
@@ -130,4 +130,25 @@
             </plugin>
         </plugins>
     </build>
+
+    <developers>
+        <developer>
+            <id>kendarorg</id>
+            <name>Enrico Da Ros</name>
+            <email>github@kendar.org</email>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/kendarorg/vibecoding.git</connection>
+        <developerConnection>scm:git:git://github.com/kendarorg/vibecoding.git</developerConnection>
+        <url>https://github.com/kendarorg/vibecoding</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <name>My-Ai-Backup server</name>
+    <description>
+        My-Ai-Backup server application that provides REST API for managing backups and synchronization.
+    </description>
+    <url>https://www.github.com/kendarorg/vibecoding</url>
 </project>

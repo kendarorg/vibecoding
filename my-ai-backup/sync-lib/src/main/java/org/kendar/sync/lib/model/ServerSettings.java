@@ -247,6 +247,33 @@ public class ServerSettings {
         private String realPath;
         private BackupType backupType;
         private List<String> allowedUsers;
+        private boolean ignoreSystemFiles = true;
+        private boolean ignoreHiddenFiles = true;
+        private List<String> ignoredPatterns = new ArrayList<>();
+
+        public boolean isIgnoreSystemFiles() {
+            return ignoreSystemFiles;
+        }
+
+        public void setIgnoreSystemFiles(boolean ignoreSystemFiles) {
+            this.ignoreSystemFiles = ignoreSystemFiles;
+        }
+
+        public boolean isIgnoreHiddenFiles() {
+            return ignoreHiddenFiles;
+        }
+
+        public void setIgnoreHiddenFiles(boolean ignoreHiddenFiles) {
+            this.ignoreHiddenFiles = ignoreHiddenFiles;
+        }
+
+        public List<String> getIgnoredPatterns() {
+            return ignoredPatterns;
+        }
+
+        public void setIgnoredPatterns(List<String> ignoredPatterns) {
+            this.ignoredPatterns = ignoredPatterns;
+        }
 
         // Default constructor for Jackson
         public BackupFolder() {
@@ -261,11 +288,15 @@ public class ServerSettings {
          * @param backupType   The type of backup
          * @param allowedUsers The list of user IDs allowed to access the folder
          */
-        public BackupFolder(String virtualName, String realPath, BackupType backupType, List<String> allowedUsers) {
+        public BackupFolder(String virtualName, String realPath, BackupType backupType, List<String> allowedUsers,
+                            boolean ignoreSystemFiles, boolean ignoreHiddenFiles, List<String> ignoredPatterns) {
             this.virtualName = virtualName;
             this.realPath = realPath;
             this.backupType = backupType;
             this.allowedUsers = allowedUsers;
+            this.ignoreSystemFiles = ignoreSystemFiles;
+            this.ignoreHiddenFiles = ignoreHiddenFiles;
+            this.ignoredPatterns = ignoredPatterns;
         }
 
         // Getters and setters

@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.kendar.sync</groupId>
         <artifactId>my-ai-backup</artifactId>
-        <version>${revision}</version>
+        <version>1.0.1</version>
     </parent>
 
 
@@ -18,16 +18,19 @@
     </properties>
 
     <artifactId>sync-lib</artifactId>
+    <version>1.0.1</version>
 
     <dependencies>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
             <version>${jackson.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
@@ -50,18 +53,19 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-core</artifactId>
             <version>${logback.version}</version>
-            <scope>runtime</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>${logback.version}</version>
-            <scope>runtime</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>${sl4j.version}</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
     <build>
@@ -79,4 +83,25 @@
             </plugins>
         </pluginManagement>
     </build>
+
+    <developers>
+        <developer>
+            <id>kendarorg</id>
+            <name>Enrico Da Ros</name>
+            <email>github@kendar.org</email>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/kendarorg/vibecoding.git</connection>
+        <developerConnection>scm:git:git://github.com/kendarorg/vibecoding.git</developerConnection>
+        <url>https://github.com/kendarorg/vibecoding</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <name>My-Ai-Backup libraries</name>
+    <description>
+        My-Ai-Backup libraries
+    </description>
+    <url>https://www.github.com/kendarorg/vibecoding</url>
 </project>

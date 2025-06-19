@@ -2,6 +2,7 @@ package org.kendar.sync.lib.protocol;
 
 import org.junit.jupiter.api.Test;
 import org.kendar.sync.lib.model.FileInfo;
+import org.kendar.sync.lib.utils.Attributes;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -28,7 +29,10 @@ class ProtocolMessagesTest {
                 1024 * 1024,
                 5,
                 false,
-                "test-hostname"
+                "test-hostname",
+                true,
+                true,
+                List.of()
         );
 
         // Serialize the message
@@ -56,7 +60,10 @@ class ProtocolMessagesTest {
                 null,
                 1024 * 1024,
                 5,
-                BackupType.NONE
+                BackupType.NONE,
+                true,
+                true,
+                List.of()
         );
 
         // Serialize the message
@@ -79,7 +86,10 @@ class ProtocolMessagesTest {
                 "Authentication failed",
                 1024 * 1024,
                 5,
-                BackupType.NONE
+                BackupType.NONE,
+                true,
+                true,
+                List.of()
         );
 
         byte[] errorSerialized = errorMessage.serialize();
@@ -128,7 +138,7 @@ class ProtocolMessagesTest {
                 100L,
                 Instant.now().minusSeconds(3600),
                 Instant.now(),
-                false
+                0
         );
 
         // Create a test message
@@ -154,7 +164,7 @@ class ProtocolMessagesTest {
 
         assertEquals(dtf.format(new Date(fileInfo.getModificationTime().toEpochMilli())),
                 dtf.format(new Date(deserializedFileInfo.getModificationTime().toEpochMilli())));
-        assertEquals(fileInfo.isDirectory(), deserializedFileInfo.isDirectory());
+        assertEquals(fileInfo.getExtendedUmask(), deserializedFileInfo.getExtendedUmask());
     }
 
     @Test
@@ -194,7 +204,7 @@ class ProtocolMessagesTest {
                 100L,
                 Instant.now().minusSeconds(3600),
                 Instant.now(),
-                false
+                0x07
         );
 
         // Create a test message
@@ -222,7 +232,7 @@ class ProtocolMessagesTest {
 
         assertEquals(dtf.format(new Date(fileInfo.getModificationTime().toEpochMilli())),
                 dtf.format(new Date(deserializedFileInfo.getModificationTime().toEpochMilli())));
-        assertEquals(fileInfo.isDirectory(), deserializedFileInfo.isDirectory());
+        assertEquals(fileInfo.getExtendedUmask(), deserializedFileInfo.getExtendedUmask());
     }
 
     @Test
@@ -257,8 +267,10 @@ class ProtocolMessagesTest {
     void testFileListMessage() throws IOException {
         // Create test file list
         List<FileInfo> files = new ArrayList<>();
-        files.add(new FileInfo("/test/file1.txt", "file1.txt", 100L, Instant.now(), Instant.now(), false));
-        files.add(new FileInfo("/test/dir", "dir", 0L, Instant.now(), Instant.now(), true));
+        files.add(new FileInfo("/test/file1.txt", "file1.txt", 100L,
+                Instant.now(), Instant.now(), 0));
+        files.add(new FileInfo("/test/dir", "dir", 0L,
+                Instant.now(), Instant.now(), 0x8000));
 
         // Create a test message
         FileListMessage originalMessage = new FileListMessage(files, true, 1, 1);
@@ -281,18 +293,19 @@ class ProtocolMessagesTest {
         FileInfo deserializedFile1 = deserializedMessage.getFiles().get(0);
         assertEquals("file1.txt", deserializedFile1.getRelativePath());
         assertEquals(100L, deserializedFile1.getSize());
-        assertFalse(deserializedFile1.isDirectory());
+        assertFalse(Attributes.isDirectory(deserializedFile1.getExtendedUmask()));
 
         FileInfo deserializedDir = deserializedMessage.getFiles().get(1);
         assertEquals("dir", deserializedDir.getRelativePath());
-        assertTrue(deserializedDir.isDirectory());
+        assertTrue(Attributes.isDirectory(deserializedDir.getExtendedUmask()));
     }
 
     @Test
     void testFileListResponseMessage() throws IOException {
         // Create test file lists
         List<FileInfo> filesToTransfer = new ArrayList<>();
-        filesToTransfer.add(new FileInfo("/test/file1.txt", "file1.txt", 100L, Instant.now(), Instant.now(), false));
+        filesToTransfer.add(new FileInfo("/test/file1.txt", "file1.txt", 100L,
+                Instant.now(), Instant.now(), 0));
 
         List<String> filesToDelete = Arrays.asList("file2.txt", "file3.txt");
 
@@ -324,7 +337,7 @@ class ProtocolMessagesTest {
         FileInfo deserializedFile = deserializedMessage.getFilesToTransfer().get(0);
         assertEquals("file1.txt", deserializedFile.getRelativePath());
         assertEquals(100L, deserializedFile.getSize());
-        assertFalse(deserializedFile.isDirectory());
+        assertFalse(Attributes.isDirectory(deserializedFile.getExtendedUmask()));
 
         // Verify the files to delete
         assertEquals("file2.txt", deserializedMessage.getFilesToDelete().get(0));

@@ -111,7 +111,7 @@ const API = {
             this.setCurrentUser({
                 username: data.username,
                 userId: data.userId,
-                isAdmin: data.isAdmin
+                isAdmin: data.admin
             });
         }
 

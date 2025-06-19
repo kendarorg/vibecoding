@@ -2,6 +2,9 @@ package org.kendar.sync.lib.protocol;
 
 import org.kendar.sync.lib.buffer.ByteContainer;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Message sent by the client to connect to the server.
  * Contains authentication information and the target folder.
@@ -18,6 +21,41 @@ public class ConnectMessage extends Message {
     private int maxConnections;
     private boolean dryRun;
     private String hostName;
+    private boolean ignoreSystemFiles = true;
+    private boolean ignoreHiddenFiles = true;
+    private List<String> ignoredPatterns = new ArrayList<>();
+
+    public String getHostName() {
+        return hostName;
+    }
+
+    public void setHostName(String hostName) {
+        this.hostName = hostName;
+    }
+
+    public boolean isIgnoreSystemFiles() {
+        return ignoreSystemFiles;
+    }
+
+    public void setIgnoreSystemFiles(boolean ignoreSystemFiles) {
+        this.ignoreSystemFiles = ignoreSystemFiles;
+    }
+
+    public boolean isIgnoreHiddenFiles() {
+        return ignoreHiddenFiles;
+    }
+
+    public void setIgnoreHiddenFiles(boolean ignoreHiddenFiles) {
+        this.ignoreHiddenFiles = ignoreHiddenFiles;
+    }
+
+    public List<String> getIgnoredPatterns() {
+        return ignoredPatterns;
+    }
+
+    public void setIgnoredPatterns(List<String> ignoredPatterns) {
+        this.ignoredPatterns = ignoredPatterns;
+    }
 
     // Default constructor for Jackson
     public ConnectMessage() {
@@ -35,7 +73,8 @@ public class ConnectMessage extends Message {
      */
     public ConnectMessage(String username, String password, String targetFolder,
                           int maxPacketSize, int maxConnections,
-                          boolean dryRun, String hostName) {
+                          boolean dryRun, String hostName,
+                          boolean ignoreSystemFiles, boolean ignoreHiddenFiles, List<String> ignoredPatterns) {
         this.username = username;
         this.password = password;
         this.targetFolder = targetFolder;
@@ -43,6 +82,9 @@ public class ConnectMessage extends Message {
         this.maxConnections = maxConnections;
         this.dryRun = dryRun;
         this.hostName = hostName;
+        this.ignoreSystemFiles = ignoreSystemFiles;
+        this.ignoreHiddenFiles = ignoreHiddenFiles;
+        this.ignoredPatterns = ignoredPatterns;
     }
 
     @Override
@@ -54,6 +96,12 @@ public class ConnectMessage extends Message {
         maxConnections = buffer.readType(Integer.class);
         dryRun = buffer.readType(Boolean.class);
         hostName = buffer.readType(String.class);
+        ignoreHiddenFiles = buffer.readType(Boolean.class);
+        ignoreSystemFiles = buffer.readType(Boolean.class);
+        var patterns = buffer.readType(String.class);
+        if(patterns != null && !patterns.isEmpty()) {
+            ignoredPatterns = List.of(patterns.split(","));
+        }
         return this;
     }
 
@@ -71,6 +119,13 @@ public class ConnectMessage extends Message {
         buffer.writeType(maxConnections);
         buffer.writeType(dryRun);
         buffer.writeType(hostName);
+        buffer.writeType(ignoreHiddenFiles);
+        buffer.writeType(ignoreSystemFiles);
+        if (ignoredPatterns != null && !ignoredPatterns.isEmpty()) {
+            buffer.writeType(String.join(",", ignoredPatterns));
+        } else {
+            buffer.writeType("");
+        }
     }
 
     // Getters and setters

@@ -229,7 +229,7 @@ public class SettingsController {
             return ResponseEntity.notFound().build();
         }
         var user = serverSettings.getUsers().stream().filter(u -> u.getUsername().equalsIgnoreCase(principal.getName())).findFirst().get();
-        if (!folder.get().getAllowedUsers().contains(user.getId()) || user.isAdmin()) {
+        if (!folder.get().getAllowedUsers().contains(user.getId()) && !user.isAdmin()) {
             return ResponseEntity.status(403).build();
         }
 
@@ -286,6 +286,9 @@ public class SettingsController {
         folderToUpdate.setRealPath(folder.getRealPath());
         folderToUpdate.setBackupType(folder.getBackupType());
         folderToUpdate.setAllowedUsers(folder.getAllowedUsers());
+        folderToUpdate.setIgnoredPatterns(folder.getIgnoredPatterns() == null ? new ArrayList<>() : folder.getIgnoredPatterns());
+        folderToUpdate.setIgnoreSystemFiles(folder.isIgnoreSystemFiles());
+        folderToUpdate.setIgnoreHiddenFiles(folder.isIgnoreHiddenFiles());
 
         serverSettings.save(serverConfig.getSettingsFile());
 

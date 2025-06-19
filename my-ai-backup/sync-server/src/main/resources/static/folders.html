@@ -88,6 +88,34 @@
                 </div>
             </div>
 
+            <div class="form-group">
+                <label for="ignoreHidden">Ignore Settings</label>
+                <div class="checkbox-group">
+                    <label class="checkbox-label">
+                        <input id="ignoreHidden" name="ignoreHidden" type="checkbox">
+                        Ignore Hidden Files
+                    </label>
+                </div>
+                <div class="checkbox-group">
+                    <label class="checkbox-label">
+                        <input id="ignoreSystem" name="ignoreSystem" type="checkbox">
+                        Ignore System Files
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="pattern-list">Ignore Patterns</label>
+                <div class="pattern-list" id="pattern-list">
+                    <!-- Pattern items will be inserted here -->
+                </div>
+                <div class="pattern-input-group">
+                    <input id="new-pattern" type="text" placeholder="Add a pattern (e.g., *.tmp or @.*\.log$)">
+                    <button class="btn" id="add-pattern-btn" type="button">Add</button>
+                </div>
+                <small class="form-hint">Use * for wildcards, ** for recursive matches, ? for single character, or @ for regex</small>
+            </div>
+
             <div class="modal-footer">
                 <button class="btn btn-danger" data-dismiss="modal" type="button">Cancel</button>
                 <button class="btn btn-success" type="submit">Save</button>
@@ -133,9 +161,10 @@
         const deleteFolderName = document.getElementById('delete-folder-name');
         const allowedUsersContainer = document.getElementById('allowed-users-container');
 
-        // Variables to store current folder name for editing/deleting
+        // Variables to store current folder name and patterns for editing/deleting
         let currentFolderName = null;
         let allUsers = [];
+        let currentPatterns = [];
 
         // Load data
         await loadFolders();
@@ -147,9 +176,67 @@
             folderForm.reset();
             folderModalTitle.textContent = 'Add Backup Folder';
             currentFolderName = null;
+            currentPatterns = [];
+            renderPatterns();
             populateAllowedUsers([]);
             Utils.openModal('folder-modal');
         });
+        // Add event listeners for pattern management
+        document.getElementById('add-pattern-btn').addEventListener('click', addPattern);
+        document.getElementById('new-pattern').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addPattern();
+            }
+        });
+
+
+        // Function to add a new pattern
+        function addPattern() {
+            const patternInput = document.getElementById('new-pattern');
+            const pattern = patternInput.value.trim();
+
+            if (pattern) {
+                currentPatterns.push(pattern);
+                renderPatterns();
+                patternInput.value = '';
+            }
+        }
+
+        // Function to remove a pattern
+        function removePattern(index) {
+            currentPatterns.splice(index, 1);
+            renderPatterns();
+        }
+
+        // Function to render the patterns list
+        function renderPatterns() {
+            const patternList = document.getElementById('pattern-list');
+            patternList.innerHTML = '';
+
+            if (currentPatterns.length === 0) {
+                patternList.innerHTML = '<div class="no-patterns">No patterns added</div>';
+                return;
+            }
+
+            currentPatterns.forEach((pattern, index) => {
+                const patternItem = document.createElement('div');
+                patternItem.className = 'pattern-item';
+                patternItem.innerHTML = `
+            <span class="pattern-text">${pattern}</span>
+            <button class="btn btn-small remove-pattern" data-index="${index}" type="button">×</button>
+        `;
+                patternList.appendChild(patternItem);
+            });
+
+            // Add event listeners to remove buttons
+            document.querySelectorAll('.remove-pattern').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.getAttribute('data-index'));
+                    removePattern(index);
+                });
+            });
+        }
 
         // Handle modal close buttons
         document.querySelectorAll('[data-dismiss="modal"]').forEach(btn => {
@@ -174,7 +261,10 @@
                 virtualName: formData.virtualName,
                 realPath: formData.realPath,
                 backupType: formData.backupType,
-                allowedUsers: allowedUsers
+                allowedUsers: allowedUsers,
+                ignoreHiddenFiles: formData.ignoreHidden === 'on',
+                ignoreSystemFiles: formData.ignoreSystem === 'on',
+                ignoredPatterns: currentPatterns
             };
 
             if (currentFolderName) {
@@ -328,6 +418,12 @@
                 folderForm.elements.virtualName.value = folder.virtualName;
                 folderForm.elements.realPath.value = folder.realPath;
                 folderForm.elements.backupType.value = folder.backupType;
+                folderForm.elements.ignoreHidden.checked = folder.ignoreHiddenFiles || false;
+                folderForm.elements.ignoreSystem.checked = folder.ignoreSystemFiles || false;
+
+                // Set ignore patterns
+                currentPatterns = folder.ignoredPatterns || [];
+                renderPatterns();
 
                 // Set allowed users
                 populateAllowedUsers(folder.allowedUsers || []);

@@ -15,6 +15,7 @@ public class JwtResponse implements Serializable {
     private final String username;
     private final String userId;
     private final boolean isAdmin;
+    private final int port;
 
     /**
      * Creates a new JWT response.
@@ -23,12 +24,14 @@ public class JwtResponse implements Serializable {
      * @param username The username
      * @param userId   The user ID
      * @param isAdmin  Whether the user is an admin
+     * @param port
      */
-    public JwtResponse(String token, String username, String userId, boolean isAdmin) {
+    public JwtResponse(String token, String username, String userId, boolean isAdmin, int port) {
         this.token = token;
         this.username = username;
         this.userId = userId;
         this.isAdmin = isAdmin;
+        this.port = port;
     }
 
     // Getters

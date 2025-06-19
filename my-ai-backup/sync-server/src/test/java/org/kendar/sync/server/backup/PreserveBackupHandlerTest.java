@@ -83,7 +83,8 @@ public class PreserveBackupHandlerTest {
     @Test
     void testHandleFileDescriptor() throws IOException {
         // Create a file descriptor message for a regular file
-        FileInfo fileInfo = new FileInfo("test.txt", "test.txt", 100, Instant.now(), Instant.now(), false);
+        FileInfo fileInfo = new FileInfo("test.txt", "test.txt", 100,
+                Instant.now(), Instant.now(), 0x7);
         FileDescriptorMessage message = new FileDescriptorMessage(fileInfo);
 
         // Call the method
@@ -105,7 +106,8 @@ public class PreserveBackupHandlerTest {
     @Test
     void testHandleFileDescriptorForDirectory() throws IOException {
         // Create a file descriptor message for a directory
-        FileInfo fileInfo = new FileInfo("testdir", "testdir", 0, Instant.now(), Instant.now(), true);
+        FileInfo fileInfo = new FileInfo("testdir", "testdir", 0,
+                Instant.now(), Instant.now(), 0x8007);
         FileDescriptorMessage message = new FileDescriptorMessage(fileInfo);
 
         // Call the method

@@ -4,10 +4,8 @@ import org.kendar.sync.lib.utils.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.Date;
@@ -22,7 +20,7 @@ public class FileInfo {
     private long size;
     private Instant creationTime;
     private Instant modificationTime;
-    private boolean isDirectory;
+    private int extendedUmask;
 
     // Default constructor for Jackson
     public FileInfo() {
@@ -36,16 +34,16 @@ public class FileInfo {
      * @param size             The size of the file in bytes
      * @param creationTime     The creation time of the file
      * @param modificationTime The last modification time of the file
-     * @param isDirectory      Whether the file is a directory
+     * @param extendedUmask      Whether the file is a directory
      */
     public FileInfo(String path, String relativePath, long size, Instant creationTime,
-                    Instant modificationTime, boolean isDirectory) {
+                    Instant modificationTime, int extendedUmask) {
         this.path = path;
         this.relativePath = relativePath;
         this.size = size;
         this.creationTime = creationTime;
         this.modificationTime = modificationTime;
-        this.isDirectory = isDirectory;
+        this.extendedUmask = extendedUmask;
     }
 
     /**
@@ -61,15 +59,15 @@ public class FileInfo {
         Path basePath = Paths.get(baseDir).toAbsolutePath();
         Path relativePath = basePath.relativize(filePath.toAbsolutePath());
 
-        BasicFileAttributes attrs = Files.readAttributes(filePath, BasicFileAttributes.class);
+        var attrs = FileUtils.readFileAttributes(filePath);
 
         return new FileInfo(
                 file.getAbsolutePath(),
                 FileUtils.makeUniformPath(relativePath.toString()),
                 file.length(),
-                attrs.creationTime().toInstant(),
-                attrs.lastModifiedTime().toInstant(),
-                file.isDirectory()
+                attrs.getCreationTime(),
+                attrs.getModificationTime(),
+                attrs.getExtendedUmask()
         );
     }
 
@@ -84,14 +82,14 @@ public class FileInfo {
             long size = Long.parseLong(parts[1]);
             Instant creationTime = dtf.parse(parts[2]).toInstant();
             Instant modificationTime = dtf.parse(parts[3]).toInstant();
-            boolean isDirectory = Boolean.parseBoolean(parts[4]);
+            int extendedUmask = Integer.parseInt(parts[4]);
             return new FileInfo(
                     null, // the path is not needed here
                     relativePath,
                     size,
                     creationTime,
                     modificationTime,
-                    isDirectory
+                    extendedUmask
             );
         } catch (Exception ex) {
             throw new RuntimeException(ex);
@@ -149,12 +147,12 @@ public class FileInfo {
         this.modificationTime = modificationTime;
     }
 
-    public boolean isDirectory() {
-        return isDirectory;
+    public int getExtendedUmask() {
+        return extendedUmask;
     }
 
-    public void setDirectory(boolean directory) {
-        isDirectory = directory;
+    public void setExtendedUmask(int extendedUmask) {
+        this.extendedUmask = extendedUmask;
     }
 
     @Override
@@ -186,7 +184,7 @@ public class FileInfo {
                 String.valueOf(size),
                 dtf.format(new Date(creationTime.toEpochMilli())),
                 dtf.format(new Date(modificationTime.toEpochMilli())),
-                String.valueOf(isDirectory)
+                String.valueOf(extendedUmask)
         );
     }
 }

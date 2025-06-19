@@ -1,21 +1,25 @@
 package org.kendar.sync.lib.utils;
 
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.PathMatcher;
+import java.nio.file.attribute.*;
+import java.util.regex.Pattern;
 import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.protocol.BackupType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.attribute.FileTime;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -24,6 +28,30 @@ import java.util.stream.Collectors;
 public class FileUtils {
     private static final Logger log = LoggerFactory.getLogger(FileUtils.class);
 
+    public static String readFile(String filename) throws IOException
+    {
+        String content = null;
+        File file = new File(filename); // For example, foo.txt
+        FileReader reader = null;
+        try {
+            reader = new FileReader(file);
+            char[] chars = new char[(int) file.length()];
+            reader.read(chars);
+            content = new String(chars);
+            reader.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if(reader != null){
+                reader.close();
+            }
+        }
+        return content;
+    }
+
+    public static String readFile(Path lastCompactLogPath) throws IOException {
+        return readFile(lastCompactLogPath.toAbsolutePath().normalize().toString());
+    }
     /**
      * Lists all files in a directory recursively.
      *
@@ -97,7 +125,7 @@ public class FileUtils {
         // Files to transfer: files that don't exist in the target or have different timestamps
         List<FileInfo> filesToTransfer = sourceFiles.stream()
                 .filter(sourceFile -> {
-                    if (sourceFile.isDirectory()) {
+                    if (Attributes.isDirectory(sourceFile.getExtendedUmask())) {
                         return false; // Skip directories
                     }
 
@@ -117,7 +145,7 @@ public class FileUtils {
         // Files to delete: files that exist in the target but not in the source
         if (backupType == BackupType.MIRROR) {
             List<FileInfo> filesToDelete = targetFiles.stream()
-                    .filter(targetFile -> !targetFile.isDirectory() && !sourceMap.containsKey(targetFile.getRelativePath()))
+                    .filter(targetFile -> !Attributes.isDirectory(targetFile.getExtendedUmask()) && !sourceMap.containsKey(targetFile.getRelativePath()))
                     .collect(Collectors.toList());
 
             result.put("delete", filesToDelete);
@@ -282,5 +310,131 @@ public class FileUtils {
         Files.delete(directory);
 
         return success;
+    }
+
+    private static ConcurrentHashMap<String, Pattern> regexPatterns = new ConcurrentHashMap<>();
+    private static ConcurrentHashMap<String, PathMatcher> globPatterns = new ConcurrentHashMap<>();
+
+    /**
+     * Checks if a given path matches a specified pattern.
+     * The pattern can be a glob pattern or a regex pattern (prefixed with '@').
+     *
+     * @param path    The path to check
+     * @param pattern The pattern to match against
+     * @return true if the path matches the pattern, false otherwise
+     */
+    public static boolean matches(String path,String pattern){
+        try {
+            path = makeUniformPath(path);
+            if (pattern.startsWith("@")) {
+                regexPatterns.computeIfAbsent(pattern, p -> Pattern.compile(p.substring(1)));
+                return regexPatterns.get(pattern).matcher(path).matches();
+            } else {
+                globPatterns.computeIfAbsent(pattern, p -> FileSystems.getDefault().getPathMatcher("glob:" + p));
+                return globPatterns.get(pattern).matches(Path.of(path));
+            }
+        }catch (Exception e){
+            return false;
+        }
+    }
+
+    public static Attributes readFileAttributes(Path path) throws IOException {
+        BasicFileAttributes attributes =Files.readAttributes(path, BasicFileAttributes.class);
+        int umask = 0x0;
+        var file = path.toFile();
+        if(file.isHidden()){
+            umask |= 0x1000;
+        }
+        if(file.isDirectory()){
+            umask |= 0x8000;
+        }
+        if(attributes.isSymbolicLink()){
+            umask |= 0x2000;
+        }
+
+        if(attributes instanceof PosixFileAttributes) {
+            var posixAttributes = (PosixFileAttributes) attributes;
+            for (var permission : posixAttributes.permissions()) {
+                switch (permission) {
+                    case OWNER_READ:     umask |= 0x0400; break;
+                    case OWNER_WRITE:    umask |= 0x0200; break;
+                    case OWNER_EXECUTE:  umask |= 0x0100; break;
+                    case GROUP_READ:     umask |= 0x0040; break;
+                    case GROUP_WRITE:    umask |= 0x0020; break;
+                    case GROUP_EXECUTE:  umask |= 0x0010; break;
+                    case OTHERS_READ:    umask |= 0x0004; break;
+                    case OTHERS_WRITE:   umask |= 0x0002; break;
+                    case OTHERS_EXECUTE: umask |= 0x0001; break;
+                }
+            }
+        } else if (attributes instanceof DosFileAttributes) {
+            var dosAttributes = (DosFileAttributes) attributes;
+            if (dosAttributes.isSystem()) {
+                umask |= 0x4000;
+            }
+            if(file.canExecute()){
+                umask |= 0x0001;
+            }
+            if(file.canRead()){
+                umask |= 0x111;
+            }
+            if(file.isDirectory()){
+                umask |= 0x000;
+            }
+            if(file.canWrite()){
+                umask |= 0x0002;
+            }
+        }
+
+
+        return new Attributes(umask,attributes.creationTime().toInstant(),attributes.lastModifiedTime().toInstant(),
+                attributes.size());
+    }
+
+
+
+
+    /**
+     * Converts a Unix file mode (umask) to a set of PosixFilePermission
+     *
+     * @param umask The Unix file mode as an integer (e.g., 644, 755)
+     * @return A set of PosixFilePermission
+     */
+    public static void writeFileAttributes(Path path, int umask, BasicFileAttributes attributes) throws IOException {
+
+        var file = path.toFile();
+        if(attributes instanceof PosixFileAttributes) {
+            var posixAttributes = (PosixFileAttributes) attributes;
+            Set<PosixFilePermission> permissions = EnumSet.noneOf(PosixFilePermission.class);
+
+            // Owner permissions
+            if ((umask & 0x0400) != 0) permissions.add(PosixFilePermission.OWNER_READ);
+            if ((umask & 0x0200) != 0) permissions.add(PosixFilePermission.OWNER_WRITE);
+            if ((umask & 0x0100) != 0) permissions.add(PosixFilePermission.OWNER_EXECUTE);
+
+            // Group permissions
+            if ((umask & 0x0040) != 0) permissions.add(PosixFilePermission.GROUP_READ);
+            if ((umask & 0x0020) != 0) permissions.add(PosixFilePermission.GROUP_WRITE);
+            if ((umask & 0x0010) != 0) permissions.add(PosixFilePermission.GROUP_EXECUTE);
+
+            // Others permissions
+            if ((umask & 0x0004) != 0) permissions.add(PosixFilePermission.OTHERS_READ);
+            if ((umask & 0x0002) != 0) permissions.add(PosixFilePermission.OTHERS_WRITE);
+            if ((umask & 0x0001) != 0) permissions.add(PosixFilePermission.OTHERS_EXECUTE);
+            Files.setPosixFilePermissions(path,permissions);
+        }else if(attributes instanceof DosFileAttributes){
+            var dosAttributes = (DosFileAttributes) attributes;
+            if( (umask & 0x4000) != 0) {
+                // Set system attribute
+                Files.setAttribute(path, "dos:system", true);
+            }
+            if( (umask & 0x1000) != 0) {
+                // Set system attribute
+                Files.setAttribute(path, "dos:hidden", true);
+            }
+            if((umask & 0x0222) == 0){
+                file.setReadOnly();
+            }
+        }
     }
 }

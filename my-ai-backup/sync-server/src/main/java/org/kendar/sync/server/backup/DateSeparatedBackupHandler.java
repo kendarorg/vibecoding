@@ -3,6 +3,7 @@ package org.kendar.sync.server.backup;
 import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
+import org.kendar.sync.lib.utils.Attributes;
 import org.kendar.sync.lib.utils.FileUtils;
 import org.kendar.sync.server.server.ClientSession;
 import org.slf4j.Logger;
@@ -57,11 +58,15 @@ public class DateSeparatedBackupHandler extends BackupHandler {
 
         var allFiles = listAllFiles(Path.of(session.getFolder().getRealPath()));
         for (var file : allFiles) {
-            var fts = FileUtils.makeUniformPath(file.toString().replace(session.getFolder().getRealPath(), ""));
+            var fts = FileUtils.makeUniformPath(file.toString()).replace(FileUtils.makeUniformPath(session.getFolder().getRealPath()), "");
+            if(fts.startsWith("/"))fts=fts.substring(1);
             var filePath = session.getFolder().getRealPath() + File.separator + fts;
-            BasicFileAttributes attr = Files.readAttributes(Path.of(filePath), BasicFileAttributes.class);
+            var attr = FileUtils.readFileAttributes(Path.of(filePath));
+
+            if (shouldIgnoreFileByAttrAndPattern(session, file, attr)) continue;
 
             if (!fts.matches(".*\\d{4}-\\d{2}-\\d{2}.*")) {
+
                 if (shouldUpdate(filesOnClient.get(fts), file, attr)) {
                     filesOnClient.remove(fts);
                 }
@@ -71,7 +76,8 @@ public class DateSeparatedBackupHandler extends BackupHandler {
                     }
                 }
             } else {
-                var newFts = fts.substring(11); // Remove the date prefix
+                var newFts = fts.substring(11);
+                //if(newFts.startsWith("/"))newFts=newFts.substring(1);// Remove the date prefix
                 if (shouldUpdate(filesOnClient.get(newFts), file, attr)) {
                     filesOnClient.remove(fts);
                 }
@@ -85,7 +91,8 @@ public class DateSeparatedBackupHandler extends BackupHandler {
             }
         }
 
-        var filesToSend = filesOnClient.values().stream().filter(f -> !f.isDirectory()).collect(Collectors.toList());
+        var filesToSend = filesOnClient.values().stream().filter(f ->
+                !Attributes.isDirectory(f.getExtendedUmask())).collect(Collectors.toList());
         connection.sendMessage(new FileListResponseMessage(filesToSend, new ArrayList<>(), true, 1, 1));
 
         if (message.isBackup()) {
@@ -148,6 +155,8 @@ public class DateSeparatedBackupHandler extends BackupHandler {
         String dateDir = new java.text.SimpleDateFormat("yyyy-MM-dd").format(
                 new java.util.Date(fileInfo.getCreationTime().toEpochMilli()));
         var realPath = Path.of(session.getFolder().getRealPath() + File.separator + dateDir + File.separator + fileInfo.getRelativePath());
+        var attr = Files.readAttributes(realPath, BasicFileAttributes.class);
+        FileUtils.writeFileAttributes(realPath,fileInfo.getExtendedUmask(),attr);
         Files.setAttribute(realPath, "creationTime", FileTime.fromMillis(fileInfo.getCreationTime().toEpochMilli()));
         Files.setLastModifiedTime(realPath, FileTime.fromMillis(fileInfo.getModificationTime().toEpochMilli()));
         filesOnClient.remove(fileInfo.getRelativePath());
