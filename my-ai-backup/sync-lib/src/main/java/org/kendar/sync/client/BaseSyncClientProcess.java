@@ -65,6 +65,7 @@ public class BaseSyncClientProcess {
      * @throws IOException If an I/O error occurs
      */
     protected void transferFile(FileInfo file, CommandLineArgs args, TcpConnection connection) throws IOException {
+        file.setPath(Path.of(args.getSourceFolder().toString(),file.getRelativePath()).toString());
         String threadName = Thread.currentThread().getName();
         var connectionId = connection.getConnectionId();
         log.debug("[CLIENT-{}] Starting transfer of {}", connectionId, file.getRelativePath());
