@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -67,6 +68,14 @@ public class BaseSyncClientProcess {
         String threadName = Thread.currentThread().getName();
         var connectionId = connection.getConnectionId();
         log.debug("[CLIENT-{}] Starting transfer of {}", connectionId, file.getRelativePath());
+        if(file.getExtendedUmask()==0){
+            var attr = FileUtils.readFileAttributes(Path.of(file.getPath()));
+            if(attr!=null){
+                file.setExtendedUmask(attr.getExtendedUmask());
+            } else {
+                log.warn("[CLIENT-{}] Could not read attributes for file: {}", connectionId, file.getRelativePath());
+            }
+        }
 
         // Create the new connection to the server
 
@@ -261,6 +270,8 @@ public class BaseSyncClientProcess {
             currentConnection.sendMessage(fileEndAck);
 
             var realPath = targetFile.toPath();
+            var attr = Files.readAttributes(realPath, BasicFileAttributes.class);
+            FileUtils.writeFileAttributes(realPath,fileInfo.getExtendedUmask(),attr);
             Files.setAttribute(realPath, "creationTime", FileTime.fromMillis(fileInfo.getCreationTime().toEpochMilli()));
             Files.setLastModifiedTime(realPath, FileTime.fromMillis(fileInfo.getModificationTime().toEpochMilli()));
 

@@ -14,6 +14,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
@@ -175,6 +176,8 @@ public class MirrorBackupHandler extends BackupHandler {
         }
 
         var realPath = Path.of(session.getFolder().getRealPath() + File.separator + fileInfo.getRelativePath());
+        var attr = Files.readAttributes(realPath, BasicFileAttributes.class);
+        FileUtils.writeFileAttributes(realPath,fileInfo.getExtendedUmask(),attr);
         Files.setAttribute(realPath, "creationTime", FileTime.fromMillis(fileInfo.getCreationTime().toEpochMilli()));
         Files.setLastModifiedTime(realPath, FileTime.fromMillis(fileInfo.getModificationTime().toEpochMilli()));
 

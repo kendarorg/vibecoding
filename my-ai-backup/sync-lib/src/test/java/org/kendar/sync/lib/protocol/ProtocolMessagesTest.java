@@ -204,7 +204,7 @@ class ProtocolMessagesTest {
                 100L,
                 Instant.now().minusSeconds(3600),
                 Instant.now(),
-                0
+                0x07
         );
 
         // Create a test message

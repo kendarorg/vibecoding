@@ -356,3 +356,6 @@ Generate a FilePattern class that
 ** ignore patterns (editable list of strings)
 * Add the new parameter to the relevant api
 
+### Prompt 028
+
+* Function to create the umask from PosixFileAttributes and viceversa

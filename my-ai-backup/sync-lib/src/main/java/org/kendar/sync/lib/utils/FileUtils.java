@@ -376,7 +376,10 @@ public class FileUtils {
                 umask |= 0x0001;
             }
             if(file.canRead()){
-                umask |= 0x0004;
+                umask |= 0x111;
+            }
+            if(file.isDirectory()){
+                umask |= 0x000;
             }
             if(file.canWrite()){
                 umask |= 0x0002;
@@ -429,10 +432,9 @@ public class FileUtils {
                 // Set system attribute
                 Files.setAttribute(path, "dos:hidden", true);
             }
-
-            file.setWritable( (umask & 0x0002) == 0);
-            file.setExecutable( (umask & 0x0001) == 0);
-            file.setReadable( (umask & 0x0004) == 0);
+            if((umask & 0x0222) == 0){
+                file.setReadOnly();
+            }
         }
     }
 }

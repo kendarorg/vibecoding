@@ -6,6 +6,7 @@ import org.kendar.sync.lib.protocol.*;
 import org.kendar.sync.lib.twoway.ConflictItem;
 import org.kendar.sync.lib.twoway.LogEntry;
 import org.kendar.sync.lib.twoway.StatusAnalyzer;
+import org.kendar.sync.lib.utils.FileUtils;
 import org.kendar.sync.server.server.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +16,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -104,6 +106,8 @@ public class SyncBackupHandler extends BackupHandler {
         }
 
         var realPath = Path.of(session.getFolder().getRealPath() + File.separator + fileInfo.getRelativePath());
+        var attr = Files.readAttributes(realPath, BasicFileAttributes.class);
+        FileUtils.writeFileAttributes(realPath,fileInfo.getExtendedUmask(),attr);
         Files.setAttribute(realPath, "creationTime", FileTime.fromMillis(fileInfo.getCreationTime().toEpochMilli()));
         Files.setLastModifiedTime(realPath, FileTime.fromMillis(fileInfo.getModificationTime().toEpochMilli()));
 
@@ -146,6 +150,11 @@ public class SyncBackupHandler extends BackupHandler {
             for (var file : result.getFilesToUpdate()) {
                 var path = Path.of(session.getFolder().getRealPath(), file.getRelativePath());
                 var fi = new FileInfo();
+
+                if(Files.exists(path)){
+                    fi = FileInfo.fromFile(path.toFile(), session.getFolder().getRealPath());
+                }
+
                 var li = file.getLogEntry();
                 fi.setRelativePath(file.getRelativePath());
                 fi.setCreationTime(li.getCreationTime());
