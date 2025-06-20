@@ -2,10 +2,10 @@ package org.kendar.sync;
 
 import static org.junit.Assert.assertTrue;
 
-import com.kendar.testcontainers.images.JavaImage;
 
 import org.junit.Test;
 import org.kendar.sync.lib.utils.Sleeper;
+import org.kendar.testcontainers.images.JavaImage;
 
 import java.nio.file.Path;
 

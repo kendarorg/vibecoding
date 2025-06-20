@@ -1,4 +1,4 @@
-package com.kendar.testcontainers.utils;
+package org.kendar.testcontainers.utils;
 
 import java.io.BufferedReader;
 import java.io.File;

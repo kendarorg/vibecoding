@@ -1,4 +1,4 @@
-package com.kendar.testcontainers.utils;
+package org.kendar.testcontainers.utils;
 
 import org.testcontainers.containers.output.OutputFrame;
 
