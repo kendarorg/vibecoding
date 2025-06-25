@@ -359,3 +359,8 @@ Generate a FilePattern class that
 ### Prompt 028
 
 * Function to create the umask from PosixFileAttributes and viceversa
+
+### Prompt 029
+
+* Collect the id of the running jobs in Server class (with a thread safe structure)
+* When the client try to run a job that is alredy running, return an error to the client and disconnect

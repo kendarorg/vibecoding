@@ -84,11 +84,16 @@ public class JobSchedulerService extends Service {
     private Runnable jobCheckRunnable = new Runnable() {
         @Override
         public void run() {
-            checkAndRunScheduledJobs();
-            if(isCharging && isWifiConnected) {
-                handler.postDelayed(this, 5000); // Check more frequently if both conditions are met
-            }else{
-                handler.postDelayed(this, CHECK_INTERVAL_MS);
+            try {
+                checkAndRunScheduledJobs();
+            } catch (Exception e) {
+                Log.e(TAG, "Error in jobCheckRunnable", e);
+            } finally {
+                if(isCharging && isWifiConnected) {
+                    handler.postDelayed(this, 5000);
+                } else {
+                    handler.postDelayed(this, CHECK_INTERVAL_MS);
+                }
             }
         }
     };
@@ -273,6 +278,8 @@ public class JobSchedulerService extends Service {
                 Log.e(TAG, "Error executing job: " + job.getName(), e);
             } finally {
                jobSemaphore.release();
+               toRunJob.remove(job.getId());
+               runningJobId.set(null);
             }
         });
     }

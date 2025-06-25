@@ -218,3 +218,9 @@ At startup the application must load all jobs and then (even if it is in backgro
 * Clarifyng the schedule service run style
 * Some cleanup
 * Lib included as library from maven central
+
+### Prompt A08
+
+On the home fragment 
+* add a field to save on settings the id of the android phone. If not set yet prefill with a random UID.
+* add a button to save it

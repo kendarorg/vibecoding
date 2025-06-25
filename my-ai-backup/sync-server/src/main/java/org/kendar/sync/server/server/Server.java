@@ -12,10 +12,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -81,6 +78,8 @@ public class Server {
         }
     }
 
+    protected static final Set<String> runningJobs = Collections.synchronizedSet(new HashSet<>());
+
     /**
      * Handles a client connection.
      *
@@ -88,6 +87,7 @@ public class Server {
      * @param settings     The server settings
      */
     private void handleClient(Socket clientSocket, ServerSettings settings) {
+        String jobId = null;
         try {
             // Create a new TCP connection
             UUID sessionId = UUID.randomUUID();
@@ -193,6 +193,14 @@ public class Server {
             ignoredPatterns.addAll(folder.getIgnoredPatterns());
             ignoredPatterns.addAll(connectMessage.getIgnoredPatterns());
 
+            jobId = folder.getVirtualName();
+            if(!runningJobs.add(jobId)) {
+                log.warn("[SERVER] Job already running: {}",jobId);
+                connection.sendMessage(new ErrorMessage("ERR_BUSY", "Folder is busy with another operation"));
+                connection.close();
+                return;
+            }
+
             // Create session
             ClientSession session = new ClientSession(
                     sessionId,
@@ -235,6 +243,7 @@ public class Server {
                         session.closeConnections();
                         sessions.remove(sessionId);
                         connection.close();
+                        if(jobId!=null)runningJobs.remove(jobId);
                         return;
                     default:
                         connection.sendMessage(new ErrorMessage("ERR_PROTOCOL", "Unexpected message type: " + message.getMessageType()));
@@ -244,6 +253,7 @@ public class Server {
             log.trace("[SERVER] Error handling client: {}", e.getMessage());
             try {
                 clientSocket.close();
+                if(jobId!=null)runningJobs.remove(jobId);
             } catch (IOException ex) {
                 // Ignore
             }
@@ -375,7 +385,6 @@ public class Server {
 
         // Delegate to the backup handler
         handler.handleSyncEnd(connection, session, message);
-        Sleeper.sleep(200);
     }
 
     public void stop() {

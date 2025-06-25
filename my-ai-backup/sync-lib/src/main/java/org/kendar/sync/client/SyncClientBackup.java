@@ -109,8 +109,8 @@ public class SyncClientBackup extends BaseSyncClientProcess {
         // Wait for all transfers to complete
         try {
             completionLatch.await();
-            log.debug("[CLIENT] All file transfers completed 2");
-            connection.close();
+            log.debug("[CLIENT] All file transfers completed 3");
+            //XXX connection.close();
         } catch (InterruptedException e) {
             log.error("[CLIENT] File transfer interrupted 2: {}", e.getMessage());
         } finally {

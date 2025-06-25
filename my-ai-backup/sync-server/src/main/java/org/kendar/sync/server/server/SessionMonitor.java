@@ -9,6 +9,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import static org.kendar.sync.server.server.Server.runningJobs;
+
 /**
  * Monitors client sessions for timeout/expiration and disconnects expired sessions.
  */
@@ -56,6 +58,8 @@ public class SessionMonitor implements AutoCloseable {
                 if (session != null && session.isExpired()) {
                     log.info("Session {} has expired, closing connections", sessionId);
                     session.closeConnections();
+                    var jobId = session.getFolder().getVirtualName();
+                    runningJobs.remove(jobId);
                     sessions.remove(sessionId);
                 }
             }
