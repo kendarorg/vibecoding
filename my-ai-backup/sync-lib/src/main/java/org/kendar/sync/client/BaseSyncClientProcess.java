@@ -295,8 +295,7 @@ public abstract class BaseSyncClientProcess<T extends BaseSyncClientProcess> {
             var realPath = targetFile.toPath();
             var attr = Files.readAttributes(realPath, BasicFileAttributes.class);
             FileUtils.writeFileAttributes(realPath,fileInfo.getExtendedUmask(),attr);
-            Files.setAttribute(realPath, "creationTime", FileTime.fromMillis(fileInfo.getCreationTime().toEpochMilli()));
-            Files.setLastModifiedTime(realPath, FileTime.fromMillis(fileInfo.getModificationTime().toEpochMilli()));
+            FileUtils.setFileTimes(realPath.toFile(),fileInfo.getCreationTime(), fileInfo.getModificationTime());
 
 
             log.debug("[CLIENT] Received file: {}", fileInfo.getRelativePath());

@@ -157,8 +157,7 @@ public class DateSeparatedBackupHandler extends BackupHandler {
         var realPath = Path.of(session.getFolder().getRealPath() + File.separator + dateDir + File.separator + fileInfo.getRelativePath());
         var attr = Files.readAttributes(realPath, BasicFileAttributes.class);
         FileUtils.writeFileAttributes(realPath,fileInfo.getExtendedUmask(),attr);
-        Files.setAttribute(realPath, "creationTime", FileTime.fromMillis(fileInfo.getCreationTime().toEpochMilli()));
-        Files.setLastModifiedTime(realPath, FileTime.fromMillis(fileInfo.getModificationTime().toEpochMilli()));
+        FileUtils.setFileTimes(realPath.toFile(),fileInfo.getCreationTime(), fileInfo.getModificationTime());
         filesOnClient.remove(fileInfo.getRelativePath());
         connection.sendMessage(FileEndAckMessage.success(message.getRelativePath()));
     }
