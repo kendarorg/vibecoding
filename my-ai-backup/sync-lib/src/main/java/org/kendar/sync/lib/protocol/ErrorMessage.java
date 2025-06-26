@@ -7,9 +7,7 @@ import org.kendar.sync.lib.buffer.ByteContainer;
  * Can be sent by either the client or the server.
  */
 public class ErrorMessage extends Message {
-    static {
-        Message.registerMessageType(ErrorMessage.class);
-    }
+
 
     private String errorCode;
     private String errorMessage;

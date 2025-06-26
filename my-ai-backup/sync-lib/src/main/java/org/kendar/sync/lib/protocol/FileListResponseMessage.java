@@ -12,9 +12,7 @@ import java.util.stream.Collectors;
  * Contains the list of files that need to be transferred and the list of files that need to be deleted.
  */
 public class FileListResponseMessage extends Message {
-    static {
-        Message.registerMessageType(FileListResponseMessage.class);
-    }
+
 
     private List<FileInfo> filesToTransfer;
     private List<String> filesToDelete;

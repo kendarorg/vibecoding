@@ -13,9 +13,7 @@ import java.util.stream.Collectors;
  * Used during both backup and restore operations.
  */
 public class FileSyncMessage extends Message {
-    static {
-        Message.registerMessageType(FileSyncMessage.class);
-    }
+
 
     private int partNumber;
     private int totalParts;

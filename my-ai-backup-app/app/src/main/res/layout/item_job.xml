@@ -59,7 +59,7 @@
                 android:src="@android:drawable/ic_menu_delete" />
 
             <ImageButton
-                android:id="@+id/button_show"
+                android:id="@+id/button_results"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="?attr/selectableItemBackgroundBorderless"
@@ -72,6 +72,15 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Run job"
                 android:src="@android:drawable/ic_media_play" />
+
+            <ImageButton
+                android:id="@+id/button_stop"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Stop job"
+                android:src="@android:drawable/ic_menu_agenda" />
+
         </LinearLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView>

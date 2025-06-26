@@ -224,3 +224,9 @@ At startup the application must load all jobs and then (even if it is in backgro
 On the home fragment 
 * add a field to save on settings the id of the android phone. If not set yet prefill with a random UID.
 * add a button to save it
+
+### Prompt A09
+
+* Add a "stop" button on the item_job on the jobs list. Normally disable
+* Add a "results" button (with a scroll icon) on the item_job on the jobs list that change to another fragment "Job results" for now empty
+* When a job is running block the "play" button and enable the "stop" button

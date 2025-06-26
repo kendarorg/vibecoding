@@ -12,9 +12,6 @@ import java.util.stream.Collectors;
  * Used during both backup and restore operations.
  */
 public class FileListMessage extends Message {
-    static {
-        Message.registerMessageType(FileListMessage.class);
-    }
 
     private List<FileInfo> files;
     private boolean isBackup;

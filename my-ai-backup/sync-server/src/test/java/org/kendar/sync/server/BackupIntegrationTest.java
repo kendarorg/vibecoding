@@ -118,26 +118,26 @@ public class BackupIntegrationTest {
         createRandomFiles(sourceDir, 5, 3);
 
         // Perform backup
-        System.out.println("================= Performing backup...");
+        System.out.println("================= Performing backup 1...");
         commandLineArgs.setBackup(true);
         var target = new SyncClient();
         target.doSync(commandLineArgs);
 
         // Verify backup
-        System.out.println("================= Verifying backup...");
+        System.out.println("================= Verifying backup 2...");
         assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath(), BackupType.DATE_SEPARATED);
 
         //Add a non deletable file tot destination
-        System.out.println("================= Adding new file on target...");
+        System.out.println("================= Adding new file on target 3...");
         Files.writeString(Path.of(targetDir.toPath() + "/atest.txt"), "testBackup");
 
         // Perform backup
-        System.out.println("================= Performing backup...");
+        System.out.println("================= Performing backup 4...");
         commandLineArgs.setBackup(true);
         target.doSync(commandLineArgs);
 
         // Verify backup
-        System.out.println("================= Verifying backup...");
+        System.out.println("================= Verifying backup 5...");
         List<String> diff = new ArrayList<>();
         assertFalse(areDirectoriesEqual(sourceDir.toPath(), targetDir.toPath(), diff, BackupType.DATE_SEPARATED));
         assertEquals(List.of(sourceDir.toPath() + File.separator + "atest.txt"), diff);
@@ -147,7 +147,7 @@ public class BackupIntegrationTest {
         removedFile = removeRandomFile(sourceDir.toPath(), sourceDir.toPath());
 
         // Perform restore
-        System.out.println("================= Performing restore...");
+        System.out.println("================= Performing restore 6...");
         if (restore) {
             commandLineArgs.setBackup(false);
             target.doSync(commandLineArgs);

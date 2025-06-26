@@ -5,17 +5,17 @@ import org.kendar.sync.lib.buffer.ByteContainer;
 /**
  * Message sent before transferring a file to describe its metadata.
  */
-public class StartRestoreAck extends Message {
+public class KeepAlive extends Message {
 
 
     // Default constructor for Jackson
-    public StartRestoreAck() {
+    public KeepAlive() {
     }
 
 
     @Override
     public MessageType getMessageType() {
-        return MessageType.START_RESTORE_ACK;
+        return MessageType.KEEP_ALIVE;
     }
 
     @Override

@@ -7,9 +7,6 @@ import org.kendar.sync.lib.buffer.ByteContainer;
  * is ready to receive the file data.
  */
 public class FileDescriptorAckMessage extends Message {
-    static {
-        Message.registerMessageType(FileDescriptorAckMessage.class);
-    }
 
     private String relativePath;
     private boolean ready;

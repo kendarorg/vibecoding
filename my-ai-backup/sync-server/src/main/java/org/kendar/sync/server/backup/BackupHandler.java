@@ -93,6 +93,7 @@ public abstract class BackupHandler {
      * This method handles the common workflow of sending files to the client during restore.
      */
     protected void handleFileRestore(TcpConnection connection, ClientSession session, List<FileInfo> filesToSend) throws IOException {
+        log.debug("[SERVER] Received START_RESTORE message");
         var startRestoreMessage = connection.receiveMessage();
         if (startRestoreMessage.getMessageType() != MessageType.START_RESTORE) {
             log.error("[SERVER] Unexpected response 1: {}", startRestoreMessage.getMessageType());
@@ -109,10 +110,12 @@ public abstract class BackupHandler {
         var onlyFilesToTransfer = filesToSend.stream()
                 .filter(f -> !Attributes.isDirectory(f.getExtendedUmask()))
                 .collect(Collectors.toMap(FileInfo::getRelativePath, f -> f));
-        CountDownLatch completionLatch = new CountDownLatch(onlyFilesToTransfer.size());
+        CountDownLatch completionLatch = new CountDownLatch(filesToSend.size());
 
         for (var file : filesToSend) {
-            if (Attributes.isDirectory(file.getExtendedUmask())) {
+
+            if (file.getRelativePath().equals(".conflicts.log") || Attributes.isDirectory(file.getExtendedUmask())) {
+                completionLatch.countDown();
                 continue;
             }
             executorService.submit(() -> transferFile(connections, session, file, completionLatch));
@@ -121,7 +124,7 @@ public abstract class BackupHandler {
         try {
             completionLatch.await();
             log.debug("[SERVER] All file transfers completed");
-            connection.close();
+            //connection.close();
         } catch (InterruptedException e) {
             log.error("[SERVER] File transfer interrupted: {}", e.getMessage());
         } finally {
@@ -190,7 +193,7 @@ public abstract class BackupHandler {
 
             log.debug("[SERVER] Transferred file: {}", file.getRelativePath());
         } catch (Exception e) {
-            log.error("[SERVER] Error transferring file: {} - {}", file.getRelativePath(), e.getMessage());
+            log.error("[SERVER] Error transferring file 3: {} - {}", file.getRelativePath(), e.getMessage());
         } finally {
             if (currentConnection != null) connections.add(currentConnection);
             completionLatch.countDown();

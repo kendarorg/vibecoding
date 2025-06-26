@@ -6,9 +6,6 @@ import org.kendar.sync.lib.buffer.ByteContainer;
  * Message containing a chunk of file data.
  */
 public class FileDataMessage extends Message {
-    static {
-        Message.registerMessageType(FileDataMessage.class);
-    }
 
     private String relativePath;
     private int blockNumber;

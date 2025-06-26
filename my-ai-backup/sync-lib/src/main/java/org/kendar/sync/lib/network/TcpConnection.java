@@ -1,7 +1,10 @@
 package org.kendar.sync.lib.network;
 
 import org.kendar.sync.lib.protocol.Message;
+import org.kendar.sync.lib.protocol.MessageType;
 import org.kendar.sync.lib.protocol.Packet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,12 +20,22 @@ import java.util.UUID;
 public class TcpConnection implements AutoCloseable {
     private final Socket socket;
     private final int packetId;
-    private final int maxPacketSize;
+    private int maxPacketSize;
     private final OutputStream outputStream;
     private InputStream inputStream;
     private UUID sessionId;
     private int connectionId;
     private Runnable sessionTouch;
+
+    public void setServer(boolean server) {
+        this.server = server;
+    }
+
+    public boolean isServer() {
+        return server;
+    }
+
+    private boolean server = false;
 
     /**
      * Creates a new TCP connection.
@@ -56,6 +69,7 @@ public class TcpConnection implements AutoCloseable {
         return Objects.hashCode(socket);
     }
 
+    private Object lock = new Object();
     /**
      * Sends a message.
      *
@@ -63,28 +77,31 @@ public class TcpConnection implements AutoCloseable {
      * @throws IOException If an I/O error occurs
      */
     public void sendMessage(Message message) throws IOException {
-        byte[] messageData = message.serialize();
+        synchronized (lock) {
 
-        // Create a packet with the message data
-        Packet packet = new Packet(
-                connectionId,
-                sessionId,
-                packetId,
-                message.getMessageType().getCode(),
-                messageData
-        );
+            byte[] messageData = message.serialize();
 
-        // Serialize the packet and send it
-        byte[] packetData = packet.serialize();
-        outputStream.write(packetData);
-        outputStream.flush();
+            // Create a packet with the message data
+            Packet packet = new Packet(
+                    connectionId,
+                    sessionId,
+                    packetId,
+                    message.getMessageType().getCode(),
+                    messageData
+            );
 
-        // Touch the session to indicate activity
-        if (sessionTouch != null) {
-            sessionTouch.run(); // 30-second timeout
+            // Serialize the packet and send it
+            byte[] packetData = packet.serialize();
+            outputStream.write(packetData);
+            outputStream.flush();
+
+            // Touch the session to indicate activity
+            if (sessionTouch != null) {
+                sessionTouch.run(); // 30-second timeout
+            }
         }
     }
-
+    private static final Logger log = LoggerFactory.getLogger(TcpConnection.class);
     /**
      * Receives a message.
      *
@@ -92,51 +109,57 @@ public class TcpConnection implements AutoCloseable {
      * @throws IOException If an I/O error occurs
      */
     public Message receiveMessage() throws IOException {
-        // Touch the session before reading to indicate activity
-        if (sessionTouch != null) {
-            sessionTouch.run(); // 30-second timeout
-        }
-
-        // Read the packet length
-        byte[] lengthBytes = new byte[4];
-        this.inputStream = socket.getInputStream();
-        int bytesRead = inputStream.read(lengthBytes);
-        if (bytesRead != 4) {
-            if (bytesRead == -1) {
-                return null;
-            }
-            throw new IOException("Failed to read packet length");
-        }
-
-        int packetLength = ByteBuffer.wrap(lengthBytes).getInt();
-        if (packetLength <= 0 || packetLength > (maxPacketSize + 1024)) {
-            throw new IOException("Invalid packet length: " + packetLength);
-        }
-
-        // Read the rest of the packet
-        byte[] packetData = new byte[packetLength];
-        System.arraycopy(lengthBytes, 0, packetData, 0, 4);
-
-        int remaining = packetLength - 4;
-        int offset = 4;
-
-        while (remaining > 0) {
-            bytesRead = inputStream.read(packetData, offset, remaining);
-            if (bytesRead == -1) {
-                throw new IOException("End of stream reached");
+        while(true) {
+            // Touch the session before reading to indicate activity
+            if (sessionTouch != null) {
+                sessionTouch.run(); // 30-second timeout
             }
 
-            offset += bytesRead;
-            remaining -= bytesRead;
+            // Read the packet length
+            byte[] lengthBytes = new byte[4];
+            this.inputStream = socket.getInputStream();
+            int bytesRead = inputStream.read(lengthBytes);
+            if (bytesRead != 4) {
+                if (bytesRead == -1) {
+                    return null;
+                }
+                throw new IOException("Failed to read packet length");
+            }
+
+            int packetLength = ByteBuffer.wrap(lengthBytes).getInt();
+            if (packetLength <= 0 || packetLength > (maxPacketSize + 1024)) {
+                log.error("Packet length out of range was {} max is {}", packetLength, maxPacketSize);
+                throw new IOException("Invalid packet length: " + packetLength);
+            }
+
+            // Read the rest of the packet
+            byte[] packetData = new byte[packetLength];
+            System.arraycopy(lengthBytes, 0, packetData, 0, 4);
+
+            int remaining = packetLength - 4;
+            int offset = 4;
+
+            while (remaining > 0) {
+                bytesRead = inputStream.read(packetData, offset, remaining);
+                if (bytesRead == -1) {
+                    throw new IOException("End of stream reached");
+                }
+
+                offset += bytesRead;
+                remaining -= bytesRead;
+            }
+
+            // Deserialize the packet
+            Packet packet = Packet.deserialize(packetData);
+
+            // Deserialize the message
+            var result = Message.deserialize(packet.getDecompressedContent());
+            result.initialize(packet.getConnectionId(), packet.getSessionId(), packet.getPacketId());
+            if( result.getMessageType() == MessageType.KEEP_ALIVE) {
+                continue;
+            }
+            return result;
         }
-
-        // Deserialize the packet
-        Packet packet = Packet.deserialize(packetData);
-
-        // Deserialize the message
-        var result = Message.deserialize(packet.getDecompressedContent());
-        result.initialize(packet.getConnectionId(), packet.getSessionId(), packet.getPacketId());
-        return result;
     }
 
     /**
@@ -146,6 +169,7 @@ public class TcpConnection implements AutoCloseable {
      */
     @Override
     public void close() throws IOException {
+        log.debug("[{}-{}] Closing socket",server?"SERVER":"CLIENT",getConnectionId());
         inputStream.close();
         outputStream.close();
         socket.close();
@@ -204,5 +228,9 @@ public class TcpConnection implements AutoCloseable {
      */
     public void setSession(Runnable sessionTouch) {
         this.sessionTouch = sessionTouch;
+    }
+
+    public void setMaxPacketSize(int maxPacketSize) {
+        this.maxPacketSize = maxPacketSize;
     }
 }

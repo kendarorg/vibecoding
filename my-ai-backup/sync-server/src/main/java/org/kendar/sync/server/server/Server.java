@@ -97,158 +97,172 @@ public class Server {
                     0,
                     settings.getMaxPacketSize()
             );
+            connection.setServer(true);
 
-            // Wait for the connection message
-            Message message = connection.receiveMessage();
-            if (message == null) {
-                log.error("[SERVER] Client disconnected before sending CONNECT message");
-                connection.close();
-                return;
-            }
-            if (message.getMessageType() == MessageType.START_RESTORE) {
-                var session = sessions.get(message.getSessionId());
-                connection.setSessionId(message.getSessionId());
-                connection.setConnectionId(message.getConnectionId());
-                connection.setSession(session::touch);
-                session.setConnection(connection);
-                connection.sendMessage(new StartRestoreAck());
-                return;
-            } else if (message.getMessageType() == MessageType.FILE_DESCRIPTOR) {
-                try {
-                    var session = sessions.get(message.getSessionId());
-                    while (session != null) {
-                        if (message == null) return;
-                        connection.setSessionId(message.getSessionId());
-                        connection.setConnectionId(message.getConnectionId());
-                        var sess = session;
-                        connection.setSession(sess::touch);
-                        session.setConnection(connection);
-                        log.debug("[SERVER-{}] Receiving header {}", connection.getConnectionId(),
-                                ((FileDescriptorMessage) message).getFileInfo().getRelativePath());
-                        handleFileDescriptor(connection, session, (FileDescriptorMessage) message);
-                        message = connection.receiveMessage();
-                        var lastMessage = message;
-                        while (message.getMessageType() == MessageType.FILE_DATA) {
-                            log.debug("[SERVER-{}] Receiving data", connection.getConnectionId());
+            //while( running && !connection.isClosed()) {
 
-                            handleFileData(connection, session, (FileDataMessage) message);
-                            message = connection.receiveMessage();
-                        }
-                        if (message.getMessageType() != MessageType.FILE_END) {
-                            log.error("[SERVER] Unexpected message 1: {}", message.getMessageType());
-                            return;
-                        }
-                        log.debug("[SERVER-{}] Receiving end {}", connection.getConnectionId(),
-                                ((FileEndMessage) message).getFileInfo().getRelativePath());
 
-                        //message = connection.receiveMessage();
-                        handleFileEnd(connection, session, (FileEndMessage) message);
-                        session = sessions.get(message.getSessionId());
-                        message = connection.receiveMessage();
-                    }
-                    log.debug("[SERVER] Client disconnected ");
-                } catch (Exception ex) {
-                    log.error("[SERVER] Client disconnected {}", ex.getMessage());
+                // Wait for the connection message
+                Message message = connection.receiveMessage();
+                if (message == null) {
+                    log.error("[SERVER-{}] Client disconnected before sending CONNECT message",connection.getConnectionId());
+                    connection.close();
                     return;
                 }
-            }
+                if (message.getMessageType() == MessageType.START_RESTORE) {
+                    var session = sessions.get(message.getSessionId());
+                    connection.setSessionId(message.getSessionId());
+                    connection.setConnectionId(message.getConnectionId());
+                    connection.setSession(session::touch);
+                    session.setConnection(connection);
+                    connection.sendMessage(new StartRestoreAck());
+                    return;
+                } else if (message.getMessageType() == MessageType.FILE_DESCRIPTOR) {
+                    try {
+                        var session = sessions.get(message.getSessionId());
+                        while (session != null) {
+                            if (message == null) {
+                                log.error("[SERVER] Client disconnected before sending FILE_DESCRIPTOR message");
+                                return;
+                            }
+                            connection.setSessionId(message.getSessionId());
+                            connection.setConnectionId(message.getConnectionId());
+                            var sess = session;
+                            connection.setSession(sess::touch);
+                            session.setConnection(connection);
+                            log.debug("[SERVER-{}] Receiving header {}", connection.getConnectionId(),
+                                    ((FileDescriptorMessage) message).getFileInfo().getRelativePath());
+                            handleFileDescriptor(connection, session, (FileDescriptorMessage) message);
+                            message = connection.receiveMessage();
+                            var lastMessage = message;
+                            while (message.getMessageType() == MessageType.FILE_DATA) {
+                                log.debug("[SERVER-{}] Receiving data", connection.getConnectionId());
 
-            if (message.getMessageType() != MessageType.CONNECT) {
-                connection.sendMessage(new ErrorMessage("ERR_PROTOCOL", "Expected CONNECT message received: " + message.getMessageType()));
-                connection.close();
-                return;
-            }
+                                handleFileData(connection, session, (FileDataMessage) message);
+                                message = connection.receiveMessage();
+                            }
+                            if (message.getMessageType() != MessageType.FILE_END) {
+                                log.error("[SERVER] Unexpected message 1: {}", message.getMessageType());
+                                return;
+                            }
+                            log.debug("[SERVER-{}] Receiving end {}", connection.getConnectionId(),
+                                    ((FileEndMessage) message).getFileInfo().getRelativePath());
 
-            ConnectMessage connectMessage = (ConnectMessage) message;
-
-            // Authenticate user
-            String username = connectMessage.getUsername();
-            String password = connectMessage.getPassword();
-
-            var userOpt = settings.authenticate(username, password);
-            if (userOpt.isEmpty()) {
-                connection.sendMessage(new ErrorMessage("ERR_AUTH", "Authentication failed"));
-                connection.close();
-                return;
-            }
-
-            var user = userOpt.get();
-
-            // Check if the user has access to the requested folder
-            String targetFolder = connectMessage.getTargetFolder();
-            var folderOpt = settings.getUserFolder(user.getId(), targetFolder);
-            if (folderOpt.isEmpty()) {
-                connection.sendMessage(new ErrorMessage("ERR_ACCESS", "Access to folder denied"));
-                connection.close();
-                return;
-            }
-
-            var folder = folderOpt.get();
-
-            var ignoreHiddenFiles = connectMessage.isIgnoreHiddenFiles();
-            if(folder.isIgnoreHiddenFiles())ignoreHiddenFiles = true;
-            var ignoreSystemFiles = connectMessage.isIgnoreSystemFiles();
-            if(folder.isIgnoreSystemFiles())ignoreSystemFiles = true;
-            var ignoredPatterns = new HashSet<String>();
-            ignoredPatterns.addAll(folder.getIgnoredPatterns());
-            ignoredPatterns.addAll(connectMessage.getIgnoredPatterns());
-
-            jobId = folder.getVirtualName();
-            if(!runningJobs.add(jobId)) {
-                log.warn("[SERVER] Job already running: {}",jobId);
-                connection.sendMessage(new ErrorMessage("ERR_BUSY", "Folder is busy with another operation"));
-                connection.close();
-                return;
-            }
-
-            // Create session
-            ClientSession session = new ClientSession(
-                    sessionId,
-                    user,
-                    folder,
-                    folder.getBackupType(),
-                    connectMessage.isDryRun() || dryRun,
-                    TIMEOUT_SECONDS
-            );
-            sessions.put(sessionId, session);
-            session.setIgnoreHiddenFiles(ignoreHiddenFiles);
-            session.setIgnoreSystemFiles(ignoreSystemFiles);
-            session.setIgnoredPatterns(ignoredPatterns);
-            session.setMainConnection(connection);
-
-            // Set the session in the connection and touch it
-            connection.setSession(session::touch);
-
-            // Send connect response
-            connection.sendMessage(new ConnectResponseMessage(true, null, settings.getMaxPacketSize(),
-                    settings.getMaxConnections(), session.getBackupType(),
-                    ignoreSystemFiles, ignoreHiddenFiles,ignoredPatterns.stream().toList()));
-
-            // Handle messages
-            while (true) {
-                message = connection.receiveMessage();
-                if (message == null) {
-                    break;
-                }
-                switch (message.getMessageType()) {
-                    case FILE_LIST:
-                        handleFileList(connection, session, (FileListMessage) message);
-                        break;
-                    case FILE_SYNC:
-                        handleFileSync(connection, session, (FileSyncMessage) message);
-                        break;
-                    case SYNC_END:
-                        handleSyncEnd(connection, session, (SyncEndMessage) message);
-                        // End of session
-                        session.closeConnections();
-                        sessions.remove(sessionId);
-                        connection.close();
-                        if(jobId!=null)runningJobs.remove(jobId);
+                            //message = connection.receiveMessage();
+                            handleFileEnd(connection, session, (FileEndMessage) message);
+                            session = sessions.get(message.getSessionId());
+                            message = connection.receiveMessage();
+                        }
+                        log.debug("[SERVER] Client disconnected ");
                         return;
-                    default:
-                        connection.sendMessage(new ErrorMessage("ERR_PROTOCOL", "Unexpected message type: " + message.getMessageType()));
+                    } catch (Exception ex) {
+                        log.error("[SERVER] Client disconnected {}", ex.getMessage());
+                        return;
+                    }
                 }
-            }
+
+                if (message.getMessageType() != MessageType.CONNECT) {
+                    connection.sendMessage(new ErrorMessage("ERR_PROTOCOL", "Expected CONNECT message received: " + message.getMessageType()));
+                    connection.close();
+                    return;
+                }
+
+                ConnectMessage connectMessage = (ConnectMessage) message;
+
+                // Authenticate user
+                String username = connectMessage.getUsername();
+                String password = connectMessage.getPassword();
+
+                var userOpt = settings.authenticate(username, password);
+                if (userOpt.isEmpty()) {
+                    connection.sendMessage(new ErrorMessage("ERR_AUTH", "Authentication failed"));
+                    connection.close();
+                    return;
+                }
+
+                var user = userOpt.get();
+
+                // Check if the user has access to the requested folder
+                String targetFolder = connectMessage.getTargetFolder();
+                var folderOpt = settings.getUserFolder(user.getId(), targetFolder);
+                if (folderOpt.isEmpty()) {
+                    connection.sendMessage(new ErrorMessage("ERR_ACCESS", "Access to folder denied"));
+                    connection.close();
+                    return;
+                }
+
+                var folder = folderOpt.get();
+
+                var ignoreHiddenFiles = connectMessage.isIgnoreHiddenFiles();
+                if (folder.isIgnoreHiddenFiles()) ignoreHiddenFiles = true;
+                var ignoreSystemFiles = connectMessage.isIgnoreSystemFiles();
+                if (folder.isIgnoreSystemFiles()) ignoreSystemFiles = true;
+                var ignoredPatterns = new HashSet<String>();
+                ignoredPatterns.addAll(folder.getIgnoredPatterns());
+                ignoredPatterns.addAll(connectMessage.getIgnoredPatterns());
+
+                jobId = folder.getVirtualName();
+                if (!runningJobs.add(jobId)) {
+                    log.warn("[SERVER] Job already running: {}", jobId);
+                    connection.sendMessage(new ErrorMessage("ERR_BUSY", "Folder is busy with another operation"));
+                    connection.close();
+                    return;
+                }
+
+                // Create session
+                ClientSession session = new ClientSession(
+                        sessionId,
+                        user,
+                        folder,
+                        folder.getBackupType(),
+                        connectMessage.isDryRun() || dryRun,
+                        TIMEOUT_SECONDS
+                );
+
+                sessions.put(sessionId, session);
+                session.setIgnoreHiddenFiles(ignoreHiddenFiles);
+                session.setIgnoreSystemFiles(ignoreSystemFiles);
+                session.setIgnoredPatterns(ignoredPatterns);
+                session.setMainConnection(connection);
+
+                // Set the session in the connection and touch it
+                connection.setSession(session::touch);
+
+                // Send connect response
+                connection.sendMessage(new ConnectResponseMessage(true, null, settings.getMaxPacketSize(),
+                        settings.getMaxConnections(), session.getBackupType(),
+                        ignoreSystemFiles, ignoreHiddenFiles, ignoredPatterns.stream().toList()));
+
+                // Handle messages
+                while (true) {
+                    message = connection.receiveMessage();
+                    if (message == null) {
+                        log.debug("[SERVER-{}] No Data", connection.getConnectionId());
+                        break;
+                    }
+                    log.debug("[SERVER-{}] Received data: {}", connection.getConnectionId(), message.getMessageType());
+                    switch (message.getMessageType()) {
+                        case FILE_LIST:
+                            handleFileList(connection, session, (FileListMessage) message);
+                            break;
+                        case FILE_SYNC:
+                            handleFileSync(connection, session, (FileSyncMessage) message);
+                            break;
+                        case SYNC_END:
+                            log.debug("[SERVER-{}] Received sync end", connection.getConnectionId());
+                            handleSyncEnd(connection, session, (SyncEndMessage) message);
+                            Sleeper.sleep(100);
+                            // End of session
+                            session.closeConnections();
+                            sessions.remove(sessionId);
+                            connection.close();
+                            if (jobId != null) runningJobs.remove(jobId);
+                            return;
+                        default:
+                            connection.sendMessage(new ErrorMessage("ERR_PROTOCOL", "Unexpected message type: " + message.getMessageType()));
+                    }
+                }
+            //}
         } catch (IOException e) {
             log.trace("[SERVER] Error handling client: {}", e.getMessage());
             try {
@@ -258,6 +272,7 @@ public class Server {
                 // Ignore
             }
         }
+
     }
 
     private void handleFileSync(TcpConnection connection, ClientSession session, FileSyncMessage message) throws IOException {
@@ -397,6 +412,11 @@ public class Server {
 
         try {
             sessionMonitor.close();
+            this.sessions.clear();
+            this.executorService.shutdown();
+            this.backupHandlers.clear();
+            this.runningJobs.clear();
+
         } catch (Exception ex) {
             log.error("Error closing session monitor: {}", ex.getMessage());
         }

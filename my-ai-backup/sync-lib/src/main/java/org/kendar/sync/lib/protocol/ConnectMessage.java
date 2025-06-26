@@ -10,9 +10,7 @@ import java.util.List;
  * Contains authentication information and the target folder.
  */
 public class ConnectMessage extends Message {
-    static {
-        Message.registerMessageType(ConnectMessage.class);
-    }
+
 
     private String username;
     private String password;

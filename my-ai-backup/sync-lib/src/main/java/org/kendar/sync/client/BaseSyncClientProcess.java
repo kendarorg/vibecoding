@@ -17,12 +17,26 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.*;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
-public class BaseSyncClientProcess {
+public abstract class BaseSyncClientProcess<T extends BaseSyncClientProcess> {
+    private Supplier<Boolean> checkRunning = ()-> true;
+    protected ThreadPoolExecutor executorService;
+    public T setCheckRunning(Supplier<Boolean> checkRunning) {
+        this.checkRunning = checkRunning;
+        return (T) this;
+    }
+
+    public void close(){
+        executorService.shutdown();
+    }
+
+    public boolean isRunning() {
+        return checkRunning.get();
+    }
+
     private static final Logger log = LoggerFactory.getLogger(BaseSyncClientProcess.class);
 
     /**
@@ -120,6 +134,10 @@ public class BaseSyncClientProcess {
                 int bytesRead;
 
                 while ((bytesRead = fis.read(buffer)) != -1) {
+                    if(!isRunning()) {
+                        log.debug("[CLIENT-{}] Client stopped 2: stopping file transfer for {}", connectionId, file.getRelativePath());
+                        return;
+                    }
                     // If we read less than the buffer size, create a smaller array with just the data
                     byte[] blockData = bytesRead == buffer.length ? buffer : java.util.Arrays.copyOf(buffer, bytesRead);
 
@@ -168,6 +186,10 @@ public class BaseSyncClientProcess {
         TcpConnection currentConnection = null;
         FileInfo fileInfo = null;
         try {
+            if(!isRunning()){
+                close();
+                return;
+            }
             currentConnection = connections.poll();
             if (currentConnection == null) {
                 log.error("[CLIENT] No available connections for file transfer");
@@ -228,6 +250,9 @@ public class BaseSyncClientProcess {
             message = currentConnection.receiveMessage();
             if (message.getMessageType() != MessageType.FILE_DATA) {
                 log.error("[CLIENT] Unexpected message 2: {}", message.getMessageType());
+                if(message.getMessageType()==MessageType.ERROR){
+                    log.error("[CLIENT] Error message: {}", ((ErrorMessage) message).getErrorMessage());
+                }
                 return;
             }
 

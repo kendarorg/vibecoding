@@ -23,6 +23,7 @@ public class JobsAdapter extends RecyclerView.Adapter<JobsAdapter.JobViewHolder>
         void onDeleteJob(Job job);
         void onShowJob(Job job);
         void onRunJob(Job job);
+        void onStopJob(Job job);
     }
 
     public JobsAdapter(List<Job> jobs, OnJobActionListener listener) {
@@ -59,8 +60,9 @@ public class JobsAdapter extends RecyclerView.Adapter<JobsAdapter.JobViewHolder>
         private final TextView lastTransferredTextView;
         private final ImageButton editButton;
         private final ImageButton deleteButton;
-        private final ImageButton showButton;
+        private final ImageButton resultsButton;
         private final ImageButton runButton;
+        private final ImageButton stopButton;
 
         public JobViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -69,8 +71,9 @@ public class JobsAdapter extends RecyclerView.Adapter<JobsAdapter.JobViewHolder>
             lastTransferredTextView = itemView.findViewById(R.id.text_last_transferred);
             editButton = itemView.findViewById(R.id.button_edit);
             deleteButton = itemView.findViewById(R.id.button_delete);
-            showButton = itemView.findViewById(R.id.button_show);
+            resultsButton = itemView.findViewById(R.id.button_results);
             runButton = itemView.findViewById(R.id.button_run);
+            stopButton = itemView.findViewById(R.id.button_stop);
         }
 
         public void bind(Job job) {
@@ -80,7 +83,8 @@ public class JobsAdapter extends RecyclerView.Adapter<JobsAdapter.JobViewHolder>
 
             editButton.setOnClickListener(v -> listener.onEditJob(job));
             deleteButton.setOnClickListener(v -> listener.onDeleteJob(job));
-            showButton.setOnClickListener(v -> listener.onShowJob(job));
+            resultsButton.setOnClickListener(v -> listener.onShowJob(job));
+            stopButton.setOnClickListener(v -> listener.onStopJob(job));
             runButton.setOnClickListener(v -> listener.onRunJob(job));
         }
     }

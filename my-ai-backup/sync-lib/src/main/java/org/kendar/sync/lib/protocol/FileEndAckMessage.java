@@ -6,9 +6,7 @@ import org.kendar.sync.lib.buffer.ByteContainer;
  * Message sent in response to a file end message to acknowledge that the file has been successfully received.
  */
 public class FileEndAckMessage extends Message {
-    static {
-        Message.registerMessageType(FileEndAckMessage.class);
-    }
+
 
     private String relativePath;
     private boolean success;

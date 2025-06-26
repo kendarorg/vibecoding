@@ -12,6 +12,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -43,6 +44,19 @@ public class TestUtils {
         }
     }
 
+    public static void assertDirectoriesNotEqual(Path dir1, Path dir2) throws IOException {
+        if (Files.exists(Path.of(dir1.toString(), ".conflicts.log"))) {
+            conflicts = Files.readAllLines(Path.of(dir1.toString(), ".conflicts.log"));
+        }
+        if (Files.exists(Path.of(dir2.toString(), ".conflicts.log"))) {
+            conflicts = Files.readAllLines(Path.of(dir2.toString(), ".conflicts.log"));
+        }
+        var diffferent = new ArrayList<String>();
+        if (areDirectoriesEqual(dir1, dir2, diffferent)) {
+            fail("Directories are equal: " + dir1 + " and " + dir2);
+
+        }
+    }
     public static void assertDirectoriesEqual(Path dir1, Path dir2) throws IOException {
         if (Files.exists(Path.of(dir1.toString(), ".conflicts.log"))) {
             conflicts = Files.readAllLines(Path.of(dir1.toString(), ".conflicts.log"));
@@ -169,21 +183,22 @@ public class TestUtils {
     }
 
     public static List<File> createRandomFiles(File dir, int numFiles, int maxDepth) throws IOException {
-        return createRandomFiles(dir, dir, numFiles, maxDepth);
+        var numFilesCounter = new AtomicInteger(numFiles);
+        return createRandomFiles(dir, dir, numFilesCounter, maxDepth);
     }
 
-    public static List<File> createRandomFiles(File rootDir, File dir, int numFiles, int maxDepth) throws IOException {
+    public static List<File> createRandomFiles(File rootDir, File dir, AtomicInteger numFiles, int maxDepth) throws IOException {
         List<File> files = new ArrayList<>();
         Random random = new Random();
 
-        for (int i = 0; i < numFiles; i++) {
+        for (int i = 0; i < numFiles.get(); i++) {
             // Decide whether to create a file or directory
             boolean isDirectory = random.nextBoolean() && maxDepth > 0;
             String name = isDirectory ? "dir_" + i : "file_" + i + ".txt";
             File file = new File(dir, name);
 
             if (!isDirectory) {
-
+                numFiles.decrementAndGet();
                 files.add(file);
                 var randomLong = getRandomNumber(228967200000L, 1585965600000L);
                 String date = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date(randomLong));
@@ -225,7 +240,7 @@ public class TestUtils {
 
             } else {
                 // Recursively create files in the directory
-                files.addAll(createRandomFiles(rootDir, file, numFiles / 2, maxDepth - 1));
+                files.addAll(createRandomFiles(rootDir, file, numFiles, maxDepth - 1));
             }
         }
 

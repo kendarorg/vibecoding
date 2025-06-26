@@ -7,9 +7,6 @@ import org.kendar.sync.lib.model.FileInfo;
  * Message sent after all blocks of a file have been transferred to signal the end of the file transfer.
  */
 public class FileEndMessage extends Message {
-    static {
-        Message.registerMessageType(FileEndMessage.class);
-    }
 
     private String relativePath;
     private FileInfo fileInfo;

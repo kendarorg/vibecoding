@@ -4,10 +4,12 @@ import org.kendar.sync.lib.model.FileInfo;
 import org.kendar.sync.lib.model.ServerSettings;
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.BackupType;
+import org.kendar.sync.lib.protocol.KeepAlive;
 import org.kendar.sync.lib.utils.Sleeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -40,6 +42,8 @@ public class ClientSession {
         this.backupType = backupType;
         this.dryRun = dryRun;
         this.secondsTimeout = secondsTimeout;
+
+
     }
 
     public UUID getSessionId() {
@@ -133,16 +137,20 @@ public class ClientSession {
     }
 
     public void closeChildConnections() {
-        var lst = new ArrayList<>(connections);
-        for (TcpConnection connection : lst) {
-            try {
-                if (connection.getConnectionId() != 0) {
-                    connection.close();
-                    connections.remove(connection);
+        try {
+            var lst = new ArrayList<>(connections);
+            for (TcpConnection connection : lst) {
+                try {
+                    if (connection.getConnectionId() != 0) {
+                        connection.close();
+                        connections.remove(connection);
+                    }
+                } catch (Exception e) {
+                    log.error("Error closing connection 2: {}", e.getMessage());
                 }
-            } catch (Exception e) {
-                log.error("Error closing connection 2: {}", e.getMessage());
             }
+        } catch (Exception e) {
+            log.error("Error closing child connections: {}", e.getMessage());
         }
         Sleeper.sleep(200);
     }

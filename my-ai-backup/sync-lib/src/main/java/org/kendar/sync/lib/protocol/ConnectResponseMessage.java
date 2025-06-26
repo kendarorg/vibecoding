@@ -10,9 +10,7 @@ import java.util.List;
  * Indicates whether the connection was accepted or rejected.
  */
 public class ConnectResponseMessage extends Message {
-    static {
-        Message.registerMessageType(ConnectResponseMessage.class);
-    }
+
 
     private boolean accepted;
     private String errorMessage = "";

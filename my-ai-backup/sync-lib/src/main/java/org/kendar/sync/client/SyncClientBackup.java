@@ -17,8 +17,9 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
-public class SyncClientBackup extends BaseSyncClientProcess {
+public class SyncClientBackup extends BaseSyncClientProcess<SyncClientBackup> {
     private final Logger log = LoggerFactory.getLogger(SyncClientBackup.class);
+    ;
 
     /**
      * Performs a backup operation.
@@ -31,7 +32,7 @@ public class SyncClientBackup extends BaseSyncClientProcess {
      */
     public void performBackup(TcpConnection connection, CommandLineArgs args, int maxConnections, int maxPacketSize,
                               boolean ignoreSystemFiles,boolean ignoreHiddenFiles,List<String> patternsToIgnore) throws IOException {
-        log.debug("[CLIENT] Starting backup from {} to {}", args.getSourceFolder(), args.getTargetFolder());
+        log.debug("[CLIENT] Starting backup 2 from {} to {}", args.getSourceFolder(), args.getTargetFolder());
 
         // Get the list of files to back up
         List<FileInfo> files = new ArrayList<>();
@@ -72,7 +73,7 @@ public class SyncClientBackup extends BaseSyncClientProcess {
         log.debug("[CLIENT] Transferring {} files with {} parallel connections", filesToTransfer.size(), maxConnections);
 
         // Use a fixed pool of 10 threads for parallel file transfers
-        ExecutorService executorService = new ThreadPoolExecutor(maxConnections, maxConnections,
+        executorService = new ThreadPoolExecutor(maxConnections, maxConnections,
                 0L, TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<>());
         CountDownLatch completionLatch = new CountDownLatch(filesToTransfer.size());
@@ -88,8 +89,12 @@ public class SyncClientBackup extends BaseSyncClientProcess {
             executorService.submit(() -> {
                 TcpConnection currentConnection = null;
                 try {
-
                     semaphore.acquire();
+                    if(!isRunning()) {
+                        close();
+                        log.debug("[CLIENT-{}] Client stopped 1", connection.getConnectionId());
+                        return;
+                    }
                     currentConnection = connections.poll();
                     if (currentConnection == null) {
                         throw new RuntimeException("[CLIENT] No connection available");

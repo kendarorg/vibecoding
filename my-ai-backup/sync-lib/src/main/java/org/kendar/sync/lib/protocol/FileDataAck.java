@@ -7,10 +7,6 @@ import org.kendar.sync.lib.buffer.ByteContainer;
  */
 public class FileDataAck extends Message {
 
-    static {
-        Message.registerMessageType(FileDataAck.class);
-    }
-
     // Default constructor for Jackson
     public FileDataAck() {
     }

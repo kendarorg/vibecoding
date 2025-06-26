@@ -66,6 +66,7 @@ public class SyncIntegrationTest {
     @AfterEach
     void tearDown() throws Exception {
         server.stop();
+        Sleeper.sleep(500);
     }
 
     @BeforeEach
@@ -93,7 +94,7 @@ public class SyncIntegrationTest {
         var serverSettings = new ServerSettings();
         serverSettings.setPort(serverPort);
         serverSettings.setMaxConnections(5);
-        serverSettings.setMaxPacketSize(1024); // 1 MB
+        serverSettings.setMaxPacketSize(10*1024*1024); // 1 MB
         ServerSettings.User newUser = new ServerSettings.User(UUID.randomUUID().toString(),
                 "user", "password", true);
         serverSettings.getUsers().add(newUser);
@@ -116,6 +117,7 @@ public class SyncIntegrationTest {
         commandLineArgs.setUsername("user");
         commandLineArgs.setPassword("password");
         commandLineArgs.setHostName("testHost");
+        commandLineArgs.setMaxSize(10*1024*1024);
     }
 
 
@@ -123,8 +125,8 @@ public class SyncIntegrationTest {
     void testSynchronize() throws Exception {
 
         startServer(BackupType.TWO_WAY_SYNC);
-        createRandomFiles(sourceDir, 5, 3);
-        createRandomFiles(targetDir, 5, 3);
+        createRandomFiles(sourceDir, 100, 3);
+        createRandomFiles(targetDir, 100, 3);
 
         // Perform backup
         System.out.println("================= Performing backup...");
@@ -132,19 +134,19 @@ public class SyncIntegrationTest {
         target.doSync(commandLineArgs);
 
         // Verify backup
-        System.out.println("================= Verifying backup...");
+        System.out.println("================= Verifying backup 2...");
         assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
 
         //Add a new file on target
-        System.out.println("================= ADd file on target...");
+        System.out.println("================= ADd file on target 2...");
         Files.writeString(Path.of(targetDir.toPath() + "/targetnew.txt"), "testBackup");
 
         // Perform backup
-        System.out.println("================= Performing backup...");
+        System.out.println("================= Performing backup 2...");
         target.doSync(commandLineArgs);
 
         // Verify backup
-        System.out.println("================= Verifying backup...");
+        System.out.println("================= Verifying backup 3...");
         assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
 
         //Add a new file on source
@@ -156,7 +158,7 @@ public class SyncIntegrationTest {
         target.doSync(commandLineArgs);
 
         // Verify backup
-        System.out.println("================= Verifying backup...");
+        System.out.println("================= Verifying backup 4...");
         assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
 
 //
@@ -167,7 +169,7 @@ public class SyncIntegrationTest {
         target.doSync(commandLineArgs);
 
         // Verify backup
-        System.out.println("================= Verifying backup...");
+        System.out.println("================= Verifying backup 5...");
         assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
 
 
@@ -178,7 +180,7 @@ public class SyncIntegrationTest {
         target.doSync(commandLineArgs);
 
         // Verify backup
-        System.out.println("================= Verifying backup...");
+        System.out.println("================= Verifying backup 6...");
         assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
 
         Files.writeString(Path.of(sourceDir.toPath() + "/conflict.txt"), "testBackup");
@@ -188,13 +190,55 @@ public class SyncIntegrationTest {
         target.doSync(commandLineArgs);
 
         // Verify backup
-        System.out.println("================= Verifying backup...");
+        System.out.println("================= Verifying backup 7...");
         assertDirectoriesEqual(sourceDir.toPath(), targetDir.toPath());
         var conflicts = Files.readAllLines(Path.of(targetDir.toPath().toString(), ".conflicts.log"));
         assertTrue(conflicts.size() > 0, "There should be conflicts in the log file");
         assertTrue(conflicts.stream().anyMatch(conflict -> conflict.contains("conflict.txt")),
                 "There should be a conflict for the file conflict.txt in the log file");
 
+    }
+
+
+    @Test
+    void testSynchronizeStop() throws Exception {
+
+        startServer(BackupType.TWO_WAY_SYNC);
+        createRandomFiles(sourceDir, 1500, 3);
+        createRandomFiles(targetDir, 1, 4);
+        Sleeper.sleep(200);
+        // Perform backup
+        System.out.println("================= Performing backup...");
+        var target = new SyncClient();
+        target.setKeepAlive(50);
+        new Thread(()->target.doSync(commandLineArgs)).start();
+        var count =0;
+        Sleeper.sleep(100);
+        while(count<1000){
+            //System.out.println(count);
+            Sleeper.yield();
+            count= countFilesInDirectory(targetDir);
+        }
+        System.out.println("================= Counted files in target "+count);
+        target.disconnect();
+
+        // Verify backup
+        System.out.println("================= Verifying backup 1...");
+        assertDirectoriesNotEqual(sourceDir.toPath(), targetDir.toPath());
+
+    }
+
+    public static int countFilesInDirectory(File directory) {
+        int count = 0;
+        for (File file : directory.listFiles()) {
+            if (file.isFile()) {
+                count++;
+            }
+            if (file.isDirectory()) {
+                count += countFilesInDirectory(file);
+            }
+        }
+        return count;
     }
 
 

@@ -16,15 +16,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-public class SyncClientSync extends BaseSyncClientProcess {
+public class SyncClientSync extends BaseSyncClientProcess<SyncClientSync> {
 
     private static final Logger log = LoggerFactory.getLogger(SyncClientSync.class);
 
     public void performSync(TcpConnection connection, CommandLineArgs args, int maxConnections, int maxPacketSize,
                             boolean ignoreSystemFiles,boolean ignoreHiddenFiles,List<String> patternsToIgnore) throws IOException {
-        log.debug("[CLIENT] Starting backup from {} to {}", args.getSourceFolder(), args.getTargetFolder());
+        log.debug("[CLIENT] Starting backup 1 from {} to {}", args.getSourceFolder(), args.getTargetFolder());
 
         // Get the list of files to back up
         List<FileInfo> files = new ArrayList<>();
@@ -50,6 +51,10 @@ public class SyncClientSync extends BaseSyncClientProcess {
 
         // Wait for file list response
         Message response = connection.receiveMessage();
+        if(response==null){
+            log.error("[CLIENT] No response received from server");
+            return;
+        }
         if (response.getMessageType() != MessageType.FILE_LIST_RESPONSE) {
             log.error("[CLIENT] Unexpected response 3: {}", response.getMessageType());
             return;
@@ -83,7 +88,7 @@ public class SyncClientSync extends BaseSyncClientProcess {
         log.debug("[CLIENT] Transferring {} files with {} parallel connections", filesToTransfer.size(), maxConnections);
 
         // Use a fixed pool of 10 threads for parallel file transfers
-        ExecutorService executorService = new ThreadPoolExecutor(maxConnections, maxConnections,
+         executorService = new ThreadPoolExecutor(maxConnections, maxConnections,
                 0L, TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<>());
         CountDownLatch completionLatch = new CountDownLatch(filesToTransfer.size());
@@ -97,10 +102,15 @@ public class SyncClientSync extends BaseSyncClientProcess {
         // Process files to transfer in parallel
         for (FileInfo file : filesToTransfer) {
             executorService.submit(() -> {
+
                 TcpConnection currentConnection = null;
                 try {
-
                     semaphore.acquire();
+                    if(!isRunning()) {
+                        close();
+                        //log.debug("[CLIENT-{}] Client stopped 3", connection.getConnectionId());
+                        return;
+                    }
                     currentConnection = connections.poll();
                     if (currentConnection == null) {
                         throw new RuntimeException("[CLIENT] No connection available");
@@ -188,13 +198,16 @@ public class SyncClientSync extends BaseSyncClientProcess {
                 Sleeper.sleep(100);
             }
             completionLatchRetrieve.await();
-            log.debug("[CLIENT] All file transfers completed 1");
+            log.debug("[CLIENT] All file transfers completed 8");
+            var cc =counter.incrementAndGet();
         } catch (InterruptedException e) {
-            log.error("[CLIENT] File transfer interrupted 1: {}", e.getMessage());
+            log.error("[CLIENT] File transfer interrupted 8: {}", e.getMessage());
         } finally {
+            var cc = counter.get();
             statusAnalyzer.analyze();
             executorService.shutdown();
         }
 
     }
+    private AtomicInteger counter = new AtomicInteger(0);
 }

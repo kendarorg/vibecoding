@@ -7,9 +7,6 @@ import org.kendar.sync.lib.buffer.ByteContainer;
  * to acknowledge the end of the synchronization session.
  */
 public class SyncEndAckMessage extends Message {
-    static {
-        Message.registerMessageType(SyncEndAckMessage.class);
-    }
 
     private boolean success;
     private String errorMessage;

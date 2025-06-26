@@ -111,4 +111,10 @@ public class JobsListFragment extends Fragment implements JobsAdapter.OnJobActio
         var svc = JobSchedulerService.getInstance();
         svc.executeJob(job);
     }
+
+    @Override
+    public void onStopJob(Job job) {
+        var svc = JobSchedulerService.getInstance();
+        svc.stopJob(job);
+    }
 }

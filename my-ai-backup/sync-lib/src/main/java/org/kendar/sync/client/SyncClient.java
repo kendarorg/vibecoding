@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
+import java.util.Timer;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -24,6 +25,14 @@ public class SyncClient {
     private static final int DEFAULT_MAX_CONNECTIONS = 5;
 
     private static final Logger log = LoggerFactory.getLogger(SyncClient.class);
+    private Timer timer;
+    private Socket socket;
+
+    public void setKeepAlive(int keepAlive) {
+        this.keepAlive = keepAlive;
+    }
+
+    private int keepAlive=-1;
 
 
     /**
@@ -70,6 +79,17 @@ public class SyncClient {
         return valid;
     }
 
+    private boolean isRunning = true;
+    public void disconnect(){
+        isRunning =false;
+        if(socket != null){
+            try {
+                socket.close();
+            } catch (Exception e) {
+
+            }
+        }
+    }
 
     public void doSync(CommandLineArgs commandLineArgs) {
         // Validate arguments
@@ -85,14 +105,18 @@ public class SyncClient {
                 log.debug("[CLIENT] Running in dry-run mode. No actual file operations will be performed.");
             }
 
-            Socket socket = new Socket(commandLineArgs.getServerAddress(), commandLineArgs.getServerPort());
+            socket = new Socket(commandLineArgs.getServerAddress(), commandLineArgs.getServerPort());
             UUID sessionId = UUID.randomUUID();
-
+            var maxPacketSize = DEFAULT_MAX_PACKET_SIZE;
+            if(commandLineArgs.getMaxSize()==0){
+                maxPacketSize = commandLineArgs.getMaxSize();
+            }
             try (TcpConnection connection = new TcpConnection(
                     socket,
                     sessionId,
                     0,
-                    DEFAULT_MAX_PACKET_SIZE)) {
+                    maxPacketSize
+                    )) {
 
                 // Send the connection message
                 ConnectMessage connectMessage = new ConnectMessage(
@@ -108,6 +132,7 @@ public class SyncClient {
                         commandLineArgs.getIgnoredPatterns() != null ? commandLineArgs.getIgnoredPatterns() : List.of()
                 );
 
+
                 connection.sendMessage(connectMessage);
 
                 // Wait for the connection response
@@ -122,9 +147,17 @@ public class SyncClient {
                     log.error("[CLIENT] Connection rejected: {}", connectResponse.getErrorMessage());
                     return;
                 }
+                var keepAlive = 3000L;
+                if(this.keepAlive>0){
+                    keepAlive = this.keepAlive;
+                }
+                this.timer = new Timer("idle-timeout-task", true);
+                this.timer.schedule(new SyncClient.TimerTask(connection,this.timer), keepAlive, keepAlive);
+
                 connection.setSessionId(connectResponse.getSessionId());
                 var maxConnections = Math.min(commandLineArgs.getMaxConnections(), connectResponse.getMaxConnections());
-                var maxPacketSize = Math.min(commandLineArgs.getMaxSize(), connectResponse.getMaxPacketSize());
+                maxPacketSize = Math.min(commandLineArgs.getMaxSize(), connectResponse.getMaxPacketSize());
+                connection.setMaxPacketSize(maxPacketSize);
                 if (maxConnections == 0) maxConnections = connectResponse.getMaxConnections();
                 if (maxPacketSize == 0) maxPacketSize = connectResponse.getMaxPacketSize();
 
@@ -132,24 +165,27 @@ public class SyncClient {
 
                 // Perform backup or restore
                 if (connectResponse.getBackupType() == BackupType.TWO_WAY_SYNC) {
-                    new SyncClientSync().performSync(connection, commandLineArgs, maxConnections, maxPacketSize,
+                    new SyncClientSync().setCheckRunning(()->this.isRunning).performSync(connection, commandLineArgs, maxConnections, maxPacketSize,
                             connectResponse.isIgnoreSystemFiles(),
                             connectResponse.isIgnoreHiddenFiles(),
                             connectResponse.getIgnoredPatterns());
                 } else if (commandLineArgs.isBackup()) {
-                    new SyncClientBackup().performBackup(connection, commandLineArgs, maxConnections, maxPacketSize,
+                    new SyncClientBackup().setCheckRunning(()->this.isRunning).performBackup(connection, commandLineArgs, maxConnections, maxPacketSize,
                             connectResponse.isIgnoreSystemFiles(),
                             connectResponse.isIgnoreHiddenFiles(),
                             connectResponse.getIgnoredPatterns());
                 } else {
-                    new SyncClientRestore().performRestore(connection, commandLineArgs, maxConnections, maxPacketSize,
+                    new SyncClientRestore().setCheckRunning(()->this.isRunning).performRestore(connection, commandLineArgs, maxConnections, maxPacketSize,
                             connectResponse.isIgnoreSystemFiles(),
                             connectResponse.isIgnoreHiddenFiles(),
                             connectResponse.getIgnoredPatterns());
                 }
                 Sleeper.sleep(200);
+                log.debug("[CLIENT] Completed main operation, shutting down");
                 // Send sync end message
                 connection.sendMessage(new SyncEndMessage());
+
+                log.debug("[CLIENT-{}] Waiting for end ",connection.getConnectionId()); //KEND
 
                 // Wait for sync end ack
                 response = connection.receiveMessage();
@@ -163,6 +199,10 @@ public class SyncClient {
                     log.error("[CLIENT] Sync failed: {}", syncEndAck.getErrorMessage());
                     return;
                 }
+                log.debug("[CLIENT] Shutting down");
+                Sleeper.sleep(100);
+                connection.close();
+                this.timer.cancel();
 
                 log.debug("[CLIENT] Sync completed successfully");
             }
@@ -172,4 +212,29 @@ public class SyncClient {
     }
 
 
+
+    public class TimerTask extends java.util.TimerTask {
+        private final Timer timer;
+        private final TcpConnection mainConnection;
+
+        public TimerTask(TcpConnection mainConnection, Timer timer) {
+            this.mainConnection = mainConnection;
+            this.timer = timer;
+        }
+
+        @Override
+        public void run() {
+            if(mainConnection!=null) {
+                try {
+                    if(!mainConnection.isClosed()) {
+                        log.debug("[CLIENT-{}] KEEPALIVE",mainConnection.getConnectionId());
+                        mainConnection.sendMessage(new KeepAlive());
+                    }
+                } catch (Exception e) {
+                    log.error("[CLIENT-{}] KEEPALIVE",mainConnection.getConnectionId(),e);
+                    timer.cancel();
+                }
+            }
+        }
+    }
 }

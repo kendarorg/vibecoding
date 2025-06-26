@@ -7,10 +7,6 @@ import org.kendar.sync.lib.buffer.ByteContainer;
  */
 public class StartRestore extends Message {
 
-    static {
-        Message.registerMessageType(StartRestore.class);
-    }
-
     // Default constructor for Jackson
     public StartRestore() {
     }

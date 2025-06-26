@@ -148,6 +148,9 @@ public class SyncBackupHandler extends BackupHandler {
 
             List<FileInfo> filesToSend = new ArrayList<>();
             for (var file : result.getFilesToUpdate()) {
+                if(file.getRelativePath().equalsIgnoreCase(".conflicts.log")){
+                    continue; //Do not send conflicts log
+                }
                 var path = Path.of(session.getFolder().getRealPath(), file.getRelativePath());
                 var fi = new FileInfo();
 
@@ -172,7 +175,9 @@ public class SyncBackupHandler extends BackupHandler {
 
             List<FileInfo> filesToReceive = new ArrayList<>();
             for (var file : result.getFilesToSend()) {
-
+                if(file.getRelativePath().equalsIgnoreCase(".conflicts.log")){
+                    continue; //Do not send conflicts log
+                }
                 var path = Path.of(session.getFolder().getRealPath(), file.getRelativePath());
                 filesToReceive.add(FileInfo.fromFile(path.toFile(), session.getFolder().getRealPath()));
             }

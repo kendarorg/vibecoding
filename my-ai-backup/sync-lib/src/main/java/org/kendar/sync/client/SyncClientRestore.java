@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
-public class SyncClientRestore extends BaseSyncClientProcess {
+public class SyncClientRestore extends BaseSyncClientProcess<SyncClientRestore> {
     private static final Logger log = LoggerFactory.getLogger(SyncClientRestore.class);
 
     /**
@@ -82,7 +82,7 @@ public class SyncClientRestore extends BaseSyncClientProcess {
         var mapToTransfer = new ConcurrentHashMap<>(mapToTransferInitial);
 
         // Use a fixed pool of 10 threads for parallel file transfers
-        ExecutorService executorService = new ThreadPoolExecutor(maxConnections, maxConnections,
+        executorService = new ThreadPoolExecutor(maxConnections, maxConnections,
                 0L, TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<>());
         CountDownLatch completionLatch = new CountDownLatch(mapToTransfer.size());

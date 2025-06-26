@@ -11,7 +11,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * Base class for all messages in the sync protocol.
  */
 public abstract class Message {
-    private static final ConcurrentHashMap<String, Class<? extends Message>> messageTypeMap = new ConcurrentHashMap<>();
     private static final Logger log = LoggerFactory.getLogger(Message.class);
 
     private int connectionId;
@@ -19,13 +18,6 @@ public abstract class Message {
     private UUID sessionId;
 
     private int packetId;
-
-    public static void registerMessageType(Class<? extends Message> clazz) {
-        if (clazz == null) {
-            throw new IllegalArgumentException("Type and class must not be null or empty");
-        }
-        messageTypeMap.put(clazz.getSimpleName(), clazz);
-    }
 
     /**
      * Deserializes a message from a JSON byte array.
@@ -41,9 +33,9 @@ public abstract class Message {
         buffer.write(data);
         buffer.resetReadCursor();
         buffer.resetWriteCursor();
-        String type = buffer.readType(String.class);
+        MessageType type = buffer.readType(MessageType.class);
         try {
-            var instance = (Message) clazz.getDeclaredConstructor().newInstance();
+            var instance = type.createInstance();
             return (T) instance.deserialize(buffer);
         } catch (Exception e) {
             log.error("Error 1 deserializing message of type: {}", type);
@@ -62,11 +54,10 @@ public abstract class Message {
         buffer.write(data);
         buffer.resetReadCursor();
         buffer.resetWriteCursor();
-        String type = buffer.readType(String.class);
+        MessageType type = buffer.readType(MessageType.class);
 
         try {
-            var clazz = Class.forName("org.kendar.sync.lib.protocol."+type);
-            var instance = (Message) clazz.getDeclaredConstructor().newInstance();
+            var instance = type.createInstance();
             return instance.deserialize(buffer);
         } catch (Exception e) {
             log.error("Error 2 deserializing message of type: {}", type);
@@ -105,7 +96,7 @@ public abstract class Message {
     public byte[] serialize() {
         try {
             var buffer = ByteContainer.create();
-            buffer.writeType(this.getClass().getSimpleName());
+            buffer.writeType(this.getMessageType());
             this.serialize(buffer);
             return buffer.getBytes();
         } catch (Exception e) {

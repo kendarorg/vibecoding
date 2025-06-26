@@ -19,6 +19,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import org.json.JSONArray;
 import org.kendar.sync.model.Job;
 import org.kendar.sync.util.JobsFileUtil;
 
@@ -27,7 +28,9 @@ import org.kendar.sync.client.SyncClient;
 
 import java.util.Calendar;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -89,7 +92,7 @@ public class JobSchedulerService extends Service {
             } catch (Exception e) {
                 Log.e(TAG, "Error in jobCheckRunnable", e);
             } finally {
-                if(isCharging && isWifiConnected) {
+                if (isCharging && isWifiConnected) {
                     handler.postDelayed(this, 5000);
                 } else {
                     handler.postDelayed(this, CHECK_INTERVAL_MS);
@@ -98,6 +101,7 @@ public class JobSchedulerService extends Service {
         }
     };
     private static JobSchedulerService staticInstance;
+    private Map<UUID, SyncClient> runningJobClients = new ConcurrentHashMap<>();
 
     public static JobSchedulerService getInstance() {
         return staticInstance;
@@ -150,6 +154,7 @@ public class JobSchedulerService extends Service {
         executorService.shutdown();
         super.onDestroy();
     }
+
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
@@ -189,7 +194,7 @@ public class JobSchedulerService extends Service {
         List<Job> jobs = jobsFileUtil.readJobs();
         for (Job job : jobs) {
             var nextScheduleTime = job.retrieveNextScheduleTime();
-            if (nextScheduleTime==null && job.retrieveIsOnWifiOnly() && !isJobRunning(job.getId())) {
+            if (nextScheduleTime == null && job.retrieveIsOnWifiOnly() && !isJobRunning(job.getId())) {
                 executeJob(job);
             }
         }
@@ -215,7 +220,7 @@ public class JobSchedulerService extends Service {
             }
 
             Calendar nextRun = job.retrieveNextScheduleTime();
-            if(nextRun == null) {
+            if (nextRun == null) {
                 continue; // Skip if no next run time is set
             }
             // Skip jobs that are wifi-only or charge-only as they're handled separately
@@ -231,7 +236,7 @@ public class JobSchedulerService extends Service {
             }
         }
         Semaphore jobSemaphore = new Semaphore(1);
-        while(!toRunJob.isEmpty()) {
+        while (!toRunJob.isEmpty()) {
             try {
                 jobSemaphore.acquire();
                 UUID jobId = toRunJob.poll();
@@ -239,7 +244,7 @@ public class JobSchedulerService extends Service {
                     runningJobId.set(jobId);
                     Job job = jobsFileUtil.getJobById(jobId);
                     if (job != null) {
-                        runJobInternal(job,jobSemaphore);
+                        runJobInternal(job, jobSemaphore);
                     }
                 }
 
@@ -266,6 +271,7 @@ public class JobSchedulerService extends Service {
                 command.setIgnoreSystemFiles(true);
                 command.setHostName("ANDROID"); //TODO Should set it on main form
                 var sc = new SyncClient();
+                runningJobClients.put(job.getId(), sc);
                 sc.doSync(command);
 
                 // Update job with execution details
@@ -277,9 +283,10 @@ public class JobSchedulerService extends Service {
             } catch (Exception e) {
                 Log.e(TAG, "Error executing job: " + job.getName(), e);
             } finally {
-               jobSemaphore.release();
-               toRunJob.remove(job.getId());
-               runningJobId.set(null);
+                runningJobClients.remove(job.getId());
+                jobSemaphore.release();
+                toRunJob.remove(job.getId());
+                runningJobId.set(null);
             }
         });
     }
@@ -295,5 +302,14 @@ public class JobSchedulerService extends Service {
 
         UUID jobId = job.getId();
         toRunJob.add(jobId);
+    }
+
+    public void stopJob(Job job) {
+        var client = runningJobClients.get(job.getId());
+        client.disconnect();
+        runningJobClients.remove(job.getId());
+        jobSemaphore.release();
+        toRunJob.remove(job.getId());
+        runningJobId.set(null);
     }
 }
