@@ -208,6 +208,7 @@ public class Server {
                 if (!runningJobs.add(jobId)) {
                     log.warn("[SERVER] Job already running: {}", jobId);
                     connection.sendMessage(new ErrorMessage("ERR_BUSY", "Folder is busy with another operation"));
+                    Sleeper.sleep(100);
                     connection.close();
                     return;
                 }

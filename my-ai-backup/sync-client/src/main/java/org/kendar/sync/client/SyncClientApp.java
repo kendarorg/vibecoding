@@ -1,13 +1,17 @@
 package org.kendar.sync.client;
 
 import org.kendar.sync.lib.protocol.BackupType;
+import org.kendar.sync.lib.utils.Sleeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.util.ArrayList;
+
+import static java.lang.System.exit;
 
 /**
  * Main class for the sync client application.
@@ -21,18 +25,35 @@ public class SyncClientApp {
      * @param args Command line arguments
      */
     public static void main(String[] args) {
-        // Parse command line arguments
-        CommandLineArgs commandLineArgs = parseCommandLineArgs(args);
+        try {
+            // Parse command line arguments
+            CommandLineArgs commandLineArgs = parseCommandLineArgs(args);
 
-        if (commandLineArgs.isHelp()) {
-            printHelp();
-            return;
+            if (commandLineArgs.isHelp()) {
+                printHelp();
+                return;
+            }
+            var hostname = getHostname();
+            var syncClient = new SyncClient();
+            commandLineArgs.setHostName(hostname);
+
+            var retries = 10;
+            while (retries > 0) {
+                try {
+                    syncClient.doSync(commandLineArgs);
+                    retries = -1;
+                    exit(0);
+                } catch (RetryException ex) {
+                    log.info("Retrying in 10 seconds. Job {} in use.",commandLineArgs.getTargetFolder());
+                    Sleeper.sleep(10 * 1000);
+                }
+            }
+            log.error("Job {} in use.",commandLineArgs.getTargetFolder());
+            exit(1);
+        }catch (Exception ex){
+            log.error("[CLIENT] Error: {}",ex.getMessage(),ex);
+            exit(2);
         }
-        var hostname = getHostname();
-        var syncClient = new SyncClient();
-        commandLineArgs.setHostName(hostname);
-
-        syncClient.doSync(commandLineArgs);
     }
 
     private static String getHostname() {

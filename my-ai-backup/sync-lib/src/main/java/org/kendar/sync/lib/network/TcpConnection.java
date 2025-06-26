@@ -1,5 +1,6 @@
 package org.kendar.sync.lib.network;
 
+import org.kendar.sync.client.RetryException;
 import org.kendar.sync.lib.protocol.ErrorMessage;
 import org.kendar.sync.lib.protocol.Message;
 import org.kendar.sync.lib.protocol.MessageType;
@@ -176,8 +177,11 @@ public class TcpConnection implements AutoCloseable {
                     var errorMessage = (ErrorMessage) result;
                     log.error("[{}-{}] Error received: {}-{}-{}", server ? "SERVER" : "CLIENT", getConnectionId(),
                             errorMessage.getErrorCode(), errorMessage.getErrorMessage(), errorMessage.getDetails());
-                    throw new IOException(errorMessage.getErrorCode() + "-" +
-                            errorMessage.getErrorMessage() + "-" + errorMessage.getDetails());
+                    if(errorMessage.getErrorCode().equals("ERR_BUSY") ) {
+                        throw new RetryException(errorMessage.getErrorCode(),
+                                errorMessage.getErrorMessage(), errorMessage.getDetails());
+                    }
+                    throw new IOException(errorMessage.getErrorCode()+"-"+errorMessage.getErrorMessage()+"-"+errorMessage.getDetails());
                 }
                 return result;
             }
