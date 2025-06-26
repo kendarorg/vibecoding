@@ -152,9 +152,7 @@ public class PreserveBackupHandler extends BackupHandler {
         var realPath = Path.of(session.getFolder().getRealPath() + File.separator + fileInfo.getRelativePath());
         var attr = Files.readAttributes(realPath, BasicFileAttributes.class);
         FileUtils.writeFileAttributes(realPath,fileInfo.getExtendedUmask(),attr);
-        Files.setAttribute(realPath, "creationTime", FileTime.fromMillis(fileInfo.getCreationTime().toEpochMilli()));
-        Files.setLastModifiedTime(realPath, FileTime.fromMillis(fileInfo.getModificationTime().toEpochMilli()));
-
+        FileUtils.setFileTimes(realPath.toFile(),fileInfo.getCreationTime(), fileInfo.getModificationTime());
         connection.sendMessage(FileEndAckMessage.success(fileInfo.getRelativePath()));
     }
 }
