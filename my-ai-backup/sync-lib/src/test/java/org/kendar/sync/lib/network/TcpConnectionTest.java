@@ -36,8 +36,8 @@ class TcpConnectionTest {
         serverSocket = new FakeSocket();
 
         // Create TcpConnections
-        clientConnection = new TcpConnection(clientSocket, sessionId, connectionId, MAX_PACKET_SIZE);
-        serverConnection = new TcpConnection(serverSocket, sessionId, connectionId, MAX_PACKET_SIZE);
+        clientConnection = new TcpConnection(clientSocket, sessionId, connectionId, MAX_PACKET_SIZE,false);
+        serverConnection = new TcpConnection(serverSocket, sessionId, connectionId, MAX_PACKET_SIZE,true);
     }
 
     /**

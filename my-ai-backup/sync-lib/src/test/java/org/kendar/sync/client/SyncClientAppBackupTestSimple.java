@@ -280,7 +280,7 @@ class SyncClientAppBackupTestSimple {
 
         public MockTcpConnection() throws IOException {
             // Create a fake socket that won't be used
-            super(new FakeSocket(), UUID.randomUUID(), 0, 1024);
+            super(new FakeSocket(), UUID.randomUUID(), 0, 1024,false);
         }
 
         @Override

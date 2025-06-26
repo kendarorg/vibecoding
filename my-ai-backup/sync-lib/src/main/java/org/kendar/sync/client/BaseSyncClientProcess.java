@@ -318,6 +318,6 @@ public abstract class BaseSyncClientProcess<T extends BaseSyncClientProcess> {
                                              CommandLineArgs args, int i, int maxPacketSize) throws IOException {
         Socket socket = new Socket(args.getServerAddress(), args.getServerPort());
         return new TcpConnection(socket, connection.getSessionId(),
-                i + 1, maxPacketSize);
+                i + 1, maxPacketSize,false);
     }
 }

@@ -115,8 +115,8 @@ public class SyncClient {
                     socket,
                     sessionId,
                     0,
-                    maxPacketSize
-                    )) {
+                    maxPacketSize,
+                    false)) {
 
                 // Send the connection message
                 ConnectMessage connectMessage = new ConnectMessage(

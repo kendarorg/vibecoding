@@ -95,7 +95,8 @@ public class Server {
                     clientSocket,
                     sessionId,
                     0,
-                    settings.getMaxPacketSize()
+                    settings.getMaxPacketSize(),
+                    true
             );
             connection.setServer(true);
 

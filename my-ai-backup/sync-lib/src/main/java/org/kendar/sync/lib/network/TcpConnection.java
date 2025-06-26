@@ -49,7 +49,7 @@ public class TcpConnection implements AutoCloseable {
      * @param maxPacketSize The maximum packet size
      * @throws IOException If an I/O error occurs
      */
-    public TcpConnection(Socket socket, UUID sessionId, int connectionId, int maxPacketSize) throws IOException {
+    public TcpConnection(Socket socket, UUID sessionId, int connectionId, int maxPacketSize,boolean server) throws IOException {
         this.socket = socket;
         this.inputStream = socket.getInputStream();
         this.outputStream = socket.getOutputStream();
@@ -57,6 +57,8 @@ public class TcpConnection implements AutoCloseable {
         this.connectionId = connectionId;
         this.packetId = 0;
         this.maxPacketSize = maxPacketSize;
+        this.server= server;
+        log.debug("[{}] Opening socket",server?"SERVER":"CLIENT",getConnectionId());
     }
 
     public void sendError(String code,String error) {
