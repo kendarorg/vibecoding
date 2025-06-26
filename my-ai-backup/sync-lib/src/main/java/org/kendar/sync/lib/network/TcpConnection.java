@@ -33,6 +33,7 @@ public class TcpConnection implements AutoCloseable {
     private Runnable sessionTouch;
     private boolean server = false;
     private final Object lock = new Object();
+    private boolean closed;
 
     /**
      * Creates a new TCP connection.
@@ -191,6 +192,7 @@ public class TcpConnection implements AutoCloseable {
                 return result;
             }
         } catch (SocketException se) {
+            if(closed)return null;
             log.error("[{}-{}] Socket exception: {}", server ? "SERVER" : "CLIENT", getConnectionId(), se.getMessage());
             throw new SocketException(se.getMessage());
         }
@@ -203,6 +205,7 @@ public class TcpConnection implements AutoCloseable {
      */
     @Override
     public void close() throws IOException {
+        this.closed=true;
         log.debug("[{}-{}] Closing socket", server ? "SERVER" : "CLIENT", getConnectionId());
         inputStream.close();
         outputStream.close();

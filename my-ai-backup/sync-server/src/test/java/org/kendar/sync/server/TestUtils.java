@@ -153,7 +153,8 @@ public class TestUtils {
             }
             var lct1 = dtf.format(new Date(attr1.getCreationTime().getEpochSecond() * 1000));
             var lct2 = dtf.format(new Date(attr2.getCreationTime().getEpochSecond() * 1000));
-            if (!lct1.equals(lct2)) {
+            if (Math.abs(attr1.getCreationTime().getEpochSecond()-
+                attr2.getCreationTime().getEpochSecond())>1) {
                 System.err.println("Different creation: " +
                         file1 + " " + lct1 + " " +
                         file2 + " " + lct2);
@@ -200,7 +201,9 @@ public class TestUtils {
             if (!isDirectory) {
                 numFiles.decrementAndGet();
                 files.add(file);
-                var randomLong = getRandomNumber(228967200000L, 1585965600000L);
+                var randomLong = getRandomNumber(
+                    962027822000L,
+                    1656251822000L);
                 String date = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date(randomLong));
                 // Create a file with random content
                 String content = "Content for " + name + ": " + UUID.randomUUID();

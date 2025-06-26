@@ -146,8 +146,9 @@ public class BackupIntegrationTest {
         // Remove a file from the source directory
         removedFile = removeRandomFile(sourceDir.toPath(), sourceDir.toPath());
 
+        System.out.println("================= Removing 6..."+removedFile);
         // Perform restore
-        System.out.println("================= Performing restore 6...");
+        System.out.println("================= Performing restore 7...");
         if (restore) {
             commandLineArgs.setBackup(false);
             target.doSync(commandLineArgs);

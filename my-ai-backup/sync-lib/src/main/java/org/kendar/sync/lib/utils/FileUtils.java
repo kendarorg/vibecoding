@@ -200,8 +200,10 @@ public class FileUtils {
      */
     public static void setFileTimes(File file, Instant creationTime, Instant modificationTime) throws IOException {
         Path path = file.toPath();
-        Files.setAttribute(path, "creationTime", FileTime.from(creationTime));
-        Files.setAttribute(path, "lastModifiedTime", FileTime.from(modificationTime));
+        //Files.setAttribute(path, "creationTime", FileTime.from(creationTime));
+        //Files.setAttribute(path, "lastModifiedTime", FileTime.from(modificationTime));
+        BasicFileAttributeView attributes = Files.getFileAttributeView(path, BasicFileAttributeView.class);
+        attributes.setTimes(FileTime.from(modificationTime), FileTime.from(creationTime), FileTime.from(modificationTime));
     }
 
     /**
