@@ -123,10 +123,10 @@ public abstract class BackupHandler {
 
         try {
             completionLatch.await();
-            log.debug("[SERVER] All file transfers completed");
+            log.debug("[SERVER-{}] All file transfers completed",connection.getConnectionId());
             //connection.close();
         } catch (InterruptedException e) {
-            log.error("[SERVER] File transfer interrupted: {}", e.getMessage());
+            log.error("[SERVER-{}] File transfer interrupted",connection.getConnectionId(), e);
         } finally {
             executorService.shutdown();
         }
@@ -152,13 +152,18 @@ public abstract class BackupHandler {
 
             var response = currentConnection.receiveMessage();
             if (response.getMessageType() != MessageType.FILE_DESCRIPTOR_ACK) {
-                log.error("[SERVER] Unexpected response 2: {}", response.getMessageType());
+                currentConnection.sendError("UNEXPECTED_RESPONSE",response.getMessageType().toString());
+                log.error("[SERVER-{}] Unexpected response 2: {}",currentConnection.getConnectionId(),
+                        response.getMessageType());
                 return;
             }
 
             FileDescriptorAckMessage fileDescriptorAck = (FileDescriptorAckMessage) response;
             if (!fileDescriptorAck.isReady()) {
-                log.error("[SERVER] Server not ready to receive file: {}", fileDescriptorAck.getErrorMessage());
+                currentConnection.sendError("SERVER_NOT_READY","Server not ready to receive file");
+                log.error("[SERVER-{}] Server not ready to receive file: {}",
+                        currentConnection.getConnectionId(),
+                        fileDescriptorAck.getErrorMessage());
                 return;
             }
 
@@ -181,18 +186,21 @@ public abstract class BackupHandler {
             // Wait for file end ack
             response = currentConnection.receiveMessage();
             if (response.getMessageType() != MessageType.FILE_END_ACK) {
+                currentConnection.sendError("UNEXPECTED_RESPONSE",response.getMessageType().toString());
                 log.error("[SERVER] Unexpected response 3: {}", response.getMessageType());
                 return;
             }
 
             FileEndAckMessage fileEndAck = (FileEndAckMessage) response;
             if (!fileEndAck.isSuccess()) {
+                currentConnection.sendError("TRANSFER_FAILED",file.getRelativePath());
                 log.error("[SERVER] File transfer failed: {}", fileEndAck.getErrorMessage());
                 return;
             }
 
             log.debug("[SERVER] Transferred file: {}", file.getRelativePath());
         } catch (Exception e) {
+            currentConnection.sendError("TRANSFER_FAILED",file.getRelativePath());
             log.error("[SERVER] Error transferring file 3: {} - {}", file.getRelativePath(), e.getMessage());
         } finally {
             if (currentConnection != null) connections.add(currentConnection);
@@ -230,6 +238,7 @@ public abstract class BackupHandler {
                 connection.sendMessage(fileDataMessage);
                 var response = connection.receiveMessage();
                 if (response.getMessageType() != MessageType.FILE_DATA_ACK) {
+                    connection.sendError("UNEXPECTED_RESPONSE",response.getMessageType().toString());
                     log.error("[SERVER] Unexpected response 9: {}", response.getMessageType());
                     return;
                 }

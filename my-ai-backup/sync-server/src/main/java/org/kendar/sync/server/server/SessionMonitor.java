@@ -58,6 +58,7 @@ public class SessionMonitor implements AutoCloseable {
                 if (session != null && session.isExpired()) {
                     log.info("Session {} has expired, closing connections", sessionId);
                     session.closeConnections();
+                    session.getMainConnection().close();
                     var jobId = session.getFolder().getVirtualName();
                     runningJobs.remove(jobId);
                     sessions.remove(sessionId);

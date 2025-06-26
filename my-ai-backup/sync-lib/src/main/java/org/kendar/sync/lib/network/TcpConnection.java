@@ -1,5 +1,6 @@
 package org.kendar.sync.lib.network;
 
+import org.kendar.sync.lib.protocol.ErrorMessage;
 import org.kendar.sync.lib.protocol.Message;
 import org.kendar.sync.lib.protocol.MessageType;
 import org.kendar.sync.lib.protocol.Packet;
@@ -10,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.UUID;
@@ -54,6 +56,18 @@ public class TcpConnection implements AutoCloseable {
         this.connectionId = connectionId;
         this.packetId = 0;
         this.maxPacketSize = maxPacketSize;
+    }
+
+    public void sendError(String code,String error) {
+        sendError(code,error,"");
+    }
+    public void sendError(String code,String error,String details)  {
+        Message message = new ErrorMessage(code, error,details);
+        try {
+            sendMessage(message);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 
@@ -109,56 +123,67 @@ public class TcpConnection implements AutoCloseable {
      * @throws IOException If an I/O error occurs
      */
     public Message receiveMessage() throws IOException {
-        while(true) {
-            // Touch the session before reading to indicate activity
-            if (sessionTouch != null) {
-                sessionTouch.run(); // 30-second timeout
-            }
-
-            // Read the packet length
-            byte[] lengthBytes = new byte[4];
-            this.inputStream = socket.getInputStream();
-            int bytesRead = inputStream.read(lengthBytes);
-            if (bytesRead != 4) {
-                if (bytesRead == -1) {
-                    return null;
-                }
-                throw new IOException("Failed to read packet length");
-            }
-
-            int packetLength = ByteBuffer.wrap(lengthBytes).getInt();
-            if (packetLength <= 0 || packetLength > (maxPacketSize + 1024)) {
-                log.error("Packet length out of range was {} max is {}", packetLength, maxPacketSize);
-                throw new IOException("Invalid packet length: " + packetLength);
-            }
-
-            // Read the rest of the packet
-            byte[] packetData = new byte[packetLength];
-            System.arraycopy(lengthBytes, 0, packetData, 0, 4);
-
-            int remaining = packetLength - 4;
-            int offset = 4;
-
-            while (remaining > 0) {
-                bytesRead = inputStream.read(packetData, offset, remaining);
-                if (bytesRead == -1) {
-                    throw new IOException("End of stream reached");
+        try {
+            while (true) {
+                // Touch the session before reading to indicate activity
+                if (sessionTouch != null) {
+                    sessionTouch.run(); // 30-second timeout
                 }
 
-                offset += bytesRead;
-                remaining -= bytesRead;
-            }
+                // Read the packet length
+                byte[] lengthBytes = new byte[4];
+                this.inputStream = socket.getInputStream();
+                int bytesRead = inputStream.read(lengthBytes);
+                if (bytesRead != 4) {
+                    if (bytesRead == -1) {
+                        return null;
+                    }
+                    throw new IOException("Failed to read packet length");
+                }
 
-            // Deserialize the packet
-            Packet packet = Packet.deserialize(packetData);
+                int packetLength = ByteBuffer.wrap(lengthBytes).getInt();
+                if (packetLength <= 0 || packetLength > (maxPacketSize + 1024)) {
+                    log.error("Packet length out of range was {} max is {}", packetLength, maxPacketSize);
+                    throw new IOException("Invalid packet length: " + packetLength);
+                }
 
-            // Deserialize the message
-            var result = Message.deserialize(packet.getDecompressedContent());
-            result.initialize(packet.getConnectionId(), packet.getSessionId(), packet.getPacketId());
-            if( result.getMessageType() == MessageType.KEEP_ALIVE) {
-                continue;
+                // Read the rest of the packet
+                byte[] packetData = new byte[packetLength];
+                System.arraycopy(lengthBytes, 0, packetData, 0, 4);
+
+                int remaining = packetLength - 4;
+                int offset = 4;
+
+                while (remaining > 0) {
+                    bytesRead = inputStream.read(packetData, offset, remaining);
+                    if (bytesRead == -1) {
+                        throw new IOException("End of stream reached");
+                    }
+
+                    offset += bytesRead;
+                    remaining -= bytesRead;
+                }
+
+                // Deserialize the packet
+                Packet packet = Packet.deserialize(packetData);
+
+                // Deserialize the message
+                var result = Message.deserialize(packet.getDecompressedContent());
+                result.initialize(packet.getConnectionId(), packet.getSessionId(), packet.getPacketId());
+                if (result.getMessageType() == MessageType.KEEP_ALIVE) {
+                    continue;
+                } else if (result.getMessageType() == MessageType.ERROR) {
+                    var errorMessage = (ErrorMessage) result;
+                    log.error("[{}-{}] Error received: {}-{}-{}", server ? "SERVER" : "CLIENT", getConnectionId(),
+                            errorMessage.getErrorCode(), errorMessage.getErrorMessage(), errorMessage.getDetails());
+                    throw new IOException(errorMessage.getErrorCode() + "-" +
+                            errorMessage.getErrorMessage() + "-" + errorMessage.getDetails());
+                }
+                return result;
             }
-            return result;
+        }catch (SocketException se){
+            log.error("[{}-{}] Socket exception: {}",server?"SERVER":"CLIENT",getConnectionId(),se.getMessage());
+            throw new SocketException(se.getMessage());
         }
     }
 

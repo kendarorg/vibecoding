@@ -3,6 +3,7 @@ package org.kendar.sync.lib.network;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.kendar.sync.lib.protocol.ErrorMessage;
+import org.kendar.sync.lib.protocol.FileDataAck;
 import org.kendar.sync.lib.protocol.Message;
 import org.kendar.sync.lib.protocol.MessageType;
 
@@ -67,14 +68,13 @@ class TcpConnectionTest {
         transferClientToServer();
 
         // Server receives the message
-        Message receivedMessage = serverConnection.receiveMessage();
+        IOException exception = assertThrows(IOException.class, () -> serverConnection.receiveMessage());
 
-        // Verify the received message
-        assertEquals(MessageType.ERROR, receivedMessage.getMessageType());
-        assertEquals("Test error message", ((ErrorMessage) receivedMessage).getErrorMessage());
+        assertEquals("ERR001-Test error message-",
+                exception.getMessage());
 
         // Server sends the same message back
-        serverConnection.sendMessage(receivedMessage);
+        serverConnection.sendMessage(new FileDataAck());
 
         // Transfer data from server to client
         transferServerToClient();
@@ -83,8 +83,7 @@ class TcpConnectionTest {
         Message clientReceivedMessage = clientConnection.receiveMessage();
 
         // Verify the received message
-        assertEquals(MessageType.ERROR, clientReceivedMessage.getMessageType());
-        assertEquals("Test error message", ((ErrorMessage) clientReceivedMessage).getErrorMessage());
+        assertEquals(MessageType.FILE_DATA_ACK, clientReceivedMessage.getMessageType());
     }
 
     @Test

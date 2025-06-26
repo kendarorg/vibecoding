@@ -122,7 +122,8 @@ public class Server {
                         var session = sessions.get(message.getSessionId());
                         while (session != null) {
                             if (message == null) {
-                                log.error("[SERVER] Client disconnected before sending FILE_DESCRIPTOR message");
+                                log.error("[SERVER-{}] Client disconnected before " +
+                                        "sending FILE_DESCRIPTOR message",connection.getConnectionId());
                                 return;
                             }
                             connection.setSessionId(message.getSessionId());
@@ -142,7 +143,9 @@ public class Server {
                                 message = connection.receiveMessage();
                             }
                             if (message.getMessageType() != MessageType.FILE_END) {
-                                log.error("[SERVER] Unexpected message 1: {}", message.getMessageType());
+                                log.error("[SERVER-{}] Unexpected message 1: {}",
+                                        connection.getConnectionId(),
+                                        message.getMessageType());
                                 return;
                             }
                             log.debug("[SERVER-{}] Receiving end {}", connection.getConnectionId(),
@@ -153,10 +156,10 @@ public class Server {
                             session = sessions.get(message.getSessionId());
                             message = connection.receiveMessage();
                         }
-                        log.debug("[SERVER] Client disconnected ");
+                        log.debug("[SERVER-{}] Client disconnected ",connection.getConnectionId());
                         return;
                     } catch (Exception ex) {
-                        log.error("[SERVER] Client disconnected {}", ex.getMessage());
+                        log.debug("[SERVER-{}] Client disconnected ",connection.getConnectionId(), ex);
                         return;
                     }
                 }
@@ -280,7 +283,7 @@ public class Server {
         BackupHandler handler = backupHandlers.get(session.getBackupType());
         if (handler == null) {
             log.error("No handler found for backup type 6: {}", session.getBackupType());
-            connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
+            connection.sendError("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType());
             return;
         }
 
@@ -304,7 +307,7 @@ public class Server {
         BackupHandler handler = backupHandlers.get(session.getBackupType());
         if (handler == null) {
             log.error("No handler found for backup type 1: {}", session.getBackupType());
-            connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
+            connection.sendError("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType());
             return;
         }
 
@@ -330,7 +333,7 @@ public class Server {
         BackupHandler handler = backupHandlers.get(session.getBackupType());
         if (handler == null) {
             log.error("No handler found for backup type 2: {}", session.getBackupType());
-            connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
+            connection.sendError("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType());
             return;
         }
 
@@ -351,7 +354,7 @@ public class Server {
         BackupHandler handler = backupHandlers.get(session.getBackupType());
         if (handler == null) {
             log.error("No handler found for backup type 3: {}", session.getBackupType());
-            connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
+            connection.sendError("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType());
             return;
         }
 
@@ -373,7 +376,7 @@ public class Server {
         BackupHandler handler = backupHandlers.get(session.getBackupType());
         if (handler == null) {
             log.error("No handler found for backup type 4: {}", session.getBackupType());
-            connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
+            connection.sendError("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType());
             return;
         }
 
@@ -394,7 +397,7 @@ public class Server {
         BackupHandler handler = backupHandlers.get(session.getBackupType());
         if (handler == null) {
             log.error("No handler found for backup type 5: {}", session.getBackupType());
-            connection.sendMessage(new ErrorMessage("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType()));
+            connection.sendError("ERR_BACKUP_TYPE", "Unsupported backup type: " + session.getBackupType());
             return;
         }
 

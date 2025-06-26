@@ -250,9 +250,6 @@ public abstract class BaseSyncClientProcess<T extends BaseSyncClientProcess> {
             message = currentConnection.receiveMessage();
             if (message.getMessageType() != MessageType.FILE_DATA) {
                 log.error("[CLIENT] Unexpected message 2: {}", message.getMessageType());
-                if(message.getMessageType()==MessageType.ERROR){
-                    log.error("[CLIENT] Error message: {}", ((ErrorMessage) message).getErrorMessage());
-                }
                 return;
             }
 
