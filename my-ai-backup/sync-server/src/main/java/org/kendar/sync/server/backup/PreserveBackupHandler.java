@@ -139,7 +139,7 @@ public class PreserveBackupHandler extends BackupHandler {
         if (session.isBackup()) {
             fileInfo = message.getFileInfo() != null ? message.getFileInfo() : session.getCurrentFile(connectionId);
             if (fileInfo == null) {
-                log.error("[SERVER] 2 No file info found for connection {}", connectionId);
+                log.error("[SERVER] 5 No file info found for connection {}", connectionId);
                 connection.sendMessage(FileEndAckMessage.failure(message.getRelativePath(), "No file info found"));
                 return;
             }

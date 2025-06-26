@@ -56,7 +56,7 @@ public class SyncBackupHandler extends BackupHandler {
         if (session.isBackup()) {
             fileInfo = session.getCurrentFile(connectionId);
             if (fileInfo == null) {
-                log.error("[SERVER] 1 No file info found for connection {}", connectionId);
+                log.error("[SERVER] 3 No file info found for connection {}", connectionId);
                 return;
             }
             log.debug("[SERVER] Received FILE_DATA message for {} on connection {} (block {} of {}, {} bytes)", fileInfo.getRelativePath(), connectionId, message.getBlockNumber() + 1, message.getTotalBlocks(), message.getData().length);
@@ -95,7 +95,7 @@ public class SyncBackupHandler extends BackupHandler {
         if (session.isBackup()) {
             fileInfo = message.getFileInfo() != null ? message.getFileInfo() : session.getCurrentFile(connectionId);
             if (fileInfo == null) {
-                log.error("[SERVER] 2 No file info found for connection {}", connectionId);
+                log.error("[SERVER] 6 No file info found for connection {}", connectionId);
                 connection.sendMessage(FileEndAckMessage.failure(message.getRelativePath(), "No file info found"));
                 return;
             }

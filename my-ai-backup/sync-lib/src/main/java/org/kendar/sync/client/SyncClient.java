@@ -2,6 +2,7 @@ package org.kendar.sync.client;
 
 import org.kendar.sync.lib.network.TcpConnection;
 import org.kendar.sync.lib.protocol.*;
+import org.kendar.sync.lib.utils.DebugLogger;
 import org.kendar.sync.lib.utils.Sleeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.Timer;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 public class SyncClient {
@@ -152,7 +154,7 @@ public class SyncClient {
                     keepAlive = this.keepAlive;
                 }
                 this.timer = new Timer("idle-timeout-task", true);
-                this.timer.schedule(new SyncClient.TimerTask(connection,this.timer), keepAlive, keepAlive);
+                this.timer.scheduleAtFixedRate(new SyncClient.TimerTask(connection,this.timer), keepAlive, keepAlive);
 
                 connection.setSessionId(connectResponse.getSessionId());
                 var maxConnections = Math.min(commandLineArgs.getMaxConnections(), connectResponse.getMaxConnections());
@@ -208,6 +210,9 @@ public class SyncClient {
             }
         } catch ( IOException e) {
             log.trace("[CLIENT] Error: {}", e.getMessage());
+        }finally {
+            if(timer!=null)timer.cancel();
+            DebugLogger.log.debug("Cancel keepalive timer");
         }
     }
 
@@ -222,11 +227,13 @@ public class SyncClient {
             this.timer = timer;
         }
 
+
         @Override
         public void run() {
             if(mainConnection!=null) {
                 try {
                     if(!mainConnection.isClosed()) {
+                        DebugLogger.log.debug("[CLIENT-{}] KEEPALIVE",mainConnection.getConnectionId());
                         log.debug("[CLIENT-{}] KEEPALIVE",mainConnection.getConnectionId());
                         mainConnection.sendMessage(new KeepAlive());
                     }
